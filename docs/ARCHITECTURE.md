@@ -94,4 +94,6 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `POST /api/auth/login`, `/logout`, `/setup`; `GET /api/auth/me` | Sign-in |
 | `GET/PUT /api/me/preferences` | Per-user settings |
 | `/api/admin/users` (GET, POST, PATCH `:id`, DELETE `:id`), `/api/admin/cameras`, `/api/admin/app-keys`, `/api/admin/media` | Admin |
+| `GET /api/models?lat&lon&units` | Daily and 72-hour forecasts from each model (ECMWF, GFS, ICON, GEM, HRRR, GraphCast, AIFS) plus day-by-day agreement (30 min cache) |
+| `GET /api/ensemble?lat&lon&units&model=ecmwf_ifs025\|gfs_seamless` | Ensemble 10th/50th/90th percentiles, confidence and rain chance (60 min cache) |
 | `GET /api/connect/summary` (Bearer app key) | Kid-safe summary for Den-Duty and other apps, see [CONNECT.md](CONNECT.md) |
