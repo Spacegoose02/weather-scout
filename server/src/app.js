@@ -455,7 +455,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     auth.deleteUser(Number(req.params.id));
     return { ok: true };
   });
-  app.get('/api/admin/cameras', { preHandler: requireAdmin }, async () => ({ feeds: (await cameras.all()).feeds }));
+  app.get('/api/admin/cameras', { preHandler: requireAdmin }, async () => ({ feeds: (await cameras.all()).feeds, needsKey: cameras.needingKeys() }));
   app.get('/api/admin/media', { preHandler: requireAdmin }, async () => ({ feeds: media.list() }));
   app.post('/api/admin/media', {
     preHandler: requireAdmin,

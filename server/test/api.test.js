@@ -233,8 +233,9 @@ test('Maryland and Kentucky ArcGIS feeds page through results; MD cams are live 
 
 test('CAMERAS_DEFAULT_FEEDS picks states', async () => {
   const { defaultFeeds } = await import('../src/providers/cameras/index.js');
-  assert.deepEqual(defaultFeeds('').map((f) => f.id), ['va', 'sc', 'md', 'ky']);
-  assert.deepEqual(defaultFeeds('', { NC_DRIVENC_API_KEY: 'k' }).map((f) => f.id), ['va', 'sc', 'md', 'ky', 'nc']);
+  assert.deepEqual(defaultFeeds('').map((f) => f.id), ['va', 'sc', 'md', 'ky', 'de']);
+  assert.deepEqual(defaultFeeds('', { NC_DRIVENC_API_KEY: 'k' }).map((f) => f.id), ['va', 'sc', 'md', 'ky', 'de', 'nc']);
+  assert.deepEqual(defaultFeeds('', { OHGO_API_KEY: 'k', GA511_API_KEY: 'g' }).map((f) => f.id), ['va', 'sc', 'md', 'ky', 'de', 'ga', 'oh']);
   assert.deepEqual(defaultFeeds('nc').map((f) => f.id), []);
   assert.deepEqual(defaultFeeds('va, ky').map((f) => f.id), ['va', 'ky']);
   assert.equal(defaultFeeds('false').length, 0);
@@ -280,4 +281,42 @@ test('Rocky picture for connected apps: known pieces only, mood badge, safe head
   assert.match(plain.body, /class="raccoon mood-happy"/);
   assert.ok(!plain.body.includes('class="coat'));
   await app.close();
+});
+
+test('Delaware cameras are live video only and skip disabled ones', async () => {
+  const de = { features: [
+    { attributes: { ID: 'KCAM001', ENABLED: 1, TITLE: 'DE 1 @ MILFORD NECK RD', M3U8S: 'https://video.deldot.gov:443/live/KCAM001.stream/playlist.m3u8' }, geometry: { x: -75.4486, y: 38.9909 } },
+    { attributes: { ID: 'KCAM002', ENABLED: 0, TITLE: 'Off camera', M3U8S: 'https://video.deldot.gov:443/live/KCAM002.stream/playlist.m3u8' }, geometry: { x: -75.54, y: 39.15 } },
+  ] };
+  const geo = { type: 'FeatureCollection', features: de.features.map((f) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [f.geometry.x, f.geometry.y] }, properties: f.attributes })) };
+  const fetchImpl = mockFetch({ 'firstmaptest.delaware.gov': () => Response.json(geo) });
+  const { app } = await testApp({ fetchImpl, env: { CAMERAS_DEFAULT_FEEDS: 'de' } });
+  const body = (await app.inject('/api/cameras?south=38.5&west=-76&north=39.5&east=-75')).json();
+  assert.deepEqual(body.cameras.map((c) => c.id), ['de:KCAM001']);
+  assert.equal(body.cameras[0].imageUrl, null);
+  assert.match(body.cameras[0].video, /^https:\/\/video\.deldot\.gov.*playlist\.m3u8$/);
+  await app.close();
+});
+
+test('Ohio OHGO cameras load with the key in a header, never in the response', async () => {
+  const oh = { totalResultCount: 1, results: [{ id: '000001', latitude: 39.96, longitude: -83.0, location: 'I-70 at I-71', description: 'Columbus',
+    cameraViews: [{ direction: 'East', smallUrl: 'https://itscameras.dot.state.oh.us/images/a-s.jpg', largeUrl: 'https://itscameras.dot.state.oh.us/images/a.jpg', mainRoute: 'I-70' }] }] };
+  const fetchImpl = mockFetch({ 'publicapi.ohgo.com/api/v1/cameras': () => Response.json(oh) });
+  const { app } = await testApp({ fetchImpl, env: { CAMERAS_DEFAULT_FEEDS: 'oh', OHGO_API_KEY: 'ohkey' } });
+  const body = (await app.inject('/api/cameras?south=39.5&west=-83.5&north=40.5&east=-82.5')).json();
+  assert.deepEqual([body.cameras[0].id, body.cameras[0].name, body.cameras[0].road, body.cameras[0].direction], ['oh:000001', 'I-70 at I-71', 'I-70', 'East']);
+  assert.equal(body.cameras[0].imageUrl, '/api/cameras/image/oh%3A000001');
+  const call = fetchImpl.calls.find((c) => c.url.includes('ohgo'));
+  assert.match(call.url, /page-all=true/);
+  assert.ok(!call.url.includes('ohkey'));
+  assert.ok(!JSON.stringify(body).includes('ohkey'));
+  await app.close();
+});
+
+test('built-in states waiting for a key are listed with the setting to fill in', async () => {
+  const { feedsNeedingKeys } = await import('../src/providers/cameras/index.js');
+  assert.deepEqual(feedsNeedingKeys('', { NY511_API_KEY: 'k' }).map((f) => f.keyEnv), ['NC_DRIVENC_API_KEY', 'GA511_API_KEY', 'OHGO_API_KEY']);
+  assert.deepEqual(feedsNeedingKeys('va,oh').map((f) => f.id), ['oh']);
+  assert.equal(feedsNeedingKeys('false').length, 0);
+  assert.match(feedsNeedingKeys('nc')[0].signup, /^https:\/\/www\.drivenc\.gov/);
 });

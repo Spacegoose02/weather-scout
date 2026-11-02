@@ -15,6 +15,7 @@ import AskExpert from './components/AskExpert.jsx';
 import Learn from './components/learn/Learn.jsx';
 import Dashboard from './components/dashboard/Dashboard.jsx';
 import { configureVoice } from './kid/speak.js';
+import { useTheme } from './theme/useTheme.js';
 
 const TABS = [
   ['today', 'Today', '🌤️'],
@@ -48,6 +49,7 @@ export default function App() {
   const location = prefs.location || config?.defaultLocation;
   const units = prefs.units || config?.units || 'imperial';
   const kidMode = !!prefs.kidMode;
+  const theme = useTheme(prefs.theme, weather);
   const voice = { tts: config?.tts, value: prefs.voice || '', onChange: (v) => setPrefs({ voice: v }) };
 
   // Read-aloud uses the server's Kokoro voice when there is one.
@@ -104,6 +106,7 @@ export default function App() {
         onAdmin={() => setModal('admin')}
         onAlerts={() => setModal('alerts')}
         sso={config.auth.sso}
+        theme={{ value: prefs.theme || 'auto', active: theme.id, why: theme.why, onChange: (t) => setPrefs({ theme: t }) }}
       />
 
       {!blocked && (

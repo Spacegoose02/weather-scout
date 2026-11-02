@@ -11,8 +11,12 @@ import { fetchJson, UpstreamError } from '../../cache.js';
 //  - 511 South Carolina: same Iteris GeoJSON format as Virginia
 //  - Maryland CHART (MD iMAP ArcGIS layer): live video player page per camera
 //  - Kentucky (KYTC ArcGIS layer): snapshot JPG per camera
+//  - Delaware (DelDOT, Delaware FirstMap ArcGIS layer): HTTPS HLS live video per camera
 // Plus feeds that switch on once their free developer key is set:
 //  - North Carolina (DriveNC, IBI 511 API v2): NC_DRIVENC_API_KEY
+//  - New York (511NY, IBI 511 API v2): NY511_API_KEY
+//  - Georgia (511GA, IBI 511 API v2): GA511_API_KEY
+//  - Ohio (OHGO public API): OHGO_API_KEY
 export const DEFAULT_FEEDS = [
   {
     id: 'va',
@@ -51,6 +55,17 @@ export const DEFAULT_FEEDS = [
     refreshMinutes: 60,
   },
   {
+    id: 'de',
+    name: 'Delaware (DelDOT)',
+    region: 'DE',
+    type: 'arcgis',
+    // DelDOT publishes its camera list (with live HLS links) on Delaware FirstMap.
+    url: 'https://enterprise.firstmaptest.delaware.gov/arcgis/rest/services/Transportation/DE_TMC_Traffic_Feeds/FeatureServer/1',
+    fields: { id: 'ID', name: 'TITLE', video: 'M3U8S', active: 'ENABLED' },
+    pageSize: 1000,
+    refreshMinutes: 60,
+  },
+  {
     id: 'nc',
     name: 'DriveNC (NCDOT)',
     region: 'NC',
@@ -59,7 +74,43 @@ export const DEFAULT_FEEDS = [
     baseUrl: 'https://www.drivenc.gov',
     keyEnv: 'NC_DRIVENC_API_KEY',
     requiresKey: true,
+    signup: 'https://www.drivenc.gov/developers/doc',
     refreshMinutes: 15, // DriveNC allows 10 calls a minute; one call every 15 minutes is plenty
+  },
+  {
+    id: 'ny',
+    name: '511NY (NYSDOT)',
+    region: 'NY',
+    type: 'ibi511',
+    apiVersion: 2,
+    baseUrl: 'https://511ny.org',
+    keyEnv: 'NY511_API_KEY',
+    requiresKey: true,
+    signup: 'https://511ny.org/developers/doc',
+    refreshMinutes: 15,
+  },
+  {
+    id: 'ga',
+    name: '511 Georgia (GDOT)',
+    region: 'GA',
+    type: 'ibi511',
+    apiVersion: 2,
+    baseUrl: 'https://511ga.org',
+    keyEnv: 'GA511_API_KEY',
+    requiresKey: true,
+    signup: 'https://511ga.org/developers/doc',
+    refreshMinutes: 15,
+  },
+  {
+    id: 'oh',
+    name: 'OHGO (ODOT)',
+    region: 'OH',
+    type: 'ohgo',
+    baseUrl: 'https://publicapi.ohgo.com',
+    keyEnv: 'OHGO_API_KEY',
+    requiresKey: true,
+    signup: 'https://publicapi.ohgo.com/docs/registration',
+    refreshMinutes: 15,
   },
 ];
 
@@ -70,6 +121,18 @@ export function defaultFeeds(setting = '', env = {}) {
   if (!v || /^(1|true|yes|on|all)$/.test(v)) return usable;
   const wanted = new Set(v.split(/[\s,]+/));
   return usable.filter((f) => wanted.has(f.id));
+}
+
+// Built-in feeds that would be on but are waiting for a free key, so the admin
+// screen can say exactly which setting to fill in.
+export function feedsNeedingKeys(setting = '', env = {}) {
+  const v = String(setting).trim().toLowerCase();
+  if (/^(0|false|no|off|none)$/.test(v)) return [];
+  const all = !v || /^(1|true|yes|on|all)$/.test(v);
+  const wanted = new Set(v.split(/[\s,]+/));
+  return DEFAULT_FEEDS
+    .filter((f) => f.requiresKey && !env[f.keyEnv] && (all || wanted.has(f.id)))
+    .map(({ id, name, region, keyEnv, signup }) => ({ id, name, region, keyEnv, signup }));
 }
 
 const get = (obj, path) => (path ? String(path).split('.').reduce((o, k) => (o == null ? o : o[k]), obj) : undefined);
@@ -122,6 +185,30 @@ export function parseIbi511(list, feed) {
     .filter((c) => !c.disabled && c.image && Number.isFinite(c.lat) && Number.isFinite(c.lon));
 }
 
+// OHGO (Ohio DOT) public API: /api/v1/cameras with CameraViews[] of snapshot URLs.
+export function parseOhgo(raw) {
+  const list = raw?.results ?? raw?.Results ?? (Array.isArray(raw) ? raw : []);
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((c) => {
+      const views = c.cameraViews ?? c.CameraViews ?? [];
+      const v = views[0] || {};
+      return {
+        id: String(c.id ?? c.Id),
+        name: c.location ?? c.Location ?? c.description ?? c.Description ?? 'Camera',
+        road: v.mainRoute ?? v.MainRoute ?? null,
+        direction: v.direction ?? v.Direction ?? null,
+        lat: Number(c.latitude ?? c.Latitude),
+        lon: Number(c.longitude ?? c.Longitude),
+        image: v.largeUrl ?? v.LargeUrl ?? v.smallUrl ?? v.SmallUrl ?? null,
+        video: null,
+      };
+    })
+    .filter((c) => c.image && Number.isFinite(c.lat) && Number.isFinite(c.lon));
+}
+
+const isOff = (v) => v === false || v === 0 || /^(0|false|no|n)$/i.test(String(v ?? '').trim());
+
 // Generic GeoJSON FeatureCollection with configurable property names. Works for
 // ArcGIS "f=geojson" layers and most open-data portals (including 511 Virginia).
 export function parseGeoJson(raw, feed) {
@@ -131,7 +218,7 @@ export function parseGeoJson(raw, feed) {
     .map((feat, i) => {
       const p = feat.properties || {};
       const [lon, lat] = feat.geometry?.coordinates || [];
-      if (f.active && get(p, f.active) === false) return null;
+      if (f.active && isOff(get(p, f.active))) return null;
       if (f.problem && get(p, f.problem) === true) return null;
       return {
         id: String(get(p, f.id || 'id') ?? feat.id ?? i),
@@ -145,7 +232,7 @@ export function parseGeoJson(raw, feed) {
         embed: get(p, f.embed) || null,
       };
     })
-    .filter((c) => c && (c.image || isHttps(c.embed)) && Number.isFinite(c.lat) && Number.isFinite(c.lon));
+    .filter((c) => c && (c.image || isHttps(c.embed) || isHttps(c.video)) && Number.isFinite(c.lat) && Number.isFinite(c.lon));
 }
 
 const isHttps = (u) => typeof u === 'string' && u.startsWith('https://');
@@ -225,6 +312,13 @@ export class CameraService {
     return defaultFeeds(env.CAMERAS_DEFAULT_FEEDS, env);
   }
 
+  // Built-in keyed feeds that are switched off only because their key is missing.
+  needingKeys() {
+    const { camerasFile, env } = this.cfg;
+    if (env.CAMERA_FEEDS_JSON || fs.existsSync(camerasFile)) return [];
+    return feedsNeedingKeys(env.CAMERAS_DEFAULT_FEEDS, env);
+  }
+
   async fetchFeed(feed) {
     const env = this.cfg.env;
     const opts = { source: feed.id, fetchImpl: this.fetchImpl, headers: { ...this.headers }, timeoutMs: 20000 };
@@ -236,6 +330,11 @@ export class CameraService {
       const p = feed.apiVersion === 2 ? '/api/v2/get/cameras' : '/api/getcameras';
       const url = `${feed.baseUrl.replace(/\/$/, '')}${p}?key=${encodeURIComponent(key)}&format=json`;
       cams = parseIbi511(await fetchJsonRetry(url, opts, this.retry), feed);
+    } else if (feed.type === 'ohgo') {
+      const key = feedKey(feed, env);
+      const url = `${(feed.baseUrl || 'https://publicapi.ohgo.com').replace(/\/$/, '')}/api/v1/cameras?page-all=true`;
+      opts.headers.authorization = `APIKEY ${key}`;
+      cams = parseOhgo(await fetchJsonRetry(url, opts, this.retry));
     } else if (feed.type === 'geojson') {
       const url = new URL(feed.url);
       const key = feedKey(feed, env);
