@@ -270,6 +270,26 @@ h3 { font-size: 1rem; margin: 18px 0 8px; }
 .locate-msg p { margin: 0 0 8px; font-size: 0.92rem; }
 .locate-msg .row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* Hurricanes, buoys and tides */
+.storm-pin { display: grid; place-items: center; position: relative; }
+.storm-pin span { font-size: 30px; line-height: 1; filter: drop-shadow(0 0 3px var(--cat)) drop-shadow(0 0 2px var(--cat)); animation: spin 6s linear infinite; }
+.storm-pin b { position: absolute; bottom: -6px; right: -8px; background: #1d2433; color: #fff; font-size: 11px; border-radius: 8px; padding: 0 5px; }
+@keyframes spin { to { transform: rotate(-360deg); } }
+@media (prefers-reduced-motion: reduce) { .storm-pin span { animation: none; } }
+.buoy-pin { display: grid; place-items: center; background: #0e7c86; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.buoy-pin span { color: #fff; font-size: 11px; font-weight: 800; }
+.buoy-popup { display: grid; gap: 4px; min-width: 190px; }
+.buoy-row { display: flex; justify-content: space-between; gap: 12px; }
+.storm-kid { margin: 4px 0; font-size: 0.85rem; }
+.storm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.storm-list li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
+.cat { font-weight: 800; border-radius: 10px; padding: 4px 8px; color: #1d2433; background: #5ebaff; white-space: nowrap; }
+.cat-1 { background: #ffd23f; } .cat-2 { background: #ff9f1c; } .cat-3 { background: #f25c05; color: #fff; } .cat-4 { background: #d62839; color: #fff; } .cat-5 { background: #8f2d56; color: #fff; }
+.kid-line { margin-top: 4px; }
+.tide-now { margin: 0 0 10px; }
+.tide-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+.tide { background: var(--bg); border-radius: 12px; padding: 10px; }
+.tide-icon { font-size: 1.1rem; }
 /* Models tab (categorical slots validated in both themes; see dataviz palette) */
 :root { --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100; --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948; }
 @media (prefers-color-scheme: dark) {
