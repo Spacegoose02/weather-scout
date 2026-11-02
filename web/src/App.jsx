@@ -3,23 +3,17 @@ import { api } from './api.js';
 import { usePrefs } from './usePrefs.js';
 import Header from './components/Header.jsx';
 import AlertsBanner from './components/AlertsBanner.jsx';
-import CurrentConditions from './components/CurrentConditions.jsx';
-import HourlyTimeline from './components/HourlyTimeline.jsx';
-import DailyForecast from './components/DailyForecast.jsx';
-import Details from './components/Details.jsx';
 import WeatherMap from './components/WeatherMap.jsx';
 import KidMode from './components/KidMode.jsx';
 import SignIn from './components/SignIn.jsx';
 import Admin from './components/Admin.jsx';
-import HealthSky from './components/HealthSky.jsx';
 import News from './components/News.jsx';
-import { RainNext, AirUv, Wind } from './components/NowCards.jsx';
-import Coast from './components/Coast.jsx';
 import ModelsView from './components/ModelsView.jsx';
 import PushAlerts from './components/PushAlerts.jsx';
 import RockyFace from './components/RockyFace.jsx';
 import AskExpert from './components/AskExpert.jsx';
 import Learn from './components/learn/Learn.jsx';
+import Dashboard from './components/dashboard/Dashboard.jsx';
 import { configureVoice } from './kid/speak.js';
 
 const TABS = [
@@ -133,21 +127,18 @@ export default function App() {
           <main>
             {!weather && !error && tab !== 'news' && tab !== 'ask' && tab !== 'models' && <div className="card skeleton">Fetching the sky…</div>}
             {weather && tab === 'today' && (
-              <div className="grid">
-                <CurrentConditions weather={weather} kidMode={kidMode} />
-                <DailyForecast daily={weather.forecast.daily} units={weather.forecast.units} />
-                <Details weather={weather} />
-                <RainNext forecast={weather.forecast} />
-                <Wind forecast={weather.forecast} />
-                <AirUv air={weather.air} forecast={weather.forecast} />
-                <HealthSky weather={weather} />
-                {location && <Coast location={location} units={units} onMap={() => setTab('map')} />}
-                <HourlyTimeline hourly={weather.forecast.hourly} units={weather.forecast.units} />
-                <p className="source">
-                  Forecast: {weather.forecast.source}. Alerts: National Weather Service.
-                  {loading ? ' Updating…' : ` Updated ${new Date(weather.fetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`}
-                </p>
-              </div>
+              <Dashboard
+                weather={weather}
+                location={location}
+                units={units}
+                kidMode={kidMode}
+                user={user}
+                loading={loading}
+                onTab={setTab}
+                onSignIn={() => setModal('signin')}
+                onAlerts={() => setModal('alerts')}
+                onAdmin={() => setModal('admin')}
+              />
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} />}
             {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} voice={voice} />}

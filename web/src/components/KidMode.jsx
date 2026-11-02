@@ -37,7 +37,7 @@ function useChecklist() {
   return [done, toggle];
 }
 
-function rockySays({ raccoon, playground, stormSafe }, c) {
+export function rockySays({ raccoon, playground, stormSafe }, c) {
   if (stormSafe?.active) return 'Grown-ups are keeping watch. Let\'s follow our storm steps together.';
   if (playground.rating === 'red') return `Uh-oh, inside day! ${playground.reasons[0]}`;
   if (raccoon.items.includes('raincoat')) return 'Splash time! Grab your raincoat and boots.';
