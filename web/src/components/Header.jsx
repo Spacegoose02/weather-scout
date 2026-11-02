@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { api } from '../api.js';
 import RockyFace from './RockyFace.jsx';
 
-export default function Header({ location, onLocation, saved, kidMode, onKidMode, units, onUnits, user, onSignIn, onSignOut, onAdmin, sso }) {
+export default function Header({ location, onLocation, saved, kidMode, onKidMode, units, onUnits, user, onSignIn, onSignOut, onAdmin, onAlerts, sso }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -27,8 +27,31 @@ export default function Header({ location, onLocation, saved, kidMode, onKidMode
     setQ('');
   };
 
+  const [locMsg, setLocMsg] = useState('');
+
+  const approximate = async () => {
+    setBusy(true);
+    setLocMsg('');
+    try {
+      const l = await api('/api/ip-location');
+      onLocation({ name: l.name, lat: l.lat, lon: l.lon });
+    } catch (e) {
+      setLocMsg(`Could not guess your location (${e.message}). Search your city or ZIP instead.`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const locate = () => {
-    if (!navigator.geolocation) return;
+    setLocMsg('');
+    if (!window.isSecureContext) {
+      setLocMsg('insecure');
+      return;
+    }
+    if (!navigator.geolocation) {
+      setLocMsg('This browser cannot share its location. Search your city or ZIP, or use an approximate location.');
+      return;
+    }
     setBusy(true);
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
@@ -43,8 +66,13 @@ export default function Header({ location, onLocation, saved, kidMode, onKidMode
         onLocation({ name, lat, lon });
         setBusy(false);
       },
-      () => setBusy(false),
-      { enableHighAccuracy: false, timeout: 10000 },
+      (err) => {
+        setBusy(false);
+        setLocMsg(err.code === 1
+          ? 'Location is blocked for this site. Allow it in your browser\'s site settings, search your city or ZIP, or use an approximate location.'
+          : 'Your device could not find its location just now. Try again, search your city or ZIP, or use an approximate location.');
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 10 * 60_000 },
     );
   };
 
@@ -62,6 +90,19 @@ export default function Header({ location, onLocation, saved, kidMode, onKidMode
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a city or ZIP" aria-label="Search location" />
         <button type="submit" disabled={busy}>{busy ? '…' : 'Go'}</button>
         <button type="button" onClick={locate} title="Use my location" aria-label="Use my location">🎯</button>
+        {locMsg && (
+          <div className="locate-msg" role="alert">
+            <p>
+              {locMsg === 'insecure'
+                ? <>Browsers only share your exact location with <strong>https://</strong> sites, and this page is plain http. Search your city or ZIP above, or use an approximate location from your internet connection.</>
+                : locMsg}
+            </p>
+            <div className="row-actions">
+              <button type="button" onClick={approximate} disabled={busy}>📍 Use approximate location</button>
+              <button type="button" className="ghost" onClick={() => setLocMsg('')}>Close</button>
+            </div>
+          </div>
+        )}
         {results.length > 0 && (
           <ul className="results">
             {results.map((r) => (
@@ -78,6 +119,7 @@ export default function Header({ location, onLocation, saved, kidMode, onKidMode
             {saved.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
           </select>
         )}
+        <button className="ghost" onClick={onAlerts} title="Weather alerts on this device" aria-label="Weather alerts on this device">🔔</button>
         <label className="switch" title="Big, simple, friendly view for kids">
           <input type="checkbox" checked={kidMode} onChange={(e) => onKidMode(e.target.checked)} />
           <span><RockyFace /> Kid mode</span>

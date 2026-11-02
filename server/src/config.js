@@ -35,6 +35,10 @@ export function loadConfig(env = process.env) {
       sessionDays: num(env.SESSION_DAYS, 30),
       secureCookies: bool(env.SECURE_COOKIES, false),
     },
+    push: {
+      enabled: bool(env.PUSH_ENABLED, true),
+      pollSeconds: Math.max(60, num(env.PUSH_POLL_SECONDS, 120)),
+    },
     camerasFile: env.CAMERAS_FILE || path.join(dataDir, 'cameras.json'),
     env,
   };

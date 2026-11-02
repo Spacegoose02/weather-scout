@@ -5,7 +5,7 @@ import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import { registerKidZone } from './kidzone.js';
 import { loadConfig, loadOrCreateSecret } from './config.js';
-import { TtlCache, UpstreamError } from './cache.js';
+import { TtlCache, UpstreamError, fetchJson } from './cache.js';
 import { openDb, publicUser } from './db.js';
 import { AuthService, AuthError, SESSION_COOKIE } from './auth.js';
 import { CameraService } from './providers/cameras/index.js';
@@ -17,18 +17,20 @@ import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
 import { moonPhase } from './sky.js';
 import { MediaService } from './media.js';
+import { PushService, LEVELS } from './push.js';
 
 const MIN = 60_000;
 
-export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}) {
+export async function buildApp({ config, fetchImpl = fetch, logger = true, pushSend } = {}) {
   const cfg = config || loadConfig();
   const app = Fastify({ logger, trustProxy: true });
   const cache = new TtlCache();
   const db = openDb(cfg.dataDir);
   const auth = new AuthService(db, cfg);
-  const cameras = new CameraService(cfg, cache, fetchImpl);
+  const cameras = new CameraService(cfg, cache, fetchImpl, { retry: { baseDelayMs: Number(cfg.env.CAMERA_RETRY_DELAY_MS) || 1500 } });
   const appKeys = new AppKeys(db);
   const media = new MediaService(db, cache, fetchImpl);
+  const push = cfg.push.enabled ? new PushService(db, cfg, { send: pushSend, log: app.log }) : null;
   await auth.bootstrapAdmin();
 
   await app.register(fastifyCookie, { secret: loadOrCreateSecret(cfg) });
@@ -140,6 +142,23 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
   // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----
   registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });
 
+  // ---- severe weather push notifications ------------------------------------
+  const subSchema = { type: 'object', required: ['endpoint'], properties: { endpoint: { type: 'string', maxLength: 2000 } } };
+  const pushOff = (reply) => reply.code(404).send({ error: 'Push notifications are turned off on this server.' });
+  app.get('/api/push/key', async (req, reply) => (push ? { publicKey: push.publicKey, levels: LEVELS } : pushOff(reply)));
+  app.post('/api/push/status', { schema: { body: subSchema } }, async (req, reply) => (push ? push.status(req.body.endpoint) : pushOff(reply)));
+  app.post('/api/push/subscribe', {
+    schema: { body: { type: 'object', required: ['subscription', 'place'], properties: { subscription: { type: 'object' }, place: { type: 'object' }, levels: { type: 'array', items: { type: 'string' }, maxItems: 3 } } } },
+  }, async (req, reply) => (push ? reply.code(201).send(push.subscribe(req.body, req.user?.id ?? null)) : pushOff(reply)));
+  app.post('/api/push/unsubscribe', { schema: { body: subSchema } }, async (req, reply) => (push ? { ok: push.unsubscribe(req.body.endpoint) } : pushOff(reply)));
+  app.post('/api/push/test', {
+    schema: { body: subSchema },
+  }, async (req, reply) => (push ? push.test(req.body.endpoint) : pushOff(reply)));
+  app.decorate('push', push);
+  // NWS alerts for a place, shared with the web app's cache (used by the background push check).
+  app.decorate('pushAlerts', (l) => alerts({ ...l, units: '' }));
+  app.addHook('onClose', async () => push?.stop());
+
   // ---- news & videos -------------------------------------------------------
   app.get('/api/news', async () => {
     const [news, videos] = await Promise.all([media.items('rss'), media.items('youtube', 24)]);
@@ -153,6 +172,27 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
   app.get('/api/reverse-geocode', { schema: latLonSchema }, async (req) => {
     const l = loc(req.query);
     return cache.wrap(`rgeo:${l.lat},${l.lon}`, 24 * 60 * MIN, () => nws.reverseGeocode(l, { userAgent: cfg.nwsUserAgent, fetchImpl }));
+  });
+
+  // Approximate location from the internet connection, for when the browser won't
+  // share GPS (plain http, or permission denied). On a home LAN the visitor's IP is
+  // private, so we look up the server's own public IP, which is the same house.
+  const PRIVATE_IP = /^(::1$|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|fc|fd|fe80:|::ffff:(127|10|192\.168)\.)/i;
+  app.get('/api/ip-location', async (req, reply) => {
+    if (/^(0|false|no|off)$/i.test(cfg.env.IP_LOCATION || '')) return reply.code(404).send({ error: 'Approximate location is turned off on this server.' });
+    const ip = String(req.ip || '').replace(/^::ffff:(?=\d)/, '');
+    const pub = ip && !PRIVATE_IP.test(ip) && /^[\d.:a-f]+$/i.test(ip) ? ip : '';
+    const r = await cache.wrap(`ipgeo:${pub || 'self'}`, 24 * 60 * MIN, async () => {
+      const raw = await fetchJson(`https://ipapi.co/${pub ? `${pub}/` : ''}json/`, { source: 'ipapi.co', fetchImpl, headers: { 'user-agent': cfg.nwsUserAgent } });
+      if (raw.error || !Number.isFinite(raw.latitude)) throw new UpstreamError('ipapi.co', 502, raw.reason || 'no location for this connection');
+      return {
+        name: [raw.city, raw.country_code === 'US' ? raw.region_code : raw.country_name].filter(Boolean).join(', ') || 'Approximate location',
+        lat: Math.round(raw.latitude * 100) / 100,
+        lon: Math.round(raw.longitude * 100) / 100,
+        approximate: true,
+      };
+    });
+    return r;
   });
 
   // ---- cameras ----------------------------------------------------------------

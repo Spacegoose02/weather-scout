@@ -31,6 +31,9 @@ from free, official data sources.
   username. Saved places, units and Kid Mode follow you between devices.
 - **News & Videos**: weather news from RSS feeds and the latest videos from YouTube channels the
   admin picks (paste a channel link or @handle in *Family & settings*).
+- **Severe weather alerts on your phone**: tap 🔔 to get a push notification when the NWS issues a
+  warning, watch or advisory for your place, even with the app closed. Needs an https address
+  (behind your reverse proxy); on iPhone, add Weather Scout to the Home Screen first.
 - **Connected apps**: a keyed, kid-safe weather summary for Den-Duty boards, Home Assistant or
   scripts ([docs/CONNECT.md](docs/CONNECT.md)).
 - Installable as a phone/desktop app (PWA manifest with Rocky app icons), light and dark themes.
@@ -63,6 +66,25 @@ also publishes `:0.1.0` and `:0.1`, so you can pin a version in Unraid instead o
 If you didn't set `ADMIN_USERNAME`/`ADMIN_PASSWORD`, the first visit asks you to create the
 admin account. Admins manage people, SSO links and see camera feed health under
 **Family & settings**.
+
+### HTTPS (for "Use my location" and phone alerts)
+
+Browsers only share GPS location, and only allow push notifications, on **https://** pages
+(or `localhost`). On plain `http://<unraid-ip>:8080` the 🎯 button explains this and offers an
+approximate location from your internet connection instead (set `IP_LOCATION=false` to turn
+that off). Searching a city or ZIP always works.
+
+To get https on Unraid, put Weather Scout behind a reverse proxy, for example:
+
+- **Nginx Proxy Manager** or **SWAG** (Community Apps): point a hostname such as
+  `weather.example.com` at `http://<unraid-ip>:8080` and request a Let's Encrypt certificate.
+  Turn on websockets support. If you use tinyauth, add it here.
+- **Tailscale**: `tailscale serve --bg 8080` on the Unraid host gives an
+  `https://<host>.<tailnet>.ts.net` address that works on every device in your tailnet, with
+  nothing exposed to the internet.
+- **Cloudflare Tunnel** (`cloudflared`): a public https hostname without opening ports.
+
+Behind https, also set `SECURE_COOKIES=true`.
 
 ## Keys and private data
 
