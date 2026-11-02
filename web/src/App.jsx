@@ -154,7 +154,7 @@ export default function App() {
             {weather && tab === 'learn' && <Learn weather={weather} location={location} kidMode={kidMode} />}
             {tab === 'models' && location && <ModelsView location={location} units={units} />}
             {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} voice={voice} />}
-            {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} />}
+            {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} kidMode={kidMode} location={location} />}
           </main>
         </>
       )}
