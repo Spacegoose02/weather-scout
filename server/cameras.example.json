@@ -1,5 +1,5 @@
 {
-  "_readme": "Copy to /data/cameras.json to customize. Without this file, Weather Scout uses the built-in Virginia, South Carolina, Maryland and Kentucky feeds (plus North Carolina when NC_DRIVENC_API_KEY is set). Put any API keys in environment variables and reference them with keyEnv, never in this file. Types: ibi511 (IBI/Castle Rock 511 developer API), geojson (any GeoJSON point layer), arcgis (ArcGIS layer URL, paged), static (your own cameras).",
+  "_readme": "Copy to /data/cameras.json to customize. Without this file, Weather Scout uses the built-in Virginia, South Carolina, Maryland, Kentucky and Delaware feeds (plus North Carolina, New York, Georgia and Ohio when NC_DRIVENC_API_KEY, NY511_API_KEY, GA511_API_KEY or OHGO_API_KEY is set). Put any API keys in environment variables and reference them with keyEnv, never in this file. Types: ibi511 (IBI/Castle Rock 511 developer API), ohgo (Ohio OHGO API), geojson (any GeoJSON point layer), arcgis (ArcGIS layer URL, paged), static (your own cameras).",
   "feeds": [
     {
       "id": "va",
@@ -66,6 +66,21 @@
       "refreshMinutes": 60
     },
     {
+      "id": "de",
+      "name": "Delaware (DelDOT)",
+      "region": "DE",
+      "type": "arcgis",
+      "url": "https://enterprise.firstmaptest.delaware.gov/arcgis/rest/services/Transportation/DE_TMC_Traffic_Feeds/FeatureServer/1",
+      "fields": {
+        "id": "ID",
+        "name": "TITLE",
+        "video": "M3U8S",
+        "active": "ENABLED"
+      },
+      "pageSize": 1000,
+      "refreshMinutes": 60
+    },
+    {
       "id": "nc",
       "name": "DriveNC (NCDOT)",
       "region": "NC",
@@ -77,12 +92,31 @@
     },
     {
       "id": "ny",
-      "name": "511NY",
+      "name": "511NY (NYSDOT)",
       "region": "NY",
       "type": "ibi511",
-      "enabled": false,
+      "apiVersion": 2,
       "baseUrl": "https://511ny.org",
       "keyEnv": "NY511_API_KEY",
+      "refreshMinutes": 15
+    },
+    {
+      "id": "ga",
+      "name": "511 Georgia (GDOT)",
+      "region": "GA",
+      "type": "ibi511",
+      "apiVersion": 2,
+      "baseUrl": "https://511ga.org",
+      "keyEnv": "GA511_API_KEY",
+      "refreshMinutes": 15
+    },
+    {
+      "id": "oh",
+      "name": "OHGO (ODOT)",
+      "region": "OH",
+      "type": "ohgo",
+      "baseUrl": "https://publicapi.ohgo.com",
+      "keyEnv": "OHGO_API_KEY",
       "refreshMinutes": 15
     },
     {

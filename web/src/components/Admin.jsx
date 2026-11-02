@@ -6,6 +6,7 @@ import IntegrationsPanel from './stations/IntegrationsPanel.jsx';
 export default function Admin({ me, onClose }) {
   const [users, setUsers] = useState([]);
   const [feeds, setFeeds] = useState([]);
+  const [needsKey, setNeedsKey] = useState([]);
   const [keys, setKeys] = useState([]);
   const [newKey, setNewKey] = useState(null);
   const [keyName, setKeyName] = useState('Den-Duty');
@@ -23,7 +24,9 @@ export default function Admin({ me, onClose }) {
       setMedia((await api('/api/admin/media')).feeds);
       setSuggestions((await api('/api/admin/media-suggestions')).suggestions);
       setHidden((await api('/api/admin/media-hidden')).hidden);
-      setFeeds((await api('/api/admin/cameras')).feeds);
+      const cams = await api('/api/admin/cameras');
+      setFeeds(cams.feeds);
+      setNeedsKey(cams.needsKey || []);
     } catch (e) {
       setError(e.message);
     }
@@ -231,6 +234,18 @@ export default function Admin({ me, onClose }) {
             </li>
           ))}
         </ul>
+      )}
+      {needsKey.length > 0 && (
+        <>
+          <p className="hint">These states switch on with a free developer key. Sign up, then paste the key into the matching setting (Unraid: edit the container, or <code>.env</code> for Docker Compose) and restart.</p>
+          <ul className="feeds">
+            {needsKey.map((f) => (
+              <li key={f.id}>
+                ⚪ {f.name}: set <code>{f.keyEnv}</code>{f.signup && <> (<a href={f.signup} target="_blank" rel="noopener noreferrer">get a key</a>)</>}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </Modal>
   );
