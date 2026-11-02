@@ -67,7 +67,8 @@ server/src/
   sky.js            moon phase
   media.js          admin news/YouTube lists
   push.js           Web Push: subscriptions, VAPID keys, alert loop
-  ai.js             Ask an Expert / Rocky chat, cloud photos, web search (Claude)
+  ai.js             Ask an Expert / Rocky chat, cloud photos, web search (Claude or Ollama)
+  tts.js            Kokoro read-aloud proxy and voice list
   weathercodes.js   WMO codes with kid descriptions
   providers/        openmeteo, nws, radar, cameras, news (RSS/Atom/YouTube)
 web/src/
@@ -87,6 +88,7 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/radar` | Radar frame list (tile URL templates) |
 | `GET /api/push/key`, `POST /api/push/subscribe`, `/unsubscribe`, `/status`, `/test` | Web Push sign-up per device; a background loop (every `PUSH_POLL_SECONDS`) checks NWS for each subscribed place and sends each new alert once |
 | `GET /api/ai/status`, `POST /api/ai/chat`, `POST /api/ai/cloud` | AI helper (only with `ANTHROPIC_API_KEY`): chat with the live forecast as context, cloud photo identifier, optional web search |
+| `GET /api/tts/voices`, `POST /api/tts` | Kokoro read-aloud (only with `KOKORO_URL`): English voice list, and MP3 speech for a text |
 | `GET /api/news` | Latest weather news and YouTube videos from the admin's lists |
 | `GET /api/cameras?south&west&north&east` | Cameras in the map view |
 | `GET /api/cameras/image/:id` | Snapshot proxy |

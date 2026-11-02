@@ -41,10 +41,25 @@ export function loadConfig(env = process.env) {
     },
     // "Ask a weather expert" chat, cloud photo identifier and web search. Off without a key.
     ai: {
+      // anthropic | ollama | off. Blank = whichever has a key/address (Claude first).
+      provider: (env.AI_PROVIDER || '').toLowerCase(),
       apiKey: env.ANTHROPIC_API_KEY || '',
+      ollama: {
+        url: env.OLLAMA_URL || '',
+        model: env.OLLAMA_MODEL || 'gemma3',
+        visionModel: env.OLLAMA_VISION_MODEL || '',
+        // Free ollama.com key, only for "Search the web" with Ollama.
+        apiKey: env.OLLAMA_API_KEY || '',
+      },
       model: env.AI_MODEL || 'claude-opus-5-5',
       webSearch: bool(env.AI_WEB_SEARCH, true),
       dailyLimit: Math.max(0, num(env.AI_DAILY_LIMIT, 40)),
+    },
+    // Kokoro text-to-speech (e.g. the Kokoro-FastAPI container) for read-aloud.
+    tts: {
+      url: (env.KOKORO_URL || '').replace(/\/+$/, ''),
+      voice: env.KOKORO_VOICE || 'af_heart',
+      speed: Math.min(2, Math.max(0.5, num(env.KOKORO_SPEED, 1))),
     },
     camerasFile: env.CAMERAS_FILE || path.join(dataDir, 'cameras.json'),
     env,

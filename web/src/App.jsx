@@ -19,6 +19,7 @@ import ModelsView from './components/ModelsView.jsx';
 import PushAlerts from './components/PushAlerts.jsx';
 import RockyFace from './components/RockyFace.jsx';
 import AskExpert from './components/AskExpert.jsx';
+import { configureVoice } from './kid/speak.js';
 
 const TABS = [
   ['today', 'Today', '🌤️'],
@@ -51,6 +52,10 @@ export default function App() {
   const location = prefs.location || config?.defaultLocation;
   const units = prefs.units || config?.units || 'imperial';
   const kidMode = !!prefs.kidMode;
+  const voice = { tts: config?.tts, value: prefs.voice || '', onChange: (v) => setPrefs({ voice: v }) };
+
+  // Read-aloud uses the server's Kokoro voice when there is one.
+  useEffect(() => configureVoice({ enabled: config?.tts?.enabled, voice: prefs.voice }), [config?.tts?.enabled, prefs.voice]);
 
   const load = useCallback(async () => {
     if (!location) return;
@@ -143,9 +148,9 @@ export default function App() {
               </div>
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} />}
-            {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} />}
+            {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} voice={voice} />}
             {tab === 'models' && location && <ModelsView location={location} units={units} />}
-            {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} />}
+            {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} voice={voice} />}
             {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} />}
           </main>
         </>

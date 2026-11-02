@@ -33,4 +33,12 @@
   <Config Name="AI model" Target="AI_MODEL" Default="claude-opus-5-5" Description="Claude model id, e.g. claude-sonnet-5-5 or claude-haiku-5-5 for lower cost" Type="Variable" Display="advanced" Required="false" Mask="false">claude-opus-5-5</Config>
   <Config Name="AI web search" Target="AI_WEB_SEARCH" Default="true" Description="Allow web search in the AI helper (kid-safe science sites only in Kid Mode)" Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
   <Config Name="AI daily limit" Target="AI_DAILY_LIMIT" Default="40" Description="AI questions and photos per person per day (0 = no limit)" Type="Variable" Display="advanced" Required="false" Mask="false">40</Config>
+  <Config Name="AI provider" Target="AI_PROVIDER" Default="" Description="anthropic, ollama or off. Blank = whichever is set up (Claude first)" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Ollama URL" Target="OLLAMA_URL" Default="" Description="Optional. Use your own Ollama for the AI helper instead of Claude, e.g. http://192.168.1.20:11434" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Ollama model" Target="OLLAMA_MODEL" Default="gemma3" Description="Ollama chat model (pull it first, e.g. ollama pull gemma3)" Type="Variable" Display="advanced" Required="false" Mask="false">gemma3</Config>
+  <Config Name="Ollama vision model" Target="OLLAMA_VISION_MODEL" Default="" Description="Only if the chat model can't see photos, e.g. qwen2.5vl" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Ollama web search key" Target="OLLAMA_API_KEY" Default="" Description="Free ollama.com key, only for Search the web with Ollama" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Kokoro voice URL" Target="KOKORO_URL" Default="" Description="Optional. Kokoro-FastAPI container for a natural read-aloud voice, e.g. http://192.168.1.20:8880" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Kokoro voice" Target="KOKORO_VOICE" Default="af_heart" Description="Rocky's default voice, e.g. af_heart, bf_emma, am_adam" Type="Variable" Display="advanced" Required="false" Mask="false">af_heart</Config>
+  <Config Name="Kokoro speed" Target="KOKORO_SPEED" Default="1" Description="Speaking speed, 0.5 to 2" Type="Variable" Display="advanced" Required="false" Mask="false">1</Config>
 </Container>
