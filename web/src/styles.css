@@ -265,3 +265,7 @@ h3 { font-size: 1rem; margin: 18px 0 8px; }
 .push-form .check input { margin-top: 4px; }
 .push-form select { padding: 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
 .push-form .row-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* "Use my location" help */
+.locate-msg { position: absolute; top: 46px; left: 0; right: 0; z-index: 1001; padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.locate-msg p { margin: 0 0 8px; font-size: 0.92rem; }
+.locate-msg .row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
