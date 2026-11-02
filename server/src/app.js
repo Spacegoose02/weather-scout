@@ -151,13 +151,13 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
   }, async (req) => {
     const out = await cameras.inBounds(req.query);
     // Images are served through our proxy so http-only DOT cameras work on an https site.
-    out.cameras = out.cameras.map(({ video, ...c }) => ({ ...c, imageUrl: `/api/cameras/image/${encodeURIComponent(c.id)}`, video }));
+    out.cameras = out.cameras.map((c) => ({ ...c, imageUrl: c.hasImage ? `/api/cameras/image/${encodeURIComponent(c.id)}` : null }));
     return out;
   });
 
   app.get('/api/cameras/image/:id', async (req, reply) => {
     const cam = await cameras.findById(req.params.id);
-    if (!cam) return reply.code(404).send({ error: 'Unknown camera.' });
+    if (!cam?.image) return reply.code(404).send({ error: 'Unknown camera.' });
     const res = await fetchImpl(cam.image, { signal: AbortSignal.timeout(10000), headers: { 'User-Agent': cfg.nwsUserAgent } });
     const type = res.headers.get('content-type') || '';
     if (!res.ok || !type.startsWith('image/')) return reply.code(502).send({ error: 'Camera image unavailable.' });

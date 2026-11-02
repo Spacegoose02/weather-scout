@@ -146,3 +146,53 @@ test('cannot remove the last admin', async () => {
   assert.equal(res.statusCode, 400);
   await app.close();
 });
+
+test('Virginia cameras are on by default with no config, and can be turned off', async () => {
+  const va = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [-77.44, 37.55] }, properties: { id: '7', description: 'I-64 at Broad St', active: true, image_url: 'http://cams.example/7.jpg' } }] };
+  const fetchImpl = mockFetch({ '511.vdot.virginia.gov': () => new Response(JSON.stringify(va), { headers: { 'content-type': 'application/json' } }) });
+  const { app } = await testApp({ fetchImpl, env: { CAMERAS_DEFAULT_FEEDS: 'va' } });
+  const body = (await app.inject('/api/cameras?south=37&west=-78&north=38&east=-77')).json();
+  assert.equal(body.cameras[0].id, 'va:7');
+  assert.equal(body.feeds[0].name, '511 Virginia (VDOT)');
+  await app.close();
+
+  const off = await testApp({ fetchImpl, env: { CAMERAS_DEFAULT_FEEDS: 'false' } });
+  assert.equal((await off.app.inject('/api/cameras?south=37&west=-78&north=38&east=-77')).json().feeds.length, 0);
+  await off.app.close();
+});
+
+test('Maryland and Kentucky ArcGIS feeds page through results; MD cams are live players', async () => {
+  const page = (n, offset, more) => ({
+    type: 'FeatureCollection', exceededTransferLimit: more,
+    features: Array.from({ length: n }, (_, i) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [-76.6, 39.2] },
+      properties: { feedID: `f${offset + i}`, location: `MD cam ${offset + i}`, url: `https://chart.maryland.gov/video/video.php?feed=f${offset + i}` } })),
+  });
+  const ky = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [-85.74, 38.26] }, properties: { OBJECTID: 2, description: 'I-65 at Spaghetti Junction', snapshot: 'http://www.trimarc.org/images/x.jpg' } }] };
+  const fetchImpl = mockFetch({
+    'geodata.md.gov': (u) => {
+      const offset = Number(new URL(u).searchParams.get('resultOffset'));
+      return Response.json(offset === 0 ? page(500, 0, true) : page(3, 500, false));
+    },
+    'kygisserver.ky.gov': () => Response.json(ky),
+  });
+  const { app } = await testApp({ fetchImpl, env: { CAMERAS_DEFAULT_FEEDS: 'md,ky' } });
+  const md = (await app.inject('/api/cameras?south=39&west=-77&north=39.5&east=-76')).json();
+  assert.equal(md.total, 503);
+  assert.equal(md.cameras[0].imageUrl, null);
+  assert.match(md.cameras[0].embed, /^https:\/\/chart\.maryland\.gov\/video/);
+  assert.equal((await app.inject(`/api/cameras/image/${encodeURIComponent(md.cameras[0].id)}`)).statusCode, 404);
+  const kyRes = (await app.inject('/api/cameras?south=38&west=-86&north=38.5&east=-85')).json();
+  assert.equal(kyRes.cameras[0].name, 'I-65 at Spaghetti Junction');
+  assert.equal(kyRes.cameras[0].imageUrl, '/api/cameras/image/ky%3A2');
+  const mdCalls = fetchImpl.calls.filter((c) => c.url.includes('geodata.md.gov'));
+  assert.equal(mdCalls.length, 2);
+  assert.match(mdCalls[0].url, /f=geojson/);
+  await app.close();
+});
+
+test('CAMERAS_DEFAULT_FEEDS picks states', async () => {
+  const { defaultFeeds } = await import('../src/providers/cameras/index.js');
+  assert.deepEqual(defaultFeeds('').map((f) => f.id), ['va', 'md', 'ky']);
+  assert.deepEqual(defaultFeeds('va, ky').map((f) => f.id), ['va', 'ky']);
+  assert.equal(defaultFeeds('false').length, 0);
+});

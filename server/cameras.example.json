@@ -1,17 +1,50 @@
 {
-  "_readme": "Copy to /data/cameras.json. Put API keys in environment variables and reference them with keyEnv, never in this file. Types: ibi511 (IBI/Castle Rock 511 developer API), geojson (any GeoJSON point layer, e.g. ArcGIS f=geojson), static (your own cameras).",
+  "_readme": "Copy to /data/cameras.json to customize. Without this file, Weather Scout uses the built-in Virginia, Maryland and Kentucky feeds. Put any API keys in environment variables and reference them with keyEnv, never in this file. Types: ibi511 (IBI/Castle Rock 511 developer API), geojson (any GeoJSON point layer), arcgis (ArcGIS layer URL, paged), static (your own cameras).",
   "feeds": [
     {
       "id": "va",
-      "name": "Virginia 511 (VDOT)",
+      "name": "511 Virginia (VDOT)",
       "region": "VA",
       "type": "geojson",
-      "enabled": false,
-      "url": "PASTE_THE_CAMERA_GEOJSON_URL_FROM_VDOT_SMARTERROADS",
-      "keyEnv": "VDOT_SMARTERROADS_TOKEN",
-      "keyParam": "token",
-      "fields": { "id": "id", "name": "description", "image": "image_url", "video": "rtmp_url", "road": "route" },
+      "url": "https://511.vdot.virginia.gov/services/511/map/layers/map/cams",
+      "fields": {
+        "id": "id",
+        "name": "description",
+        "image": "image_url",
+        "video": "https_url",
+        "road": "route",
+        "direction": "direction",
+        "active": "active"
+      },
       "refreshMinutes": 15
+    },
+    {
+      "id": "md",
+      "name": "Maryland CHART",
+      "region": "MD",
+      "type": "arcgis",
+      "url": "https://geodata.md.gov/imap/rest/services/Transportation/MD_TrafficCameras/MapServer/0",
+      "fields": {
+        "id": "feedID",
+        "name": "location",
+        "embed": "url"
+      },
+      "refreshMinutes": 60
+    },
+    {
+      "id": "ky",
+      "name": "Kentucky (KYTC)",
+      "region": "KY",
+      "type": "arcgis",
+      "url": "https://kygisserver.ky.gov/arcgis/rest/services/WGS84WM_Services/Ky_WebCams_WGS84WM/MapServer/0",
+      "fields": {
+        "id": "OBJECTID",
+        "name": "description",
+        "image": "snapshot",
+        "road": "highway",
+        "direction": "direction"
+      },
+      "refreshMinutes": 60
     },
     {
       "id": "ny",
@@ -29,7 +62,13 @@
       "type": "static",
       "enabled": false,
       "cameras": [
-        { "id": "porch", "name": "Porch sky cam", "lat": 37.54, "lon": -77.43, "image": "http://192.168.1.50/snapshot.jpg" }
+        {
+          "id": "porch",
+          "name": "Porch sky cam",
+          "lat": 37.54,
+          "lon": -77.43,
+          "image": "http://192.168.1.50/snapshot.jpg"
+        }
       ]
     }
   ]
