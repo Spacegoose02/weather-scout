@@ -17,6 +17,8 @@ export default function PushAlerts({ location, saved, onClose }) {
   const [status, setStatus] = useState(null);
   const [placeIdx, setPlaceIdx] = useState(0);
   const [levels, setLevels] = useState(['warning']);
+  const [briefing, setBriefing] = useState(false);
+  const [briefingTime, setBriefingTime] = useState('07:00');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -30,6 +32,8 @@ export default function PushAlerts({ location, saved, onClose }) {
       setStatus(s);
       if (s.subscribed) {
         setLevels(s.levels);
+        setBriefing(!!s.briefingTime);
+        if (s.briefingTime) setBriefingTime(s.briefingTime);
         const i = places.findIndex((p) => Math.abs(p.lat - s.place.lat) < 0.01 && Math.abs(p.lon - s.place.lon) < 0.01);
         if (i >= 0) setPlaceIdx(i);
       }
@@ -50,12 +54,19 @@ export default function PushAlerts({ location, saved, onClose }) {
     }
   };
 
-  const save = () => run(async () => setStatus(await enablePush({ place: places[placeIdx], levels })), 'Alerts are on for this device.');
+  const save = () => run(
+    async () => setStatus(await enablePush({ place: places[placeIdx], levels, briefingTime: briefing ? briefingTime : null })),
+    levels.length ? 'Alerts are on for this device.' : "Rocky's morning briefing is on for this device.",
+  );
   const off = () => run(async () => { await disablePush(); setStatus({ subscribed: false }); }, 'Alerts are off for this device.');
   const test = () => run(async () => {
     const sub = await currentSubscription();
     await api('/api/push/test', { method: 'POST', body: { endpoint: sub.endpoint } });
   }, 'Test sent. It should pop up in a few seconds.');
+  const testBriefing = () => run(async () => {
+    const sub = await currentSubscription();
+    await api('/api/push/briefing-test', { method: 'POST', body: { endpoint: sub.endpoint } });
+  }, "Rocky's briefing is on its way. It should pop up in a few seconds.");
 
   const toggle = (k) => setLevels((l) => (l.includes(k) ? l.filter((x) => x !== k) : [...l, k]));
 
@@ -66,7 +77,7 @@ export default function PushAlerts({ location, saved, onClose }) {
 
   return (
     <Modal title="Weather alerts on this device" onClose={onClose}>
-      <p className="hint">Get a notification on this phone or computer when the National Weather Service issues an alert, even when Weather Scout is closed. Each device picks its own place.</p>
+      <p className="hint">Get a notification on this phone or computer when the National Weather Service issues an alert, or a morning briefing from Rocky, even when Weather Scout is closed. Each device picks its own place.</p>
       {blocker ? (
         <p className="error-text" role="alert">{blocker}</p>
       ) : !status ? (
@@ -88,12 +99,26 @@ export default function PushAlerts({ location, saved, onClose }) {
               </label>
             ))}
           </fieldset>
+          <fieldset>
+            <legend>Every morning</legend>
+            <label className="check">
+              <input type="checkbox" checked={briefing} onChange={(e) => setBriefing(e.target.checked)} />
+              <span><strong>🦝 Rocky's morning briefing</strong> <span className="tile-note">Today's weather, what to wear and any alerts, at the time you pick. Tap it to hear Rocky read it aloud.</span></span>
+            </label>
+            {briefing && (
+              <label>
+                Time
+                <input type="time" value={briefingTime} onChange={(e) => setBriefingTime(e.target.value)} required />
+              </label>
+            )}
+          </fieldset>
           <div className="row-actions">
-            <button onClick={save} disabled={busy || !levels.length}>{status.subscribed ? 'Save' : '🔔 Turn on alerts'}</button>
+            <button onClick={save} disabled={busy || (!levels.length && !briefing) || (briefing && !briefingTime)}>{status.subscribed ? 'Save' : '🔔 Turn on'}</button>
             {status.subscribed && <button className="ghost" onClick={test} disabled={busy}>Send a test</button>}
+            {status.subscribed && status.briefingTime && <button className="ghost" onClick={testBriefing} disabled={busy}>Try the briefing</button>}
             {status.subscribed && <button className="link danger" onClick={off} disabled={busy}>Turn off</button>}
           </div>
-          {status.subscribed && <p className="hint">On for <strong>{status.place.name || 'your place'}</strong>{status.lastSentAt ? `, last alert sent ${new Date(`${status.lastSentAt}Z`).toLocaleString()}` : ''}.</p>}
+          {status.subscribed && <p className="hint">On for <strong>{status.place.name || 'your place'}</strong>{status.briefingTime ? `, briefing at ${status.briefingTime} local time` : ''}{status.lastSentAt ? `, last notification sent ${new Date(`${status.lastSentAt}Z`).toLocaleString()}` : ''}.</p>}
         </div>
       )}
       {msg && <p className="ok-text" role="status">{msg}</p>}

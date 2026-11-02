@@ -67,6 +67,11 @@ CREATE TABLE IF NOT EXISTS media_hidden (
 
 // Columns added after the first release. SQLite has no ADD COLUMN IF NOT EXISTS.
 const ADDED_COLUMNS = {
+  push_subscriptions: [
+    ['briefing_time', 'TEXT'], // "HH:MM" local time for Rocky's morning briefing, or NULL
+    ['briefing_sent', 'TEXT'], // local date (YYYY-MM-DD) of the last briefing sent
+    ['utc_offset', 'INTEGER'], // the place's UTC offset in seconds, from the last forecast
+  ],
   media_feeds: [
     ['scope', "TEXT NOT NULL DEFAULT 'national'"], // local | national
     ['kid_safe', 'INTEGER NOT NULL DEFAULT 1'], // shown in Kid Mode
