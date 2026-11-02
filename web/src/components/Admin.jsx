@@ -8,6 +8,8 @@ export default function Admin({ me, onClose }) {
   const [keys, setKeys] = useState([]);
   const [newKey, setNewKey] = useState(null);
   const [keyName, setKeyName] = useState('Den-Duty');
+  const [media, setMedia] = useState([]);
+  const [mediaForm, setMediaForm] = useState({ kind: 'youtube', url: '', title: '' });
   const [error, setError] = useState('');
   const [form, setForm] = useState({ username: '', displayName: '', password: '', ssoSubject: '', isAdmin: false });
 
@@ -15,6 +17,7 @@ export default function Admin({ me, onClose }) {
     try {
       setUsers((await api('/api/admin/users')).users);
       setKeys((await api('/api/admin/app-keys')).keys);
+      setMedia((await api('/api/admin/media')).feeds);
       setFeeds((await api('/api/admin/cameras')).feeds);
     } catch (e) {
       setError(e.message);
@@ -113,6 +116,36 @@ export default function Admin({ me, onClose }) {
       }}>
         <input placeholder="App name" value={keyName} onChange={(e) => setKeyName(e.target.value)} required maxLength={60} />
         <button type="submit">Make a key</button>
+      </form>
+
+      <h3>News & videos</h3>
+      <p className="hint">Weather news feeds (RSS or Atom, such as your NWS office or local TV station) and YouTube channels for the News & Videos tab. For YouTube, paste the channel link or its @handle.</p>
+      {media.length > 0 && (
+        <ul className="feeds">
+          {media.map((m) => (
+            <li key={m.id}>
+              {m.kind === 'youtube' ? '▶️' : '📰'} {m.title} <a href={m.url} target="_blank" rel="noopener noreferrer" className="hint">{m.kind === 'youtube' ? 'channel' : 'feed'}</a>{' '}
+              <button className="link danger" onClick={() => confirm(`Remove ${m.title}?`) && act(() => api(`/api/admin/media/${m.id}`, { method: 'DELETE' }))}>remove</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form className="form inline" onSubmit={(e) => {
+        e.preventDefault();
+        const body = { kind: mediaForm.kind, url: mediaForm.url };
+        if (mediaForm.title) body.title = mediaForm.title;
+        act(async () => {
+          await api('/api/admin/media', { method: 'POST', body });
+          setMediaForm({ ...mediaForm, url: '', title: '' });
+        });
+      }}>
+        <select value={mediaForm.kind} onChange={(e) => setMediaForm({ ...mediaForm, kind: e.target.value })} aria-label="Type">
+          <option value="youtube">YouTube channel</option>
+          <option value="rss">News feed (RSS)</option>
+        </select>
+        <input placeholder={mediaForm.kind === 'youtube' ? 'youtube.com/@channel' : 'https://…/rss'} value={mediaForm.url} onChange={(e) => setMediaForm({ ...mediaForm, url: e.target.value })} required />
+        <input placeholder="Name (optional)" value={mediaForm.title} onChange={(e) => setMediaForm({ ...mediaForm, title: e.target.value })} maxLength={80} />
+        <button type="submit">Add</button>
       </form>
 
       <h3>Camera feeds</h3>

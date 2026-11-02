@@ -61,13 +61,13 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Ocean data | NOAA NDBC buoys and tides |
 | Live lightning | Strike markers with age rings and distance from you (source TBD: Blitzortung community feed or a paid API) |
 | Radar precipitation type and storm cell tracks | Rain/snow/mix layer; NWS storm-track overlays |
-| Local and national weather news, RSS feeds | Admin-managed RSS list (NWS office, local TV) |
-| YouTube weather gurus | Admin-curated channel list (Ryan Hall Y'all, Max Velocity, Reed Timmer, …) |
-| Admin can edit news and YouTube lists | Admin page |
-| Health: barometric pressure warnings | Alerts on fast pressure swings for migraine/joint sensitivity |
+| Local and national weather news, RSS feeds | ✅ News & Videos tab, admin-managed RSS/Atom list (NWS office, local TV) |
+| YouTube weather gurus | ✅ Admin-curated channels (paste a link or @handle), latest videos play in the app |
+| Admin can edit news and YouTube lists | ✅ Family & settings |
+| Health: barometric pressure warnings | ✅ Health & sky card flags 4+ hPa (watch) and 6+ hPa (big swing) changes within 6 hours. Push alerts come with notifications |
 | Health: pollen & particulates | Pollen needs a US source (Open-Meteo pollen is Europe-only); candidates: Google Pollen API, Tomorrow.io |
-| Health: wet-bulb globe temperature | Compute WBGT from temp, humidity, wind and sun |
-| Golden hour: planets and Moon | 🚧 Moon phase, % lit and days to the next full Moon in Sky watch (`server/src/sky.js`) (also in `/api/connect/summary`). Next: moonrise/moonset and bright planets |
+| Health: wet-bulb globe temperature | ✅ Shade WBGT now and 24-hour peak, with heat-stress flag advice. Full-sun WBGT needs solar radiation, later |
+| Golden hour: planets and Moon | 🚧 Moon phase, % lit and next full/new Moon on the Today card's Health & sky tile and in the Kid Zone's Sky watch (`server/src/sky.js`, also in `/api/connect/summary`). Next: moonrise/moonset and bright planets |
 | Custom dashboards (pin, hide, rearrange widgets) | Drag-and-drop layout saved per user |
 | Android APK | Wrap the PWA with a Trusted Web Activity (Bubblewrap) once push works |
 | Windows 11 widget | PWA widgets (Windows supports them for installed PWAs) |
