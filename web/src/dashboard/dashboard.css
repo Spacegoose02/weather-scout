@@ -1,11 +1,14 @@
 /* Custom dashboard: a 6-column grid. s = 2 columns, m = 3, l = all 6.
-   Tablets get 2 columns (s and m are half, l is full) and phones get 1. */
+   Tablets get 2 columns (s and m are half, l is full) and phones get 1.
+   Rows are 1px tall and each card spans as many as its height needs
+   (set by usePackedGrid), so a short card never leaves a hole beside a tall one. */
 .dash-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; margin-bottom: 10px; min-height: 38px; }
 .dash-bar > .hint { font-size: 0.9rem; }
 .dash-save { min-width: 5em; font-size: 0.85rem; }
 .dash-help { margin: 0 0 10px; font-size: 0.88rem; }
 
 .dash-grid { display: grid; gap: 14px; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: start; }
+.dash-grid.packed { row-gap: 0; grid-auto-rows: 1px; }
 .dash-item { grid-column: span 3; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .dash-item.size-s { grid-column: span 2; }
 .dash-item.size-l { grid-column: 1 / -1; }

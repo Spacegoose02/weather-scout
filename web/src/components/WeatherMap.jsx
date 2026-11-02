@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { api } from '../api.js';
 import WindyView from './WindyView.jsx';
+import { baseMap } from './basemap.js';
 
 window.L = L; // leaflet.markercluster is a classic plugin that extends the global L
 
@@ -16,10 +17,6 @@ const stormIcon = (s) => L.divIcon({
   iconSize: [36, 36], iconAnchor: [18, 18],
 });
 
-export const BASEMAPS = {
-  light: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }],
-  dark: ['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18, subdomains: 'abcd', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' }],
-};
 const LEGENDS = {
   dbz: { label: 'Rain & snow', stops: ['#04e9e7', '#019ff4', '#0300f4', '#02fd02', '#01c501', '#008e00', '#fdf802', '#e5bc00', '#fd9500', '#fd0000', '#d40000', '#bc0000', '#f800fd', '#9854c6'], ends: ['light', 'heavy', 'hail'] },
   eet: { label: 'Storm tops', stops: ['#5ebaff', '#00d1c1', '#26d000', '#f4f400', '#ff9900', '#ff0000', '#c0007f'], ends: ['10k ft', '30k', '50k+ ft'] },
@@ -71,7 +68,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
   useEffect(() => {
     const m = L.map(el.current, { zoomControl: true, attributionControl: true }).setView([center.lat, center.lon], 8);
     map.current = m;
-    base.current = L.tileLayer(...BASEMAPS.light).addTo(m);
+    base.current = baseMap('light').addTo(m);
     L.circleMarker([center.lat, center.lon], { radius: 7, color: '#fff', weight: 3, fillColor: '#2f6fde', fillOpacity: 1 }).addTo(m).bindTooltip('You are here');
 
     let cancelled = false;
@@ -254,7 +251,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
     const m = map.current;
     if (!m || !base.current) return;
     base.current.remove();
-    base.current = L.tileLayer(...BASEMAPS[dark ? 'dark' : 'light']).addTo(m);
+    base.current = baseMap(dark ? 'dark' : 'light').addTo(m);
     base.current.bringToBack();
   }, [dark]);
 
