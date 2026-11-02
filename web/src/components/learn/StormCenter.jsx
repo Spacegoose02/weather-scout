@@ -93,7 +93,7 @@ export default function StormCenter({ audience, weather, location, onBack, initi
         <ul className="facts">{hazard.facts.map((f) => <li key={f}>💡 {f}</li>)}</ul>
       </section>
 
-      <Quiz questions={hazard.quiz} />
+      <Quiz key={hazard.id} questions={hazard.quiz} quizId={`storm-${hazard.id}`} />
 
       <p className="topic-links">
         Learn more: {hazard.links.map((l, i) => (

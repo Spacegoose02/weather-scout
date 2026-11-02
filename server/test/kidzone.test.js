@@ -156,3 +156,23 @@ test('field trip with no cameras configured is empty, not an error', async () =>
   assert.equal(res.json().missions.length, 0);
   await app.close();
 });
+
+test('badge merge only ever adds, and a stale Kid Zone save cannot erase it', async () => {
+  const { app, cookie } = await signedIn();
+  const m1 = await app.inject({ method: 'POST', url: '/api/me/kid/merge', headers: { cookie }, payload: { progress: { journalBest: 3, clouds: { cumulus: '2026-11-02' } } } });
+  assert.equal(m1.statusCode, 200, m1.body);
+  const m2 = (await app.inject({ method: 'POST', url: '/api/me/kid/merge', headers: { cookie }, payload: { progress: { journalBest: 1, clouds: { cirrus: '2026-11-02' } }, badges: { 'streak-3': '2026-11-02', 'Bad Id!': 'x' } } })).json();
+  assert.deepEqual(m2.fresh, ['streak-3']);
+  assert.equal(m2.data.progress.journalBest, 3);
+  assert.deepEqual(Object.keys(m2.data.progress.clouds), ['cumulus', 'cirrus']);
+  const again = (await app.inject({ method: 'POST', url: '/api/me/kid/merge', headers: { cookie }, payload: { badges: { 'streak-3': '2026-11-05' } } })).json();
+  assert.deepEqual(again.fresh, []);
+  assert.equal(again.data.badges['streak-3'], '2026-11-02');
+  // An older copy of the kid data saved from the Kid Zone keeps the new badge.
+  await app.inject({ method: 'PUT', url: '/api/me/kid', headers: { cookie }, payload: { badges: { bingo: '2026-11-02' }, guesses: [] } });
+  const data = (await app.inject({ url: '/api/me/kid', headers: { cookie } })).json().data;
+  assert.deepEqual(Object.keys(data.badges).sort(), ['bingo', 'streak-3']);
+  assert.equal(data.progress.clouds.cirrus, '2026-11-02');
+  assert.equal((await app.inject({ method: 'POST', url: '/api/me/kid/merge', payload: {} })).statusCode, 401);
+  await app.close();
+});

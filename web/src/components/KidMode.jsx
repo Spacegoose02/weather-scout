@@ -3,6 +3,7 @@ import Raccoon from './Raccoon.jsx';
 import RockyFace from './RockyFace.jsx';
 import { icon, round, duration, clockLabel } from '../format.js';
 import { useKidData } from '../kid/useKidData.js';
+import { SHELF_EVENT, takeShelfRequest } from '../kid/badges.js';
 import DailyFact from './kid/DailyFact.jsx';
 import StormSafe from './kid/StormSafe.jsx';
 import Bingo from './kid/Bingo.jsx';
@@ -12,7 +13,7 @@ import FieldTrips from './kid/FieldTrips.jsx';
 import Experiments from './kid/Experiments.jsx';
 import Seasons from './kid/Seasons.jsx';
 import TimeMachine from './kid/TimeMachine.jsx';
-import Badges, { BadgeToast } from './kid/Badges.jsx';
+import Badges from './kid/Badges.jsx';
 import SpeakButton from './kid/SpeakButton.jsx';
 import Briefing from './kid/Briefing.jsx';
 import VoicePicker from './VoicePicker.jsx';
@@ -58,7 +59,15 @@ const KID_TABS = [
 export default function KidMode({ weather, user, location, voice, onAlerts }) {
   const today = weather.kid.date;
   const kidData = useKidData(user, today);
-  const [tab, setTab] = useState('today');
+  const [tab, setTab] = useState(() => (takeShelfRequest() ? 'badges' : 'today'));
+  useEffect(() => {
+    const open = () => {
+      takeShelfRequest();
+      setTab('badges');
+    };
+    window.addEventListener(SHELF_EVENT, open);
+    return () => window.removeEventListener(SHELF_EVENT, open);
+  }, []);
   const [drill, setDrill] = useState(false);
   const storm = weather.kid.stormSafe;
   const badgeCount = Object.keys(kidData.data.badges || {}).length;
@@ -111,7 +120,6 @@ export default function KidMode({ weather, user, location, voice, onAlerts }) {
       )}
       {tab === 'badges' && <div className="kid-grid"><Badges kid={kidData} /></div>}
 
-      <BadgeToast ids={kidData.toast} />
     </div>
   );
 }

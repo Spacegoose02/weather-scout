@@ -34,6 +34,18 @@ export function streak(entries, today) {
   return n;
 }
 
+// Longest run of days in a row anywhere in the journal (for streak badges).
+export function bestStreak(entries) {
+  const days = [...new Set(entries.map((e) => dayNum(e.day)))].sort((a, b) => a - b);
+  let best = 0;
+  let run = 0;
+  days.forEach((d, i) => {
+    run = i > 0 && d === days[i - 1] + 1 ? run + 1 : 1;
+    best = Math.max(best, run);
+  });
+  return best;
+}
+
 // "You measured 3° warmer than the forecast."
 export function compareForecast(entry, unit = '°') {
   const f = entry?.forecast;
