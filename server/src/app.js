@@ -19,6 +19,7 @@ import { healthReport } from './health.js';
 import { moonPhase } from './sky.js';
 import { MediaService } from './media.js';
 import { PushService, LEVELS } from './push.js';
+import { AiService, registerAi } from './ai.js';
 
 const MIN = 60_000;
 
@@ -32,6 +33,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const appKeys = new AppKeys(db);
   const media = new MediaService(db, cache, fetchImpl);
   const push = cfg.push.enabled ? new PushService(db, cfg, { send: pushSend, log: app.log }) : null;
+  const ai = new AiService(cfg, { fetchImpl, log: app.log });
   await auth.bootstrapAdmin();
 
   await app.register(fastifyCookie, { secret: loadOrCreateSecret(cfg) });
@@ -115,6 +117,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       needsSetup: auth.userCount() === 0 && !cfg.auth.trustProxyHeaders,
     },
     user: publicUser(req.user),
+    ai: ai.status(),
   }));
 
   // ---- weather --------------------------------------------------------------
@@ -155,6 +158,9 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
 
   // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----
   registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });
+
+  // ---- AI weather expert, cloud photos, web search ---------------------------
+  registerAi(app, { ai, forecast, alerts, air, settle, loc });
 
   // ---- severe weather push notifications ------------------------------------
   const subSchema = { type: 'object', required: ['endpoint'], properties: { endpoint: { type: 'string', maxLength: 2000 } } };

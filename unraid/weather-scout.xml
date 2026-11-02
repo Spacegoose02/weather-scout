@@ -29,4 +29,8 @@
   <Config Name="Road cameras" Target="CAMERAS_DEFAULT_FEEDS" Default="true" Description="Built-in camera feeds: true (VA, SC, MD, KY, plus NC with its key), false, or a list like va,md,nc" Type="Variable" Display="always" Required="false" Mask="false">true</Config>
   <Config Name="DriveNC API key" Target="NC_DRIVENC_API_KEY" Default="" Description="Free key from drivenc.gov to show North Carolina cameras" Type="Variable" Display="always" Required="false" Mask="true"></Config>
   <Config Name="511NY API key" Target="NY511_API_KEY" Default="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Anthropic API key" Target="ANTHROPIC_API_KEY" Default="" Description="Optional. Turns on Ask an Expert / Ask Rocky, the cloud photo identifier and AI web search. Key from console.anthropic.com" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="AI model" Target="AI_MODEL" Default="claude-opus-5-5" Description="Claude model id, e.g. claude-sonnet-5-5 or claude-haiku-5-5 for lower cost" Type="Variable" Display="advanced" Required="false" Mask="false">claude-opus-5-5</Config>
+  <Config Name="AI web search" Target="AI_WEB_SEARCH" Default="true" Description="Allow web search in the AI helper (kid-safe science sites only in Kid Mode)" Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="AI daily limit" Target="AI_DAILY_LIMIT" Default="40" Description="AI questions and photos per person per day (0 = no limit)" Type="Variable" Display="advanced" Required="false" Mask="false">40</Config>
 </Container>
