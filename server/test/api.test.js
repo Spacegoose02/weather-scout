@@ -146,3 +146,113 @@ test('cannot remove the last admin', async () => {
   assert.equal(res.statusCode, 400);
   await app.close();
 });
+
+test('app keys: admin makes one, Den-Duty reads the summary with it, revoke stops it', async () => {
+  const { app } = await testApp({ env: { ADMIN_USERNAME: 'admin', ADMIN_PASSWORD: 'password123', AUTH_REQUIRED: 'true' } });
+  const login = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { username: 'admin', password: 'password123' } });
+  const headers = { cookie: cookieFrom(login) };
+  const made = (await app.inject({ method: 'POST', url: '/api/admin/app-keys', headers, payload: { name: 'Den-Duty' } })).json();
+  assert.match(made.key, /^wsk_/);
+  const listed = (await app.inject({ url: '/api/admin/app-keys', headers })).json().keys;
+  assert.equal(listed[0].name, 'Den-Duty');
+  assert.ok(!JSON.stringify(listed).includes(made.key));
+
+  assert.equal((await app.inject('/api/connect/summary')).statusCode, 401);
+  assert.equal((await app.inject({ url: '/api/connect/summary', headers: { authorization: 'Bearer wsk_wrongwrongwrongwrongwrong' } })).statusCode, 401);
+  const res = await app.inject({ url: '/api/connect/summary', headers: { authorization: `Bearer ${made.key}` } });
+  assert.equal(res.statusCode, 200);
+  const body = res.json();
+  assert.equal(body.location.name, 'Richmond, VA');
+  assert.equal(body.playground.rating, 'red');
+  assert.equal(body.alerts[0].event, 'Tornado Warning');
+  assert.ok(Array.isArray(body.checklist));
+  assert.ok(!('description' in body.alerts[0]));
+  assert.ok((await app.inject({ url: '/api/admin/app-keys', headers })).json().keys[0].lastUsedAt);
+
+  await app.inject({ method: 'DELETE', url: `/api/admin/app-keys/${made.id}`, headers });
+  assert.equal((await app.inject({ url: '/api/connect/summary', headers: { authorization: `Bearer ${made.key}` } })).statusCode, 401);
+  await app.close();
+});
+
+test('app keys are admin only', async () => {
+  const { app } = await testApp();
+  assert.equal((await app.inject({ method: 'POST', url: '/api/admin/app-keys', payload: { name: 'x' } })).statusCode, 401);
+  await app.close();
+});
+
+test('Virginia cameras are on by default with no config, and can be turned off', async () => {
+  const va = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [-77.44, 37.55] }, properties: { id: '7', description: 'I-64 at Broad St', active: true, image_url: 'http://cams.example/7.jpg' } }] };
+  const fetchImpl = mockFetch({ '511.vdot.virginia.gov': () => new Response(JSON.stringify(va), { headers: { 'content-type': 'application/json' } }) });
+  const { app } = await testApp({ fetchImpl, env: { CAMERAS_DEFAULT_FEEDS: 'va' } });
+  const body = (await app.inject('/api/cameras?south=37&west=-78&north=38&east=-77')).json();
+  assert.equal(body.cameras[0].id, 'va:7');
+  assert.equal(body.feeds[0].name, '511 Virginia (VDOT)');
+  await app.close();
+
+  const off = await testApp({ fetchImpl, env: { CAMERAS_DEFAULT_FEEDS: 'false' } });
+  assert.equal((await off.app.inject('/api/cameras?south=37&west=-78&north=38&east=-77')).json().feeds.length, 0);
+  await off.app.close();
+});
+
+test('Maryland and Kentucky ArcGIS feeds page through results; MD cams are live players', async () => {
+  const page = (n, offset, more) => ({
+    type: 'FeatureCollection', exceededTransferLimit: more,
+    features: Array.from({ length: n }, (_, i) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [-76.6, 39.2] },
+      properties: { feedID: `f${offset + i}`, location: `MD cam ${offset + i}`, url: `https://chart.maryland.gov/video/video.php?feed=f${offset + i}` } })),
+  });
+  const ky = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [-85.74, 38.26] }, properties: { OBJECTID: 2, description: 'I-65 at Spaghetti Junction', snapshot: 'http://www.trimarc.org/images/x.jpg' } }] };
+  const fetchImpl = mockFetch({
+    'geodata.md.gov': (u) => {
+      const offset = Number(new URL(u).searchParams.get('resultOffset'));
+      return Response.json(offset === 0 ? page(500, 0, true) : page(3, 500, false));
+    },
+    'kygisserver.ky.gov': () => Response.json(ky),
+  });
+  const { app } = await testApp({ fetchImpl, env: { CAMERAS_DEFAULT_FEEDS: 'md,ky' } });
+  const md = (await app.inject('/api/cameras?south=39&west=-77&north=39.5&east=-76')).json();
+  assert.equal(md.total, 503);
+  assert.equal(md.cameras[0].imageUrl, null);
+  assert.match(md.cameras[0].embed, /^https:\/\/chart\.maryland\.gov\/video/);
+  assert.equal((await app.inject(`/api/cameras/image/${encodeURIComponent(md.cameras[0].id)}`)).statusCode, 404);
+  const kyRes = (await app.inject('/api/cameras?south=38&west=-86&north=38.5&east=-85')).json();
+  assert.equal(kyRes.cameras[0].name, 'I-65 at Spaghetti Junction');
+  assert.equal(kyRes.cameras[0].imageUrl, '/api/cameras/image/ky%3A2');
+  const mdCalls = fetchImpl.calls.filter((c) => c.url.includes('geodata.md.gov'));
+  assert.equal(mdCalls.length, 2);
+  assert.match(mdCalls[0].url, /f=geojson/);
+  await app.close();
+});
+
+test('CAMERAS_DEFAULT_FEEDS picks states', async () => {
+  const { defaultFeeds } = await import('../src/providers/cameras/index.js');
+  assert.deepEqual(defaultFeeds('').map((f) => f.id), ['va', 'sc', 'md', 'ky']);
+  assert.deepEqual(defaultFeeds('', { NC_DRIVENC_API_KEY: 'k' }).map((f) => f.id), ['va', 'sc', 'md', 'ky', 'nc']);
+  assert.deepEqual(defaultFeeds('nc').map((f) => f.id), []);
+  assert.deepEqual(defaultFeeds('va, ky').map((f) => f.id), ['va', 'ky']);
+  assert.equal(defaultFeeds('false').length, 0);
+});
+
+test('DriveNC cameras load with a key using the 511 v2 API', async () => {
+  const nc = [{ Id: 55, Roadway: 'I-40', Direction: 'East', Latitude: 35.78, Longitude: -78.64, Location: 'I-40 at Wade Ave', Views: [{ Id: 1, Url: 'https://www.drivenc.gov/map/Cctv/55', Status: 'Enabled', VideoUrl: null }] }];
+  const fetchImpl = mockFetch({ 'drivenc.gov/api/v2/get/cameras': () => Response.json(nc) });
+  const { app } = await testApp({ fetchImpl, env: { CAMERAS_DEFAULT_FEEDS: 'nc', NC_DRIVENC_API_KEY: 'nckey' } });
+  const body = (await app.inject('/api/cameras?south=35&west=-79&north=36&east=-78')).json();
+  assert.deepEqual([body.cameras[0].id, body.cameras[0].name, body.cameras[0].road], ['nc:55', 'I-40 at Wade Ave', 'I-40']);
+  assert.ok(fetchImpl.calls.some((c) => c.url.includes('key=nckey')));
+  assert.ok(!JSON.stringify(body).includes('nckey'));
+  await app.close();
+});
+
+test('South Carolina cameras skip offline and problem streams', async () => {
+  const cam = (name, active, problem) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [-79.062775, 33.845627] },
+    properties: { name, description: `US 501 N @ ${name}`, route: 'US 501', direction: 'NB', active, problem_stream: problem,
+      image_url: `https://scdotsnap.us-east-1.skyvdn.com/thumbs/${name}.flv.png`, https_url: `https://s18.us-east-1.skyvdn.com/rtplive/${name}/playlist.m3u8` } });
+  const sc = { type: 'FeatureCollection', features: [cam('50001', true, false), cam('50002', false, false), cam('50003', true, true)] };
+  const fetchImpl = mockFetch({ 'sc.cdn.iteris-atis.com': () => Response.json(sc) });
+  const { app } = await testApp({ fetchImpl, env: { CAMERAS_DEFAULT_FEEDS: 'sc' } });
+  const body = (await app.inject('/api/cameras?south=33&west=-80&north=34&east=-79')).json();
+  assert.deepEqual(body.cameras.map((c) => c.id), ['sc:50001']);
+  assert.equal(body.cameras[0].direction, 'NB');
+  assert.match(body.cameras[0].video, /playlist\.m3u8$/);
+  await app.close();
+});

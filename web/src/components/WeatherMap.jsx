@@ -49,20 +49,34 @@ export default function WeatherMap({ center, alerts }) {
     });
 
     let camTimer;
+    const markers = new Map();
     const loadCams = () => {
       clearTimeout(camTimer);
       camTimer = setTimeout(async () => {
         if (!camLayer.current) return;
         if (m.getZoom() < CAMERA_MIN_ZOOM) {
           camLayer.current.clearLayers();
+          markers.clear();
           setCamInfo('Zoom in to see road cameras.');
           return;
         }
         const b = m.getBounds();
         try {
           const r = await api(`/api/cameras?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}`);
-          camLayer.current.clearLayers();
-          r.cameras.forEach((c) => camLayer.current.addLayer(L.marker([c.lat, c.lon], { icon: camIcon, title: c.name }).bindPopup(() => cameraPopup(c), { maxWidth: 360, minWidth: 260 })));
+          // Update markers in place so an open popup survives the map panning to fit it.
+          const keep = new Set(r.cameras.map((c) => c.id));
+          for (const [id, marker] of markers) {
+            if (!keep.has(id) && !marker.isPopupOpen()) {
+              camLayer.current.removeLayer(marker);
+              markers.delete(id);
+            }
+          }
+          const added = r.cameras.filter((c) => !markers.has(c.id)).map((c) => {
+            const marker = L.marker([c.lat, c.lon], { icon: camIcon, title: c.name }).bindPopup(() => cameraPopup(c), { maxWidth: 380, minWidth: 280 });
+            markers.set(c.id, marker);
+            return marker;
+          });
+          camLayer.current.addLayers(added);
           if (!r.feeds.length) setCamInfo('No camera feeds are set up yet. An admin can add state 511 feeds in cameras.json.');
           else if (!r.total) setCamInfo('No cameras in this view.');
           else setCamInfo(`${r.total} camera${r.total === 1 ? '' : 's'} in view${r.truncated ? ' (zoom in for all)' : ''}.`);
@@ -145,19 +159,70 @@ function cameraPopup(c) {
   const meta = document.createElement('div');
   meta.className = 'cam-meta';
   meta.textContent = [c.road, c.direction, c.feedName].filter(Boolean).join(' · ');
-  const img = document.createElement('img');
-  img.alt = `Camera view: ${c.name}`;
-  img.loading = 'lazy';
-  const refresh = () => { img.src = `${c.imageUrl}?t=${Date.now()}`; };
-  img.onerror = () => { img.replaceWith(Object.assign(document.createElement('p'), { textContent: 'This camera is not sending pictures right now.' })); };
-  refresh();
-  const btn = document.createElement('button');
-  btn.textContent = '🔄 Refresh';
-  btn.onclick = refresh;
-  div.append(title, meta, img, btn);
-  if (c.video && /^https:/.test(c.video)) {
-    const a = Object.assign(document.createElement('a'), { href: c.video, target: '_blank', rel: 'noopener noreferrer', textContent: '▶️ Live video' });
-    div.append(' ', a);
+  const stage = document.createElement('div');
+  stage.className = 'cam-stage';
+  const actions = document.createElement('div');
+  actions.className = 'cam-actions';
+  div.append(title, meta, stage, actions);
+
+  const button = (label, onClick) => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.onclick = onClick;
+    actions.append(b);
+    return b;
+  };
+  const showMessage = (text) => stage.replaceChildren(Object.assign(document.createElement('p'), { textContent: text }));
+
+  if (c.imageUrl) {
+    const img = document.createElement('img');
+    img.alt = `Camera view: ${c.name}`;
+    const refresh = () => {
+      stage.replaceChildren(img);
+      img.src = `${c.imageUrl}?t=${Date.now()}`;
+    };
+    img.onerror = () => showMessage('This camera is not sending pictures right now.');
+    refresh();
+    button('🔄 Refresh', refresh);
+  }
+
+  if (c.video) button('▶ Live video', () => playHls(c, stage, showMessage));
+  else if (c.embed) {
+    // No still picture (Maryland): start the live player right inside the popup.
+    const startLive = () => {
+      const frame = Object.assign(document.createElement('iframe'), { src: c.embed, title: `Live camera: ${c.name}`, allowFullscreen: true });
+      frame.setAttribute('referrerpolicy', 'no-referrer');
+      frame.setAttribute('allow', 'autoplay; fullscreen');
+      stage.replaceChildren(frame);
+    };
+    if (!c.imageUrl) startLive();
+    button(c.imageUrl ? '▶ Watch live' : '🔄 Reload', startLive);
+    actions.append(Object.assign(document.createElement('a'), { href: c.embed, target: '_blank', rel: 'noopener noreferrer', textContent: 'Open in new tab' }));
   }
   return div;
+}
+
+async function playHls(c, stage, showMessage) {
+  const video = Object.assign(document.createElement('video'), { muted: true, autoplay: true, controls: true, playsInline: true });
+  stage.replaceChildren(video);
+  const fail = () => showMessage('Live video is not available for this camera right now.');
+  video.onerror = fail;
+  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = c.video; // Safari / iOS play HLS natively
+    return;
+  }
+  const { default: Hls } = await import('hls.js');
+  if (!Hls.isSupported()) return fail();
+  const hls = new Hls({ maxBufferLength: 10 });
+  hls.on(Hls.Events.ERROR, (_, data) => data.fatal && (hls.destroy(), fail()));
+  hls.loadSource(c.video);
+  hls.attachMedia(video);
+  // Stop streaming when the popup closes and the element leaves the page.
+  const watch = new MutationObserver(() => {
+    if (!video.isConnected) {
+      hls.destroy();
+      watch.disconnect();
+    }
+  });
+  watch.observe(document.body, { childList: true, subtree: true });
 }

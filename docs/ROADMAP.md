@@ -23,7 +23,7 @@ Every card from the planning board, grouped into phases. Phase 1 is this first r
 | Pull alerts from NWS by local area | ✅ |
 | Air Quality Index & UV | ✅ US AQI, PM2.5, PM10, ozone, UV |
 | Wind data, temperature tracking | ✅ Current + hourly + daily |
-| Pull up Virginia VDOT 511 cam feeds by map / state cameras / cameras on the map where they belong | ✅ Feed framework + map; needs your SmarterRoads token and dataset URL to switch on |
+| Pull up Virginia VDOT 511 cam feeds by map / state cameras / cameras on the map where they belong | ✅ Virginia, South Carolina, Maryland and Kentucky built in (public feeds, no keys), North Carolina with a free DriveNC key; other states plug in via cameras.json. WV, TN and DC: no documented public feed found yet |
 | Kid Mode: gear checklist | ✅ |
 | Kid Mode: playground / recess rating | ✅ |
 | Kid Mode: golden hour / stargazing timers | ✅ Sunset countdown + tonight's cloud cover. Planet/Moon visibility in Phase 2 |
@@ -91,4 +91,4 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Integrate with local weather stations | Ambient Weather / Ecowitt / Tempest APIs, or a local MQTT feed |
 | Webhooks & smart home (Home Assistant, MQTT) | Outbound webhooks and MQTT publish on thresholds (frost, high wind) |
 | Windy for maps | Windy Map Forecast API layer (needs a Windy key) |
-| Integrate with Den-Duty | Need details on what Den-Duty is and what it should exchange |
+| Integrate with Den-Duty | 🚧 Step 1: weather card on Den-Duty kid boards and the family wall (Weather Scout app keys + `/api/connect/summary`). Next: weather steps in the morning routine, severe alerts through Den-Duty push |
