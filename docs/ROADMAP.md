@@ -26,11 +26,26 @@ Every card from the planning board, grouped into phases. Phase 1 is this first r
 | Pull up Virginia VDOT 511 cam feeds by map / state cameras / cameras on the map where they belong | ✅ Virginia, South Carolina, Maryland and Kentucky built in (public feeds, no keys), North Carolina with a free DriveNC key; other states plug in via cameras.json. WV, TN and DC: no documented public feed found yet |
 | Kid Mode: gear checklist | ✅ |
 | Kid Mode: playground / recess rating | ✅ |
-| Kid Mode: golden hour / stargazing timers | ✅ Sunset countdown + tonight's cloud cover. Planet/Moon visibility in Phase 2 |
-| Interactive raccoon avatar that dresses for the weather | ✅ Rule-based outfits. AI personality in Phase 3 |
+| Kid Mode: golden hour / stargazing timers | ✅ Sunset countdown + tonight's cloud cover, plus Moon phase (Phase 2). Planets in Phase 2 |
+| Interactive raccoon avatar that dresses for the weather | ✅ Rocky (new brand art, also the app icon) with rule-based outfits drawn on top. AI personality in Phase 3 |
 | "Why is this happening?" micro-lessons | ✅ Rule-based cards for fog, thunder, rain, snow, pressure, humidity, wind, UV, wind chill, alerts |
 | Dew point | ✅ With comfort words |
 | Barometric pressure tracking | ✅ 3-hour trend. Migraine alerts in Phase 2 |
+
+## Kid Zone games and learning
+
+Eight kid features added after the MVP. They live in the Kid Zone under Today, Play, Explore and Badges. Signed-in kids keep their progress on the server; guests keep it in the browser.
+
+| Feature | Status |
+| --- | --- |
+| Weather bingo: a daily card of things to spot (puddle, contrail, windy flag…) | ✅ New 3x3 card every day, picked to match the weather (puddles on rainy days, frost on cold ones). Badges for a line and for a full card |
+| Kid forecaster: guess tomorrow's high and rain, earn points when the real weather comes in | ✅ Scored against Open-Meteo's measured weather for that day: up to 3 points for the high, 2 for rain |
+| Rocky's daily fact: one fact or joke each morning, with read-aloud | ✅ 50 facts and jokes, read aloud with the browser's voice. Read-aloud also on Rocky's bubble, storm steps and experiments |
+| Backyard experiments tied to badges (rain gauge, pinecone hygrometer, paper wind vane…) | ✅ Six experiments, each with its own badge, "Good today!" tips from the forecast and live readings to compare |
+| Camera field trips: guided tours of the road cameras | ✅ Seven missions (raining now, snowiest, foggy, sunny, coldest, warmest, windiest) using live weather at up to 30 nearby cameras, with a passport to stamp. Needs camera feeds switched on |
+| Storm-safe mode: calm steps during a warning, "where to go" checklist, no scary wording | ✅ Turns on for warnings and thunder. Tap-off steps, family safe spot, breathing helper, practice drill on calm days |
+| What to wear: dress Rocky, then he says if it fits the forecast | ✅ Stars and tips from the same outfit rules Rocky uses |
+| Seasons tracker: photos of the same tree or yard through the year | ✅ Named spots, side-by-side compare, season chips and a Four Seasons badge. Needs sign-in so photos are saved |
 
 ## Phase 2: Learning, notifications, richer maps
 
@@ -38,7 +53,7 @@ Every card from the planning board, grouped into phases. Phase 1 is this first r
 | --- | --- |
 | Severe weather push notifications (watches, warnings, lightning, high wind) | Web Push from the server; background poll of NWS per saved place |
 | Daily observation journal | Per-kid entries (icons, high/low, rain gauge), stored per user |
-| Badges & achievements | First frost, thunderstorm spotted, double rainbow, journal streaks |
+| Badges & achievements | 🚧 19 Kid Zone badges are in (bingo, forecaster, experiments, field trips, storm drill, seasons). Still to come: first frost, thunderstorm spotted, double rainbow, journal streaks |
 | Learning section for kids and adults | Lesson library; same lessons at two reading levels |
 | Storm center: tornadoes, wildfires, hurricanes | Explainers + live data where it exists |
 | Learn about clouds, droughts, El Niño, ocean | Lessons; US Drought Monitor and NOAA ENSO status feeds |
@@ -52,7 +67,7 @@ Every card from the planning board, grouped into phases. Phase 1 is this first r
 | Health: barometric pressure warnings | Alerts on fast pressure swings for migraine/joint sensitivity |
 | Health: pollen & particulates | Pollen needs a US source (Open-Meteo pollen is Europe-only); candidates: Google Pollen API, Tomorrow.io |
 | Health: wet-bulb globe temperature | Compute WBGT from temp, humidity, wind and sun |
-| Golden hour: planets and Moon | Moon phase/rise and bright planets from an astronomy library |
+| Golden hour: planets and Moon | 🚧 Moon phase, % lit and days to the next full Moon in Sky watch (`server/src/sky.js`) (also in `/api/connect/summary`). Next: moonrise/moonset and bright planets |
 | Custom dashboards (pin, hide, rearrange widgets) | Drag-and-drop layout saved per user |
 | Android APK | Wrap the PWA with a Trusted Web Activity (Bubblewrap) once push works |
 | Windows 11 widget | PWA widgets (Windows supports them for installed PWAs) |

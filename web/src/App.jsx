@@ -11,11 +11,12 @@ import WeatherMap from './components/WeatherMap.jsx';
 import KidMode from './components/KidMode.jsx';
 import SignIn from './components/SignIn.jsx';
 import Admin from './components/Admin.jsx';
+import RockyFace from './components/RockyFace.jsx';
 
 const TABS = [
   ['today', 'Today', '🌤️'],
   ['map', 'Radar & Cams', '🗺️'],
-  ['kids', 'Kid Zone', '🦝'],
+  ['kids', 'Kid Zone', <RockyFace key="rocky" />],
 ];
 
 export default function App() {
@@ -127,7 +128,7 @@ export default function App() {
               </div>
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} />}
-            {weather && tab === 'kids' && <KidMode weather={weather} name={user?.displayName} />}
+            {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} />}
           </main>
         </>
       )}

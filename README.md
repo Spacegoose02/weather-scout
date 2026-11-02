@@ -1,4 +1,12 @@
+<p align="center">
+  <img src="docs/brand/rocky.png" alt="Rocky the raccoon, the face of Weather Scout" width="200" />
+</p>
+
 # Weather Scout
+
+Meet **Rocky the raccoon**, the face of Weather Scout. Rocky greets kids in the Kid Zone, dresses
+for the day's weather, stays calm with them in storm-safe mode, and is the app icon on every phone
+and desktop it's installed on.
 
 A self-hosted, kid-friendly weather station for the whole family. It runs in one
 Docker container (Unraid friendly), keeps every API key on your server, and pulls
@@ -14,12 +22,14 @@ from free, official data sources.
 - **Kid Zone**: Rocky the raccoon dresses for the weather (raincoat when rain chance is over
   60%, beanie and mittens when it feels below 35°F, shades on sunny high-UV days), a tap-to-pack
   gear checklist, a green/yellow/red recess rating, "Why is this happening?" mini-lessons,
-  and a sunset / stargazing countdown.
+  and a sunset / stargazing countdown. Plus Rocky's daily fact or joke (read aloud), weather
+  bingo, a kid forecaster game, dress-Rocky, backyard experiments, camera field trips, a
+  seasons photo tracker, badges, and a calm storm-safe mode during warnings.
 - **Profiles**: local username sign-in, tinyauth SSO, and admins can link an SSO identity to a
   username. Saved places, units and Kid Mode follow you between devices.
 - **Connected apps**: a keyed, kid-safe weather summary for Den-Duty boards, Home Assistant or
   scripts ([docs/CONNECT.md](docs/CONNECT.md)).
-- Installable as a phone/desktop app (PWA manifest), light and dark themes.
+- Installable as a phone/desktop app (PWA manifest with Rocky app icons), light and dark themes.
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for everything else on the board and when it lands,
 and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how it fits together.
@@ -114,3 +124,14 @@ npm test                         # server (node:test) + web (vitest)
 ```
 
 Node 22.13+ is required (uses the built-in `node:sqlite`).
+
+## Brand
+
+Rocky's master art is [`docs/brand/rocky-master.png`](docs/brand/rocky-master.png). Every app icon,
+favicon and in-app Rocky image is generated from it:
+
+```bash
+python3 scripts/make-brand-assets.py   # needs Pillow
+```
+
+See [docs/brand/README.md](docs/brand/README.md) for which file is used where.
