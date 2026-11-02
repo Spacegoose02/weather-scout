@@ -1,0 +1,16 @@
+# Quick start:  cp .env.example .env  (edit it)  &&  docker compose up -d
+services:
+  weather-scout:
+    build: .
+    image: ghcr.io/spacegoose02/weather-scout:latest
+    container_name: weather-scout
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file: .env
+    volumes:
+      - ./data:/data
+
+  # Optional: put tinyauth in front for single sign-on. See docs/AUTH.md.
+  # Only enable AUTH_TRUST_PROXY_HEADERS when the app is reachable *only*
+  # through the proxy, otherwise anyone could fake the Remote-User header.
