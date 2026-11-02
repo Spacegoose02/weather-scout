@@ -127,3 +127,20 @@
 .planet-more { padding: 4px 12px 6px; font-size: 0.9rem; }
 .planet-more p { margin: 4px 0; }
 .stars-moon { margin: 8px 0 0; }
+
+/* gear checklist */
+.gear-acts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin: 6px 0 10px; }
+.dash-gear.m .gear-acts, .dash-gear.s .gear-acts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.gear-acts button { background: var(--bg); color: var(--ink); border: 2px solid transparent; padding: 6px 2px; display: grid; justify-items: center; gap: 2px; font-size: 1.3rem; }
+.gear-acts button small { font-size: 0.7rem; font-weight: 700; }
+.gear-acts button.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 14%, var(--card)); }
+.gear-when { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.gear-when label { display: grid; gap: 2px; font-size: 0.8rem; font-weight: 700; color: var(--muted); flex: 1 1 110px; }
+.gear-when select { padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-weight: 600; }
+.gear-summary { margin: 0 0 8px; }
+.gear-warn { margin: 0 0 8px; padding: 6px 10px; border-radius: 10px; border-left: 6px solid var(--bad); background: var(--bg); font-weight: 700; }
+.dash-gear.l ul { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.dash-gear.s .emoji { font-size: 1.4rem; }
+.dash-gear.s li button { padding: 8px 10px; }
+.gear-foot { margin-top: 8px; gap: 10px; align-items: center; }
+@media (max-width: 760px) { .gear-acts, .dash-gear.m .gear-acts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
