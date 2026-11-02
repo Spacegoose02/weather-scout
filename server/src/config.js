@@ -61,6 +61,34 @@ export function loadConfig(env = process.env) {
       voice: env.KOKORO_VOICE || 'af_heart',
       speed: Math.min(2, Math.max(0.5, num(env.KOKORO_SPEED, 1))),
     },
+    // Personal weather stations (Ecowitt, Ambient Weather, Tempest, Weather Underground protocol).
+    stations: {
+      // Needed in the push URL when uploads come through a reverse proxy or from outside
+      // the home network. Without it, only direct LAN uploads are accepted.
+      pushToken: env.STATION_PUSH_TOKEN || '',
+      primary: env.STATION_PRIMARY || '',
+      names: Object.fromEntries((env.STATION_NAMES || '').split(',').map((s) => s.split('=').map((x) => x.trim())).filter(([k, v]) => k && v)),
+      pollSeconds: Math.max(60, num(env.STATION_POLL_SECONDS, 120)),
+      ambient: { apiKey: env.AMBIENT_API_KEY || '', applicationKey: env.AMBIENT_APPLICATION_KEY || '' },
+      tempest: {
+        token: env.TEMPEST_TOKEN || '',
+        stationIds: (env.TEMPEST_STATION_IDS || '').split(',').map((s) => s.trim()).filter(Boolean),
+        // 50222 is the port Tempest hubs broadcast on. Needs host (or br0) networking in Docker.
+        udpPort: bool(env.TEMPEST_UDP, false) ? num(env.TEMPEST_UDP_PORT, 50222) : 0,
+        elevationM: env.STATION_ELEVATION_M === undefined || env.STATION_ELEVATION_M === '' ? null : num(env.STATION_ELEVATION_M, null),
+      },
+    },
+    // Home Assistant: MQTT sensors with discovery, and/or direct REST state updates.
+    homeAssistant: {
+      mqttUrl: env.MQTT_URL || '',
+      mqttUsername: env.MQTT_USERNAME || '',
+      mqttPassword: env.MQTT_PASSWORD || '',
+      topicPrefix: (env.MQTT_TOPIC_PREFIX || 'weather_scout').replace(/\/+$/, ''),
+      discoveryPrefix: (env.MQTT_DISCOVERY_PREFIX || 'homeassistant').replace(/\/+$/, ''),
+      restUrl: (env.HA_URL || '').replace(/\/+$/, ''),
+      restToken: env.HA_TOKEN || '',
+      publishSeconds: Math.max(60, num(env.HA_PUBLISH_SECONDS, 300)),
+    },
     camerasFile: env.CAMERAS_FILE || path.join(dataDir, 'cameras.json'),
     env,
   };

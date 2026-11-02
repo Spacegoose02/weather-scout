@@ -4,6 +4,8 @@ import { loadConfig } from './config.js';
 const cfg = loadConfig();
 const app = await buildApp({ config: cfg });
 if (app.push) app.push.start(app.pushAlerts, cfg.push.pollSeconds * 1000);
+app.stations.start();
+app.homeAssistant.start();
 try {
   await app.listen({ port: cfg.port, host: cfg.host });
 } catch (err) {

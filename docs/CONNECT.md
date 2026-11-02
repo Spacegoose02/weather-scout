@@ -49,6 +49,11 @@ few minutes is fine.
 
 ## Home Assistant example
 
+For full Home Assistant sensors (MQTT discovery, severe-warning binary sensor, your own weather
+station) see [HOME-ASSISTANT.md](HOME-ASSISTANT.md). The summary also has a `station` field with
+the home weather station's latest reading, or `null`.
+
+
 ```yaml
 rest:
   - resource: http://weather-scout:8080/api/connect/summary

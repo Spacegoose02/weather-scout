@@ -89,6 +89,9 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/push/key`, `POST /api/push/subscribe`, `/unsubscribe`, `/status`, `/test` | Web Push sign-up per device; a background loop (every `PUSH_POLL_SECONDS`) checks NWS for each subscribed place and sends each new alert once |
 | `GET /api/ai/status`, `POST /api/ai/chat`, `POST /api/ai/cloud` | AI helper (only with `ANTHROPIC_API_KEY`): chat with the live forecast as context, cloud photo identifier, optional web search |
 | `GET /api/tts/voices`, `POST /api/tts` | Kokoro read-aloud (only with `KOKORO_URL`): English voice list, and MP3 speech for a text |
+| `GET/POST /api/stations/push[/:token]` | Personal weather station uploads (Ecowitt form POST, Ambient and Weather Underground GET). Token or home network only; no sign-in |
+| `GET /api/stations?units` | Latest reading from each station, converted, plus the primary station id |
+| `GET /api/admin/integrations` | Station and Home Assistant (MQTT/REST) status |
 | `GET /api/news` | Latest weather news and YouTube videos from the admin's lists |
 | `GET /api/cameras?south&west&north&east` | Cameras in the map view |
 | `GET /api/cameras/image/:id` | Snapshot proxy |

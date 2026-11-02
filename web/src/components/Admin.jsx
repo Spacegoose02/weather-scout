@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Modal from './Modal.jsx';
+import IntegrationsPanel from './stations/IntegrationsPanel.jsx';
 
 export default function Admin({ me, onClose }) {
   const [users, setUsers] = useState([]);
@@ -147,6 +148,8 @@ export default function Admin({ me, onClose }) {
         <input placeholder="Name (optional)" value={mediaForm.title} onChange={(e) => setMediaForm({ ...mediaForm, title: e.target.value })} maxLength={80} />
         <button type="submit">Add</button>
       </form>
+
+      <IntegrationsPanel />
 
       <h3>Camera feeds</h3>
       {feeds.length === 0 ? (

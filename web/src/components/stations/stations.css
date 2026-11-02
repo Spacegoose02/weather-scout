@@ -1,0 +1,8 @@
+.station-strip { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--bg); border: 1px dashed var(--line); }
+.station-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; align-items: baseline; }
+.station-vals { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-weight: 600; }
+.station-temp { font-size: 1.25em; }
+.station-kid { margin: 6px 0 0; font-size: 0.9em; }
+.integrations dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 6px 0; }
+.integrations dt { color: var(--muted); }
+.integrations dd { margin: 0; overflow-wrap: anywhere; }

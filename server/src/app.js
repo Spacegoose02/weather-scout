@@ -24,10 +24,12 @@ import { MediaService } from './media.js';
 import { PushService, LEVELS } from './push.js';
 import { AiService, registerAi } from './ai.js';
 import { registerTts } from './tts.js';
+import { StationService, registerStations } from './stations.js';
+import { HomeAssistantService } from './homeassistant.js';
 
 const MIN = 60_000;
 
-export async function buildApp({ config, fetchImpl = fetch, logger = true, pushSend } = {}) {
+export async function buildApp({ config, fetchImpl = fetch, logger = true, pushSend, mqttConnect } = {}) {
   const cfg = config || loadConfig();
   const app = Fastify({ logger, trustProxy: true });
   const cache = new TtlCache();
@@ -38,6 +40,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const media = new MediaService(db, cache, fetchImpl);
   const push = cfg.push.enabled ? new PushService(db, cfg, { send: pushSend, log: app.log }) : null;
   const ai = new AiService(cfg, { fetchImpl, log: app.log });
+  const stations = new StationService(cfg, { fetchImpl, log: app.log });
   await auth.bootstrapAdmin();
 
   await app.register(fastifyCookie, { secret: loadOrCreateSecret(cfg) });
@@ -57,7 +60,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const OPEN = new Set(['/api/health', '/api/config', '/api/auth/login', '/api/auth/logout', '/api/auth/me', '/api/auth/setup']);
   app.addHook('preHandler', async (req, reply) => {
     if (!cfg.auth.required || !req.url.startsWith('/api/')) return;
-    if (OPEN.has(req.url.split('?')[0]) || req.user || req.url.startsWith('/api/connect/')) return;
+    if (OPEN.has(req.url.split('?')[0]) || req.user || req.url.startsWith('/api/connect/') || req.url.startsWith('/api/stations/push')) return;
     reply.code(401).send({ error: 'Please sign in.' });
   });
 
@@ -209,6 +212,30 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   // ---- AI weather expert, cloud photos, web search ---------------------------
   registerAi(app, { ai, forecast, alerts, air, settle, loc });
   registerTts(app, { cfg, fetchImpl });
+
+  // ---- personal weather stations & Home Assistant ----------------------------
+  registerStations(app, { stations, cfg, requireAdmin });
+  const homeAssistant = new HomeAssistantService(cfg, {
+    stations,
+    fetchImpl,
+    log: app.log,
+    ...(mqttConnect ? { connect: mqttConnect } : {}),
+    snapshot: async () => {
+      const home = cfg.defaultLocation;
+      const l = loc({ lat: home.lat, lon: home.lon });
+      const [fc, al, aq] = await Promise.all([forecast(l), settle(alerts(l)), settle(air(l))]);
+      const alertList = al?.alerts || [];
+      return { forecast: fc, alerts: alertList, air: aq, kid: kidReport(fc, { alerts: alertList, air: aq }) };
+    },
+  });
+  app.get('/api/admin/integrations', { preHandler: requireAdmin }, async () => ({ homeAssistant: homeAssistant.status(), stations: stations.status(cfg.units) }));
+  // Started from index.js (like push), so tests stay quiet.
+  app.decorate('stations', stations);
+  app.decorate('homeAssistant', homeAssistant);
+  app.addHook('onClose', async () => {
+    stations.stop();
+    await homeAssistant.stop();
+  });
 
   // ---- severe weather push notifications ------------------------------------
   const subSchema = { type: 'object', required: ['endpoint'], properties: { endpoint: { type: 'string', maxLength: 2000 } } };
@@ -419,6 +446,8 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       airQuality: aq?.aqi != null ? { aqi: aq.aqi, label: aq.category?.label, color: aq.category?.color, kid: aq.category?.kid } : null,
       alerts: alertList.map((a) => ({ id: a.id, event: a.event, severity: a.severity, headline: a.headline, kid: a.kid, ends: a.ends })),
       alertsAvailable: !!al,
+      // The family's own weather station, when one is reporting (see docs/HOME-ASSISTANT.md).
+      station: stations.primary(l.units),
       updatedAt: new Date().toISOString(),
     };
   });
