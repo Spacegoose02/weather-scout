@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { api } from '../api.js';
 import RockyFace from './RockyFace.jsx';
 import ThemePicker from './ThemePicker.jsx';
+import { openSafety } from '../safety/useSafetyPlan.js';
 
 export default function Header({ location, onLocation, saved, kidMode, onKidMode, units, onUnits, user, onSignIn, onSignOut, onAdmin, onAlerts, sso, theme }) {
   const [q, setQ] = useState('');
@@ -136,6 +137,7 @@ export default function Header({ location, onLocation, saved, kidMode, onKidMode
             </button>
             {menu === 'user' && (
               <div className="menu" onClick={() => setMenu(false)}>
+                <button onClick={() => openSafety('plan')}>🛡️ Family safety plan</button>
                 {user.isAdmin && <button onClick={onAdmin}>Family & settings</button>}
                 <button onClick={onSignOut}>Sign out</button>
               </div>

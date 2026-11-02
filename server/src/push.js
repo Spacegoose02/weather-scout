@@ -18,13 +18,16 @@ export function alertLevel(alert) {
   return 'advisory';
 }
 
-export function alertPayload(alert, place) {
+// `shelter` is the family's spot from the safety plan ("Shelter: the basement"),
+// added under warnings so the notification itself says where to go.
+export function alertPayload(alert, place, shelter = '') {
   const where = place ? ` for ${place}` : '';
+  const body = alert.headline || alert.kid || 'The National Weather Service issued an alert.';
   return {
     title: `${alertLevel(alert) === 'warning' ? '⚠️ ' : ''}${alert.event}${where}`,
-    body: alert.headline || alert.kid || 'The National Weather Service issued an alert.',
+    body: shelter ? `${shelter}. ${body}` : body,
     tag: `alert:${alert.id}`,
-    url: '/',
+    url: shelter ? '/?shelter=1' : '/',
     requireInteraction: alertLevel(alert) === 'warning',
   };
 }
@@ -153,7 +156,7 @@ export class PushService {
         for (const a of alerts) {
           if (!a.id || !levels.includes(alertLevel(a)) || sentBefore.get(sub.id, a.id)) continue;
           markSent.run(sub.id, a.id);
-          if (await this.deliver(sub, alertPayload(a, sub.place_name))) sent++;
+          if (await this.deliver(sub, alertPayload(a, sub.place_name, this.shelterFor?.(a) || ''))) sent++;
         }
       }
     }

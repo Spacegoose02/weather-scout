@@ -29,7 +29,10 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
       const open = wins.find((w) => w.url.startsWith(self.location.origin));
-      return open ? open.focus() : self.clients.openWindow(url);
+      if (!open) return self.clients.openWindow(url);
+      // A warning tap on an already-open app: show the shelter guide there.
+      if (url.includes('shelter=1')) open.postMessage({ type: 'weather-scout:shelter' });
+      return open.focus();
     }),
   );
 });

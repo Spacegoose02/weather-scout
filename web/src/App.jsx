@@ -14,6 +14,7 @@ import RockyFace from './components/RockyFace.jsx';
 import AskExpert from './components/AskExpert.jsx';
 import Learn from './components/learn/Learn.jsx';
 import Dashboard from './components/dashboard/Dashboard.jsx';
+import SafetyCenter from './components/safety/SafetyCenter.jsx';
 import { configureVoice } from './kid/speak.js';
 import { useTheme } from './theme/useTheme.js';
 
@@ -152,6 +153,8 @@ export default function App() {
           </main>
         </>
       )}
+
+      {!blocked && <SafetyCenter alerts={weather?.alerts} kidMode={kidMode} user={user} onSignIn={() => setModal('signin')} />}
 
       {modal === 'signin' && (
         <SignIn

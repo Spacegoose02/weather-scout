@@ -25,6 +25,7 @@ export const CARDS = [
   { id: 'why', title: 'Why is this happening?', emoji: '🎓', sizes: ['m', 'l'], blurb: "Short lessons about today's weather" },
   { id: 'rocky', title: "Rocky's outfit", emoji: '🦝', sizes: ['s', 'm', 'l'], blurb: 'Rocky dresses for the weather' },
   { id: 'journal', title: 'Weather journal', emoji: '📓', sizes: ['m', 'l'], signIn: true, blurb: 'Write down what you saw each day' },
+  { id: 'safety', title: 'Family safety plan', emoji: '🛡️', sizes: ['s', 'm', 'l'], blurb: 'Shelter spot, kit and where to go in a warning' },
   { id: 'denduty', title: 'Den-Duty board', emoji: '🏠', sizes: ['s', 'm'], blurb: 'What the family board shows today' },
 ];
 
@@ -39,12 +40,13 @@ export const DEFAULT_LAYOUT = {
     { id: 'rain', size: 'm' },
     { id: 'wind', size: 's' },
     { id: 'details', size: 's' },
-    { id: 'stars', size: 's' },
+    { id: 'safety', size: 's' },
     { id: 'air', size: 'l' },
     { id: 'health', size: 'm' },
     { id: 'tides', size: 'm' },
     { id: 'cameras', size: 'm' },
-    { id: 'why', size: 'm' },
+    { id: 'stars', size: 'm' },
+    { id: 'why', size: 'l' },
     { id: 'hourly', size: 'l' },
   ],
 };
