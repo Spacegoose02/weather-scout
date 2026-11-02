@@ -36,8 +36,35 @@ describe('what to wear', () => {
   test('a raincoat covers the jacket, snow boots cover rain boots', () => {
     expect(checkOutfit(['raincoat', 'snow-boots'], ['jacket', 'boots']).missing).toEqual([]);
   });
-  test('nothing needed and nothing picked is perfect', () => {
-    expect(checkOutfit([], []).perfect).toBe(true);
+  test('bare fur on a mild day is not perfect', () => {
+    const r = checkOutfit([], []);
+    expect(r.perfect).toBe(false);
+    expect(r.missing).toEqual(['t-shirt']);
+    expect(r.tips[0].text).toMatch(/fur/);
+  });
+  test('a T-shirt on a mild day is perfect', () => {
+    const r = checkOutfit(['t-shirt'], []);
+    expect(r.perfect).toBe(true);
+    expect(r.tips).toEqual([]);
+  });
+  test('a light jacket also works on a mild day', () => {
+    expect(checkOutfit(['jacket'], []).perfect).toBe(true);
+  });
+  test('a T-shirt always beats bare fur', () => {
+    for (const needed of [[], ['jacket'], ['winter-coat', 'beanie', 'mittens'], ['raincoat', 'boots'], ['t-shirt', 'sunglasses', 'sun-hat']]) {
+      expect(checkOutfit(['t-shirt'], needed).stars).toBeGreaterThanOrEqual(checkOutfit([], needed).stars);
+      expect(checkOutfit(['t-shirt'], needed).extras).not.toContain('t-shirt');
+    }
+  });
+  test('a T-shirt under a needed coat is fine', () => {
+    expect(checkOutfit(['t-shirt', 'jacket'], ['jacket']).perfect).toBe(true);
+  });
+  test('a winter coat on a mild day is too much', () => {
+    expect(checkOutfit(['winter-coat'], []).extras).toEqual(['winter-coat']);
+  });
+  test('a raincoat on a dry day is still an extra', () => {
+    const r = checkOutfit(['t-shirt', 'raincoat'], []);
+    expect(r.extras).toEqual(['raincoat']);
   });
 });
 

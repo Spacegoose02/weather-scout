@@ -32,7 +32,6 @@ const COVERS = {
 };
 
 const WHY_NOT = {
-  't-shirt': 'It is too chilly for just a T-shirt.',
   jacket: 'It is warm enough without a jacket.',
   'winter-coat': 'A winter coat would make you way too hot today!',
   raincoat: 'No rain is coming, so the raincoat can stay home.',
@@ -57,21 +56,33 @@ const WHY_NEED = {
   sunglasses: 'It is super bright. Sunglasses protect your eyes.',
 };
 
-export function checkOutfit(picked, needed) {
-  const has = (id) => picked.includes(id) || (COVERS[id] || []).some((c) => picked.includes(c));
+// Clothes that go on Rocky's body. A T-shirt is an under-layer, so it is never
+// "too much" under a coat.
+const TOPS = ['t-shirt', 'jacket', 'winter-coat', 'raincoat'];
+
+export function checkOutfit(picked, forecastItems) {
+  // The forecast only lists special gear, so on a mild, dry day it is empty. In the
+  // game Rocky still can't go out in just his fur: he needs a T-shirt (or a light jacket).
+  const base = !forecastItems.some((id) => TOPS.includes(id));
+  const needed = base ? [...forecastItems, 't-shirt'] : forecastItems;
+  const covers = (id) => [...(COVERS[id] || []), ...(base && id === 't-shirt' ? ['jacket'] : [])];
+  const has = (id) => picked.includes(id) || covers(id).some((c) => picked.includes(c));
   const missing = needed.filter((id) => !has(id));
-  const covering = new Set(needed.flatMap((id) => (picked.includes(id) ? [] : (COVERS[id] || []).filter((c) => picked.includes(c)))));
-  // A winter coat covering a jacket is extra warm, but we let it slide unless it is warm out.
-  const extras = picked.filter((id) => !needed.includes(id) && !(covering.has(id) && id !== 'winter-coat'));
+  const covering = new Set(needed.flatMap((id) => (picked.includes(id) ? [] : covers(id).filter((c) => picked.includes(c)))));
+  // A winter coat covering a jacket is extra warm, so it still counts as too much.
+  const extras = picked.filter((id) => id !== 't-shirt' && !needed.includes(id) && !(covering.has(id) && id !== 'winter-coat'));
   const stars = missing.length ? (missing.length === 1 ? 1 : 0) : extras.length ? 2 : 3;
+  const needText = (id) => {
+    if (id === 't-shirt' && base) return picked.some((p) => TOPS.includes(p)) ? WHY_NEED[id] : 'Rocky can\'t go out in just his fur! A T-shirt is just right today.';
+    return WHY_NEED[id] || `You need your ${NAME[id] || id}.`;
+  };
   const tips = [
-    ...missing.map((id) => ({ kind: 'need', id, text: WHY_NEED[id] || `You need your ${NAME[id] || id}.` })),
+    ...missing.map((id) => ({ kind: 'need', id, text: needText(id) })),
     ...extras.map((id) => ({ kind: 'extra', id, text: WHY_NOT[id] || `You will not need your ${NAME[id] || id}.` })),
   ];
   let headline = 'Perfect! You are dressed exactly right for today.';
-  if (missing.length && needed.length) headline = 'Almost! Rocky still needs something.';
+  if (missing.length) headline = 'Almost! Rocky still needs something.';
   else if (extras.length) headline = 'Good job! You could leave something at home, though.';
-  if (!picked.length && !needed.length) headline = 'Perfect! Nothing special needed today.';
   return { stars, perfect: stars === 3, missing, extras, tips, headline };
 }
 
