@@ -11,3 +11,9 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 );
+
+// Register the service worker up front (not only when alerts are turned on) so
+// the installed app's Windows 11 widget and Android app work. It caches nothing.
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}

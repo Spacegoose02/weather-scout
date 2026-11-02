@@ -21,6 +21,7 @@ import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
 import { moonPhase } from './sky.js';
 import { MediaService } from './media.js';
+import { getOfficeProducts } from './providers/news.js';
 import { PushService, LEVELS } from './push.js';
 import { AiService, registerAi } from './ai.js';
 import { registerTts } from './tts.js';
@@ -109,6 +110,35 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       app.log.warn({ err: err.message }, 'optional data source failed');
       return null;
     }
+  };
+
+  // The compact, kid-safe summary shared by connected apps and the Windows widget.
+  // Location defaults to the server's home location.
+  const summary = async (q = {}) => {
+    const home = cfg.defaultLocation;
+    const l = loc({ lat: q.lat ?? home.lat, lon: q.lon ?? home.lon, units: q.units });
+    const [fc, al, aq] = await Promise.all([forecast(l), settle(alerts(l)), settle(air(l))]);
+    const alertList = al?.alerts || [];
+    const kid = kidReport(fc, { alerts: alertList, air: aq });
+    const c = fc.current;
+    const today = fc.daily[0] || {};
+    return {
+      location: { name: q.lat == null ? home.name : null, lat: l.lat, lon: l.lon },
+      units: fc.units,
+      current: { temp: c.temp, feelsLike: c.feelsLike, icon: c.icon, label: c.label, kidLabel: c.kidLabel, isDay: c.isDay, windSpeed: c.windSpeed, uv: c.uv },
+      today: { high: today.high ?? null, low: today.low ?? null, precipChance: today.precipChance ?? null, icon: today.icon ?? null, kidLabel: today.kidLabel ?? null },
+      // Paths are relative to this server, so connected apps can show the same Rocky.
+      raccoon: { ...kid.raccoon, art: { full: '/rocky/rocky.png', face: '/rocky/rocky-face.png', icon: '/icon-192.png' } },
+      checklist: kid.checklist,
+      playground: kid.playground,
+      sky: kid.sky,
+      airQuality: aq?.aqi != null ? { aqi: aq.aqi, label: aq.category?.label, color: aq.category?.color, kid: aq.category?.kid } : null,
+      alerts: alertList.map((a) => ({ id: a.id, event: a.event, severity: a.severity, headline: a.headline, kid: a.kid, ends: a.ends })),
+      alertsAvailable: !!al,
+      // The family's own weather station, when one is reporting (see docs/HOME-ASSISTANT.md).
+      station: stations.primary(l.units),
+      updatedAt: new Date().toISOString(),
+    };
   };
 
   // ---- public ---------------------------------------------------------------
@@ -255,9 +285,30 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.addHook('onClose', async () => push?.stop());
 
   // ---- news & videos -------------------------------------------------------
-  app.get('/api/news', async () => {
-    const [news, videos] = await Promise.all([media.items('rss'), media.items('youtube', 24)]);
-    return { news: news.items, videos: videos.items, feeds: [...news.feeds, ...videos.feeds] };
+  // Optional lat/lon adds the local NWS office's outlook, discussion and statements.
+  // kid=1 keeps only kid-safe feeds and stories (see providers/news.js).
+  app.get('/api/news', {
+    schema: { querystring: { type: 'object', properties: { lat: { type: 'number', minimum: -90, maximum: 90 }, lon: { type: 'number', minimum: -180, maximum: 180 }, kid: { type: 'boolean' } } } },
+  }, async (req) => {
+    const kid = !!req.query.kid;
+    const office = async () => {
+      if (req.query.lat == null || req.query.lon == null) return null;
+      const l = loc(req.query);
+      const place = await cache.wrap(`rgeo:${l.lat},${l.lon}`, 24 * 60 * MIN, () => nws.reverseGeocode(l, { userAgent: cfg.nwsUserAgent, fetchImpl }));
+      if (!place?.office) return null;
+      const products = await cache.wrap(`nws-products:${place.office}`, 15 * MIN, () => getOfficeProducts(place.office, { userAgent: cfg.nwsUserAgent, fetchImpl }));
+      return { id: place.office, place: place.name, link: `https://www.weather.gov/${place.office.toLowerCase()}`, products: kid ? products.filter((p) => p.kidSafe) : products };
+    };
+    const [news, videos, local] = await Promise.all([media.items('rss', 40, { kid }), media.items('youtube', 24, { kid }), settle(office())]);
+    return {
+      news: news.items,
+      local: news.items.filter((n) => n.scope === 'local'),
+      national: news.items.filter((n) => n.scope !== 'local'),
+      videos: videos.items,
+      office: local,
+      kid,
+      feeds: [...news.feeds, ...videos.feeds],
+    };
   });
 
   app.get('/api/geocode', {
@@ -387,7 +438,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.get('/api/admin/media', { preHandler: requireAdmin }, async () => ({ feeds: media.list() }));
   app.post('/api/admin/media', {
     preHandler: requireAdmin,
-    schema: { body: { type: 'object', required: ['kind', 'url'], properties: { kind: { type: 'string', enum: ['rss', 'youtube'] }, url: { type: 'string', minLength: 3, maxLength: 500 }, title: { type: 'string', maxLength: 80 } } } },
+    schema: { body: { type: 'object', required: ['kind', 'url'], properties: { kind: { type: 'string', enum: ['rss', 'youtube'] }, url: { type: 'string', minLength: 3, maxLength: 500 }, title: { type: 'string', maxLength: 80 }, scope: { type: 'string', enum: ['local', 'national'] }, kidSafe: { type: 'boolean' } } } },
   }, async (req, reply) => {
     try {
       return reply.code(201).send({ feed: await media.add(req.body) });
@@ -397,8 +448,23 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       throw err;
     }
   });
+  app.patch('/api/admin/media/:id', {
+    preHandler: requireAdmin,
+    schema: { body: { type: 'object', additionalProperties: false, properties: { title: { type: 'string', maxLength: 80 }, scope: { type: 'string', enum: ['local', 'national'] }, kidSafe: { type: 'boolean' }, enabled: { type: 'boolean' }, move: { type: 'string', enum: ['up', 'down'] } } } },
+  }, async (req, reply) => {
+    const feed = media.update(Number(req.params.id), req.body || {});
+    return feed ? { feed } : reply.code(404).send({ error: 'Not found' });
+  });
   app.delete('/api/admin/media/:id', { preHandler: requireAdmin }, async (req, reply) =>
     media.remove(Number(req.params.id)) ? { ok: true } : reply.code(404).send({ error: 'Not found' }));
+  app.get('/api/admin/media-suggestions', { preHandler: requireAdmin }, async () => ({ suggestions: media.suggestions() }));
+  app.get('/api/admin/media-hidden', { preHandler: requireAdmin }, async () => ({ hidden: media.hiddenList() }));
+  app.post('/api/admin/media-hidden', {
+    preHandler: requireAdmin,
+    schema: { body: { type: 'object', required: ['link'], properties: { link: { type: 'string', maxLength: 1000 }, title: { type: 'string', maxLength: 300 } } } },
+  }, async (req, reply) => reply.code(201).send({ hidden: media.hide(req.body) }));
+  app.delete('/api/admin/media-hidden/:id', { preHandler: requireAdmin }, async (req, reply) =>
+    media.unhide(Number(req.params.id)) ? { ok: true } : reply.code(404).send({ error: 'Not found' }));
   app.get('/api/admin/app-keys', { preHandler: requireAdmin }, async () => ({ keys: appKeys.list() }));
   app.post('/api/admin/app-keys', {
     preHandler: requireAdmin,
@@ -426,30 +492,59 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     if (!appKeys.check(req.headers.authorization)) {
       return reply.code(401).header('www-authenticate', 'Bearer').send({ error: 'A Weather Scout app key is needed (Family & settings, Connected apps).' });
     }
-    const home = cfg.defaultLocation;
-    const l = loc({ lat: req.query.lat ?? home.lat, lon: req.query.lon ?? home.lon, units: req.query.units });
-    const [fc, al, aq] = await Promise.all([forecast(l), settle(alerts(l)), settle(air(l))]);
-    const alertList = al?.alerts || [];
-    const kid = kidReport(fc, { alerts: alertList, air: aq });
-    const c = fc.current;
-    const today = fc.daily[0] || {};
+    return summary(req.query);
+  });
+
+  // ---- Windows 11 widget ---------------------------------------------------
+  // Data for the Widgets board card (web/public/widgets/today.json). Same sign-in
+  // rules as the rest of the app; the service worker fetches it with the
+  // family's cookie. Short, ready-to-show strings because Adaptive Cards can't
+  // do much formatting, and absolute image URLs because the board needs them.
+  app.get('/api/widget/summary', {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          lat: { type: 'number', minimum: -90, maximum: 90 },
+          lon: { type: 'number', minimum: -180, maximum: 180 },
+          units: { type: 'string', enum: ['imperial', 'metric'] },
+        },
+      },
+    },
+  }, async (req) => {
+    const s = await summary(req.query);
+    const origin = `${req.protocol}://${req.host}`;
+    const deg = (v) => (v == null ? '--' : `${Math.round(v)}°`);
+    const tip = s.checklist[0];
+    const alert = s.alerts[0];
     return {
-      location: { name: req.query.lat == null ? home.name : null, lat: l.lat, lon: l.lon },
-      units: fc.units,
-      current: { temp: c.temp, feelsLike: c.feelsLike, icon: c.icon, label: c.label, kidLabel: c.kidLabel, isDay: c.isDay, windSpeed: c.windSpeed, uv: c.uv },
-      today: { high: today.high ?? null, low: today.low ?? null, precipChance: today.precipChance ?? null, icon: today.icon ?? null, kidLabel: today.kidLabel ?? null },
-      // Paths are relative to this server, so connected apps can show the same Rocky.
-      raccoon: { ...kid.raccoon, art: { full: '/rocky/rocky.png', face: '/rocky/rocky-face.png', icon: '/icon-192.png' } },
-      checklist: kid.checklist,
-      playground: kid.playground,
-      sky: kid.sky,
-      airQuality: aq?.aqi != null ? { aqi: aq.aqi, label: aq.category?.label, color: aq.category?.color, kid: aq.category?.kid } : null,
-      alerts: alertList.map((a) => ({ id: a.id, event: a.event, severity: a.severity, headline: a.headline, kid: a.kid, ends: a.ends })),
-      alertsAvailable: !!al,
-      // The family's own weather station, when one is reporting (see docs/HOME-ASSISTANT.md).
-      station: stations.primary(l.units),
-      updatedAt: new Date().toISOString(),
+      place: s.location.name || 'Your weather',
+      temp: deg(s.current.temp),
+      feels: `Feels like ${deg(s.current.feelsLike)}`,
+      label: s.current.kidLabel || s.current.label || '',
+      hiLo: `High ${deg(s.today.high)} · Low ${deg(s.today.low)}`,
+      rain: s.today.precipChance == null ? '' : `${s.today.precipChance}% chance of rain`,
+      playground: s.playground ? `${s.playground.emoji} Playground: ${s.playground.label}` : '',
+      tip: tip ? `${tip.emoji} ${tip.label}` : '',
+      hasAlert: !!alert,
+      alert: alert ? `⚠️ ${alert.event}${s.alerts.length > 1 ? ` (+${s.alerts.length - 1} more)` : ''}` : '',
+      rockyUrl: `${origin}${s.raccoon.art.face}`,
+      appUrl: `${origin}/`,
+      updatedAt: s.updatedAt.replace(/\.\d+Z$/, 'Z'),
     };
+  });
+
+  // ---- Android app ---------------------------------------------------------
+  // Digital Asset Links for the Android app (android/ folder, a Trusted Web
+  // Activity). When the APK's signing fingerprint is listed here, Android opens
+  // the app full screen with no browser bar. See docs/APPS.md.
+  app.get('/.well-known/assetlinks.json', async (req, reply) => {
+    const { packageName, certFingerprints } = cfg.android;
+    if (!certFingerprints.length) return reply.code(404).send({ error: 'Set ANDROID_CERT_SHA256 to link the Android app.' });
+    return [{
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: { namespace: 'android_app', package_name: packageName, sha256_cert_fingerprints: certFingerprints },
+    }];
   });
 
   // ---- web app ---------------------------------------------------------------

@@ -92,7 +92,7 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET/POST /api/stations/push[/:token]` | Personal weather station uploads (Ecowitt form POST, Ambient and Weather Underground GET). Token or home network only; no sign-in |
 | `GET /api/stations?units` | Latest reading from each station, converted, plus the primary station id |
 | `GET /api/admin/integrations` | Station and Home Assistant (MQTT/REST) status |
-| `GET /api/news` | Latest weather news and YouTube videos from the admin's lists |
+| `GET /api/news?lat&lon&kid` | Local and national weather news, YouTube videos, and the local NWS office's products (with lat/lon); `kid=true` keeps kid-safe items only |
 | `GET /api/cameras?south&west&north&east` | Cameras in the map view |
 | `GET /api/cameras/image/:id` | Snapshot proxy |
 | `GET /api/geocode?q`, `/api/reverse-geocode?lat&lon` | Place search |
