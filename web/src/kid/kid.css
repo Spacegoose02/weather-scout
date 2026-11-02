@@ -41,7 +41,9 @@ button.speak { background: #7b5cd6; }
 .breathe p { margin: 0; font-weight: 700; color: #3d4559; }
 @keyframes breathe { 0%, 100% { transform: scale(0.7); opacity: 0.6; } 50% { transform: scale(1.15); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .breathe-ball { animation: none; } }
-.storm-reassure { font-weight: 800; color: #1f5f99; }
+.storm-reassure { font-weight: 800; color: #1f5f99; margin: 0; }
+.storm-rocky { display: flex; gap: 12px; align-items: center; margin: 12px 0; }
+.storm-rocky .raccoon .rocky { animation: none; }
 .grown-up-note { font-size: 0.85rem; color: #4b5568; margin: 10px 0 0; }
 
 /* bingo */

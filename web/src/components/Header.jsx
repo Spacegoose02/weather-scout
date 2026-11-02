@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api.js';
+import RockyFace from './RockyFace.jsx';
 
 export default function Header({ location, onLocation, saved, kidMode, onKidMode, units, onUnits, user, onSignIn, onSignOut, onAdmin, sso }) {
   const [q, setQ] = useState('');
@@ -50,7 +51,7 @@ export default function Header({ location, onLocation, saved, kidMode, onKidMode
   return (
     <header className="header">
       <div className="brand">
-        <img src="/icon.svg" alt="" width="36" height="36" />
+        <img src="/icon-192.png" alt="" width="44" height="44" className="brand-logo" />
         <div>
           <h1>Weather Scout</h1>
           <div className="place" title={`${location?.lat}, ${location?.lon}`}>📍 {location?.name}</div>
@@ -79,7 +80,7 @@ export default function Header({ location, onLocation, saved, kidMode, onKidMode
         )}
         <label className="switch" title="Big, simple, friendly view for kids">
           <input type="checkbox" checked={kidMode} onChange={(e) => onKidMode(e.target.checked)} />
-          <span>🦝 Kid mode</span>
+          <span><RockyFace /> Kid mode</span>
         </label>
         <button className="ghost" onClick={() => onUnits(units === 'imperial' ? 'metric' : 'imperial')} title="Switch units">
           {units === 'imperial' ? '°F' : '°C'}

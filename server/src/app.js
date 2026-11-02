@@ -276,7 +276,8 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
       units: fc.units,
       current: { temp: c.temp, feelsLike: c.feelsLike, icon: c.icon, label: c.label, kidLabel: c.kidLabel, isDay: c.isDay, windSpeed: c.windSpeed, uv: c.uv },
       today: { high: today.high ?? null, low: today.low ?? null, precipChance: today.precipChance ?? null, icon: today.icon ?? null, kidLabel: today.kidLabel ?? null },
-      raccoon: kid.raccoon,
+      // Paths are relative to this server, so connected apps can show the same Rocky.
+      raccoon: { ...kid.raccoon, art: { full: '/rocky/rocky.png', face: '/rocky/rocky-face.png', icon: '/icon-192.png' } },
       checklist: kid.checklist,
       playground: kid.playground,
       sky: kid.sky,

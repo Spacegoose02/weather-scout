@@ -51,6 +51,7 @@ h3 { font-size: 1rem; margin: 18px 0 8px; }
 .header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 6px 0 12px; }
 .brand { display: flex; gap: 10px; align-items: center; }
 .brand h1 { font-size: 1.3rem; }
+.brand-logo { border-radius: 12px; box-shadow: 0 2px 6px rgba(20, 50, 120, .25); }
 .place { color: var(--muted); font-size: 0.92rem; }
 .search { position: relative; display: flex; gap: 6px; flex: 1 1 280px; max-width: 440px; }
 .search input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); }
@@ -175,11 +176,16 @@ h3 { font-size: 1rem; margin: 18px 0 8px; }
 .bubble::before { content: ''; position: absolute; left: -10px; top: 18px; border: 10px solid transparent; border-right-color: #fff; border-left: 0; }
 .kid-temp { display: flex; gap: 8px; align-items: center; }
 .kid-feels { margin: 0; font-weight: 700; color: #3d4559; }
-.raccoon .tail { transform-origin: 150px 170px; animation: wag 2.4s ease-in-out infinite; }
-.raccoon.mood-shivering { animation: shiver 0.25s linear infinite; }
-@keyframes wag { 50% { transform: rotate(-8deg); } }
-@keyframes shiver { 25% { transform: translateX(-1px); } 75% { transform: translateX(1px); } }
-@media (prefers-reduced-motion: reduce) { .raccoon .tail, .raccoon.mood-shivering { animation: none; } }
+.raccoon { display: block; flex: none; overflow: visible; }
+.raccoon .rocky { transform-box: fill-box; transform-origin: 50% 100%; animation: breathe 3.6s ease-in-out infinite; }
+.raccoon.mood-shivering .rocky { animation: shiver 0.25s linear infinite; }
+.raccoon.mood-hot .rocky { animation-duration: 2.2s; }
+.raccoon .mood-badge { animation: bob 2s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: scale(1.012, 0.99); } }
+@keyframes shiver { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+@keyframes bob { 50% { transform: translateY(-12px); } }
+@media (prefers-reduced-motion: reduce) { .raccoon .rocky, .raccoon .mood-badge { animation: none; } }
+.rocky-face { display: inline-block; width: 1.35em; height: 1.125em; vertical-align: -0.2em; object-fit: contain; }
 
 .playground { text-align: center; }
 .traffic { display: inline-flex; gap: 10px; padding: 10px 14px; border-radius: 40px; background: #222; }
@@ -225,3 +231,4 @@ h3 { font-size: 1rem; margin: 18px 0 8px; }
 .newkey { background: var(--bg); border: 2px dashed var(--brand); border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
 .newkey p { margin: 0 0 6px; }
 .keytext { word-break: break-all; font-size: 0.9rem; }
+.rocky-face.big { width: 2.2em; height: 1.8em; }

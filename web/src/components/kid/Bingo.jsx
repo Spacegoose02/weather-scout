@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import RockyFace from '../RockyFace.jsx';
 import { bingoStatus } from '../../kid/logic.js';
 
 export default function Bingo({ card, kid }) {
@@ -28,7 +29,7 @@ export default function Bingo({ card, kid }) {
             aria-pressed={status.onCells[i]}
             disabled={s.free}
           >
-            <span className="emoji" aria-hidden>{s.emoji}</span>
+            <span className="emoji" aria-hidden>{s.free ? <RockyFace className="big" /> : s.emoji}</span>
             <span>{s.label}</span>
           </button>
         ))}

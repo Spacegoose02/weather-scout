@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { EXPERIMENTS, BADGES } from '../../kid/logic.js';
 import SpeakButton from './SpeakButton.jsx';
+import RockyFace from '../RockyFace.jsx';
 
 const badgeOf = Object.fromEntries(BADGES.map((b) => [b.id, b]));
 
@@ -31,7 +32,7 @@ export default function Experiments({ weather, kid, today }) {
             </button>
             {open === e.id && (
               <div className="exp-body">
-                {tips[e.id] && <p className="exp-tip">🦝 {tips[e.id]}</p>}
+                {tips[e.id] && <p className="exp-tip"><RockyFace /> {tips[e.id]}</p>}
                 <h3>You need</h3>
                 <ul className="materials">{e.materials.map((m) => <li key={m}>{m}</li>)}</ul>
                 <h3>Steps</h3>

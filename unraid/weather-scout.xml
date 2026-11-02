@@ -11,7 +11,7 @@
   <Overview>Weather Scout: a kid-friendly family weather station with a radar loop, NWS alerts, state 511 road cameras on a map, and a Kid Zone with Rocky the raccoon. API keys stay on your server.</Overview>
   <Category>HomeAutomation: Tools:</Category>
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
-  <Icon>https://raw.githubusercontent.com/spacegoose02/weather-scout/main/web/public/icon.svg</Icon>
+  <Icon>https://raw.githubusercontent.com/spacegoose02/weather-scout/main/web/public/icon-512.png</Icon>
   <ExtraParams>--user 99:100</ExtraParams>
   <Config Name="Web UI port" Target="8080" Default="8080" Mode="tcp" Description="Port for the web app" Type="Port" Display="always" Required="true" Mask="false">8080</Config>
   <Config Name="App data" Target="/data" Default="/mnt/user/appdata/weather-scout" Mode="rw" Description="Database, settings and cameras.json" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/weather-scout</Config>

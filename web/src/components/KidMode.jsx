@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Raccoon from './Raccoon.jsx';
+import RockyFace from './RockyFace.jsx';
 import { icon, round, duration, clockLabel } from '../format.js';
 import { useKidData } from '../kid/useKidData.js';
 import DailyFact from './kid/DailyFact.jsx';
@@ -45,7 +46,7 @@ function rockySays({ raccoon, playground, stormSafe }, c) {
 }
 
 const KID_TABS = [
-  ['today', 'Today', '🦝'],
+  ['today', 'Today', <RockyFace key="rocky" />],
   ['play', 'Play', '🎲'],
   ['explore', 'Explore', '🔭'],
   ['badges', 'Badges', '🏅'],

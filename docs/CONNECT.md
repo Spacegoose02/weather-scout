@@ -25,7 +25,10 @@ It works even when `AUTH_REQUIRED=true`, because the key is the sign-in.
   "units": { "temp": "°F", "wind": "mph", "precip": "in", "pressure": "hPa" },
   "current": { "temp": 52, "feelsLike": 47, "icon": "rain", "label": "Rain", "kidLabel": "Rainy", "isDay": true, "windSpeed": 5, "uv": 3 },
   "today": { "high": 60, "low": 42, "precipChance": 80, "icon": "rain", "kidLabel": "Rainy" },
-  "raccoon": { "items": ["raincoat", "boots"], "mood": "happy", "maxPrecipChance": 80, "minFeelsLike": 47, "maxUv": 3 },
+  "raccoon": {
+    "items": ["raincoat", "boots"], "mood": "happy", "maxPrecipChance": 80, "minFeelsLike": 47, "maxUv": 3,
+    "art": { "full": "/rocky/rocky.png", "face": "/rocky/rocky-face.png", "icon": "/icon-192.png" }
+  },
   "checklist": [{ "id": "raincoat", "emoji": "🧥", "label": "Rain jacket", "why": "Good chance of rain today." }],
   "playground": { "rating": "yellow", "label": "Okay, with care", "emoji": "⚠️", "reasons": ["It has been raining, so it may be wet or muddy."] },
   "sky": { "sunset": "2026-11-02T17:30", "minutesToSunset": 231, "stargazing": { "good": false, "text": "…" } },
@@ -37,7 +40,9 @@ It works even when `AUTH_REQUIRED=true`, because the key is the sign-in.
 ```
 
 `icon` is one of `clear`, `partly-cloudy`, `cloudy`, `fog`, `drizzle`, `rain`, `sleet`, `snow`, `thunder`.
-`playground.rating` is `green`, `yellow` or `red`. Alerts leave out the long NWS text.
+`raccoon.art` paths are on your Weather Scout server (for example
+`http://weather-scout:8080/rocky/rocky-face.png`) and need no key, so a Den-Duty card can show
+the same Rocky as the app. `playground.rating` is `green`, `yellow` or `red`. Alerts leave out the long NWS text.
 
 Results are cached on the server (forecast 10 minutes, alerts 2 minutes), so polling every
 few minutes is fine.

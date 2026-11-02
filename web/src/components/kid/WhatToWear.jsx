@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Raccoon from '../Raccoon.jsx';
+import RockyFace from '../RockyFace.jsx';
 import { WARDROBE, checkOutfit } from '../../kid/logic.js';
 import { speak } from '../../kid/speak.js';
 
@@ -31,7 +32,7 @@ export default function WhatToWear({ raccoon, kid }) {
         </div>
       </div>
       <div className="row">
-        <button onClick={check}>Ask Rocky! 🦝</button>
+        <button onClick={check}>Ask Rocky! <RockyFace /></button>
         {picked.length > 0 && <button className="ghost" onClick={() => { setPicked([]); setResult(null); }}>Start over</button>}
       </div>
       {result && (

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import SpeakButton from './SpeakButton.jsx';
+import Raccoon from '../Raccoon.jsx';
 
 function clock(iso) {
   if (!iso) return '';
@@ -60,7 +61,10 @@ export default function StormSafe({ plans, reassure, kid, drill = false, onDone 
         <p>Smell the flower… blow out the candle…</p>
       </div>
 
-      <p className="storm-reassure">{reassure || 'Grown-ups and weather helpers are keeping watch. You are doing great.'}</p>
+      <div className="storm-rocky">
+        <Raccoon size={96} />
+        <p className="storm-reassure">{reassure || 'Grown-ups and weather helpers are keeping watch. You are doing great.'} Rocky is staying safe with you.</p>
+      </div>
       <div className="row">
         <SpeakButton text={words} />
         {drill && <button onClick={onDone}>{allDone ? 'Finish drill' : 'Stop drill'}</button>}

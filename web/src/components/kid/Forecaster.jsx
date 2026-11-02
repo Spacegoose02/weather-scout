@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { scorePending, forecasterTotals, guessKey } from '../../kid/logic.js';
+import RockyFace from '../RockyFace.jsx';
 
 const longDay = (date) => {
   const [y, m, d] = date.split('-').map(Number);
@@ -90,7 +91,7 @@ export default function Forecaster({ weather, kid, today }) {
               </li>
             ))}
           </ul>
-          <p className="rocky-line">🦝 {scored[0].result.message}</p>
+          <p className="rocky-line"><RockyFace /> {scored[0].result.message}</p>
         </>
       )}
       <p className="hint small">
