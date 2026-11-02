@@ -14,6 +14,7 @@ import Admin from './components/Admin.jsx';
 import HealthSky from './components/HealthSky.jsx';
 import News from './components/News.jsx';
 import Coast from './components/Coast.jsx';
+import ModelsView from './components/ModelsView.jsx';
 import PushAlerts from './components/PushAlerts.jsx';
 import RockyFace from './components/RockyFace.jsx';
 import AskExpert from './components/AskExpert.jsx';
@@ -22,6 +23,7 @@ const TABS = [
   ['today', 'Today', '🌤️'],
   ['map', 'Radar & Cams', '🗺️'],
   ['kids', 'Kid Zone', <RockyFace key="rocky" />],
+  ['models', 'Models', '📊'],
   ['news', 'News & Videos', '📰'],
 ];
 
@@ -121,7 +123,7 @@ export default function App() {
           {weather && <AlertsBanner alerts={weather.alerts} kidMode={kidMode} />}
 
           <main>
-            {!weather && !error && tab !== 'news' && tab !== 'ask' && <div className="card skeleton">Fetching the sky…</div>}
+            {!weather && !error && tab !== 'news' && tab !== 'ask' && tab !== 'models' && <div className="card skeleton">Fetching the sky…</div>}
             {weather && tab === 'today' && (
               <div className="grid">
                 <CurrentConditions weather={weather} kidMode={kidMode} />
@@ -138,6 +140,7 @@ export default function App() {
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} />}
             {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} />}
+            {tab === 'models' && location && <ModelsView location={location} units={units} />}
             {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} />}
             {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} />}
           </main>
