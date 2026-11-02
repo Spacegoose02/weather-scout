@@ -28,13 +28,31 @@ import { AiService, registerAi } from './ai.js';
 import { registerTts } from './tts.js';
 import { StationService, registerStations } from './stations.js';
 import { HomeAssistantService } from './homeassistant.js';
+import { cleanOutfit, rockySvg } from '../../shared/rocky-outfit.js';
 
 const MIN = 60_000;
+
+/** Path of Rocky's picture in this outfit and mood (see /api/connect/rocky.svg). */
+function rockyPath({ items, mood }) {
+  const o = cleanOutfit(items, mood);
+  const q = new URLSearchParams({ items: o.items.join(','), mood: o.mood });
+  return `/api/connect/rocky.svg?${q}`;
+}
 
 export async function buildApp({ config, fetchImpl = fetch, logger = true, pushSend, mqttConnect } = {}) {
   const cfg = config || loadConfig();
   const app = Fastify({ logger, trustProxy: true });
   const cache = new TtlCache();
+  // Rocky's base art as a data: URL for /api/connect/rocky.svg (an SVG shown as an
+  // image can't load other files). From the built web app, or web/public in dev.
+  let rockyBaseHref;
+  const rockyBase = () => {
+    if (rockyBaseHref) return rockyBaseHref;
+    const file = [path.join(cfg.webDist, 'rocky/rocky.webp'), new URL('../../web/public/rocky/rocky.webp', import.meta.url).pathname]
+      .find((f) => fs.existsSync(f));
+    if (file) rockyBaseHref = `data:image/webp;base64,${fs.readFileSync(file).toString('base64')}`;
+    return rockyBaseHref ?? null;
+  };
   const db = openDb(cfg.dataDir);
   const auth = new AuthService(db, cfg);
   const cameras = new CameraService(cfg, cache, fetchImpl, { retry: { baseDelayMs: Number(cfg.env.CAMERA_RETRY_DELAY_MS) || 1500 } });
@@ -129,7 +147,8 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       current: { temp: c.temp, feelsLike: c.feelsLike, icon: c.icon, label: c.label, kidLabel: c.kidLabel, isDay: c.isDay, windSpeed: c.windSpeed, uv: c.uv },
       today: { high: today.high ?? null, low: today.low ?? null, precipChance: today.precipChance ?? null, icon: today.icon ?? null, kidLabel: today.kidLabel ?? null },
       // Paths are relative to this server, so connected apps can show the same Rocky.
-      raccoon: { ...kid.raccoon, art: { full: '/rocky/rocky.png', face: '/rocky/rocky-face.png', icon: '/icon-192.png' } },
+      // `dressed` is Rocky in today's outfit and mood, one picture ready for an <img>.
+      raccoon: { ...kid.raccoon, art: { full: '/rocky/rocky.png', face: '/rocky/rocky-face.png', icon: '/icon-192.png', dressed: rockyPath(kid.raccoon) } },
       checklist: kid.checklist,
       playground: kid.playground,
       sky: kid.sky,
@@ -495,6 +514,28 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       return reply.code(401).header('www-authenticate', 'Bearer').send({ error: 'A Weather Scout app key is needed (Family & settings, Connected apps).' });
     }
     return summary(req.query);
+  });
+
+  // Rocky dressed for the weather as one standalone SVG, so Den-Duty's weather
+  // card (or any app) can show the same Rocky as Kid Mode with a plain <img>.
+  // Like /rocky/*.png it needs no key: it's only the mascot in an outfit.
+  app.get('/api/connect/rocky.svg', {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: { items: { type: 'string', maxLength: 300 }, mood: { type: 'string', maxLength: 20 } },
+      },
+    },
+  }, async (req, reply) => {
+    const base = rockyBase();
+    if (!base) return reply.code(404).send({ error: "Rocky's art isn't on this server." });
+    const o = cleanOutfit(req.query.items, req.query.mood);
+    return reply
+      .type('image/svg+xml; charset=utf-8')
+      .header('cache-control', 'public, max-age=86400')
+      .header('content-security-policy', "default-src 'none'; img-src data:; style-src 'unsafe-inline'")
+      .header('x-content-type-options', 'nosniff')
+      .send(rockySvg({ ...o, baseHref: base }));
   });
 
   // ---- Windows 11 widget ---------------------------------------------------

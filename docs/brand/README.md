@@ -8,6 +8,7 @@ the source for every image below; rebuild them all with `python3 scripts/make-br
 | `web/public/rocky/rocky.webp` | Rocky in the Kid Zone, What to wear and storm-safe mode, with outfits drawn on top (`Raccoon.jsx`) |
 | `web/public/rocky/rocky-face.webp` | Small inline Rocky in tabs, buttons and tips (`RockyFace.jsx`) |
 | `web/public/rocky/rocky.png`, `rocky-face.png` | Connected apps such as Den-Duty (`raccoon.art` in `/api/connect/summary`) |
+| `shared/rocky-outfit.js` | Rocky's outfit pieces, drawn by Kid Mode (`Raccoon.jsx`) and by `/api/connect/rocky.svg` for connected apps |
 | `web/public/icon-192.png`, `icon-512.png` | Header logo, PWA icons, Unraid template icon |
 | `web/public/icon-maskable-512.png` | Android adaptive icon (Rocky inside the safe circle) |
 | `web/public/apple-touch-icon.png` | iOS home screen |

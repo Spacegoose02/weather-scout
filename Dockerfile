@@ -12,6 +12,7 @@ COPY package.json package-lock.json ./
 COPY server/package.json server/
 COPY web/package.json web/
 RUN npm ci --no-audit --no-fund
+COPY shared shared
 COPY web web
 RUN npm run build --workspace web
 
@@ -37,6 +38,7 @@ COPY web/package.json web/
 COPY --from=deps /app/node_modules node_modules
 COPY --from=deps /app/server/node_modules server/node_modules
 COPY server/src server/src
+COPY shared shared
 COPY server/cameras.example.json server/
 COPY --from=web /app/web/dist web/dist
 RUN mkdir -p /data && chown node:node /data

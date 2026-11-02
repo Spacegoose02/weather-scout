@@ -27,7 +27,8 @@ It works even when `AUTH_REQUIRED=true`, because the key is the sign-in.
   "today": { "high": 60, "low": 42, "precipChance": 80, "icon": "rain", "kidLabel": "Rainy" },
   "raccoon": {
     "items": ["raincoat", "boots"], "mood": "happy", "maxPrecipChance": 80, "minFeelsLike": 47, "maxUv": 3,
-    "art": { "full": "/rocky/rocky.png", "face": "/rocky/rocky-face.png", "icon": "/icon-192.png" }
+    "art": { "full": "/rocky/rocky.png", "face": "/rocky/rocky-face.png", "icon": "/icon-192.png",
+             "dressed": "/api/connect/rocky.svg?items=raincoat%2Cboots&mood=happy" }
   },
   "checklist": [{ "id": "raincoat", "emoji": "🧥", "label": "Rain jacket", "why": "Good chance of rain today." }],
   "playground": { "rating": "yellow", "label": "Okay, with care", "emoji": "⚠️", "reasons": ["It has been raining, so it may be wet or muddy."] },
@@ -42,7 +43,17 @@ It works even when `AUTH_REQUIRED=true`, because the key is the sign-in.
 `icon` is one of `clear`, `partly-cloudy`, `cloudy`, `fog`, `drizzle`, `rain`, `sleet`, `snow`, `thunder`.
 `raccoon.art` paths are on your Weather Scout server (for example
 `http://weather-scout:8080/rocky/rocky-face.png`) and need no key, so a Den-Duty card can show
-the same Rocky as the app. `playground.rating` is `green`, `yellow` or `red`. Alerts leave out the long NWS text.
+the same Rocky as the app. `raccoon.art.dressed` is Rocky already wearing today's outfit with his
+mood badge, as one SVG that works in a plain `<img>`:
+
+```
+GET /api/connect/rocky.svg?items=raincoat,boots&mood=happy
+```
+
+`items` is a comma list of `raincoat`, `winter-coat`, `jacket`, `t-shirt`, `pants`, `shorts`,
+`swim-trunks`, `mittens`, `boots`, `snow-boots`, `sunglasses`, `beanie`, `sun-hat` (others are
+ignored); `mood` is `happy`, `worried`, `shivering` or `hot`. It's drawn from the same pieces as
+Kid Mode (`shared/rocky-outfit.js`) and is cached for a day. `playground.rating` is `green`, `yellow` or `red`. Alerts leave out the long NWS text.
 
 Results are cached on the server (forecast 10 minutes, alerts 2 minutes), so polling every
 few minutes is fine.

@@ -167,6 +167,13 @@ test('app keys: admin makes one, Den-Duty reads the summary with it, revoke stop
   assert.equal(body.alerts[0].event, 'Tornado Warning');
   assert.ok(Array.isArray(body.checklist));
   assert.equal(body.raccoon.art.full, '/rocky/rocky.png');
+  assert.match(body.raccoon.art.dressed, /^\/api\/connect\/rocky\.svg\?items=/);
+  // The dressed picture needs no key (it's only the mascot), even with sign-in required.
+  const rocky = await app.inject(body.raccoon.art.dressed);
+  assert.equal(rocky.statusCode, 200);
+  assert.match(rocky.headers['content-type'], /^image\/svg\+xml/);
+  assert.match(rocky.body, /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg"/);
+  assert.match(rocky.body, /href="data:image\/webp;base64,/);
   assert.ok(!('description' in body.alerts[0]));
   assert.ok((await app.inject({ url: '/api/admin/app-keys', headers })).json().keys[0].lastUsedAt);
 
@@ -256,6 +263,23 @@ test('South Carolina cameras skip offline and problem streams', async () => {
   assert.deepEqual(body.cameras.map((c) => c.id), ['sc:50001']);
   assert.equal(body.cameras[0].direction, 'NB');
   assert.match(body.cameras[0].video, /playlist\.m3u8$/);
+  await app.close();
+});
+
+test('Rocky picture for connected apps: known pieces only, mood badge, safe headers', async () => {
+  const { app } = await testApp();
+  const res = await app.inject('/api/connect/rocky.svg?items=raincoat,boots,<script>,beanie&mood=shivering');
+  assert.equal(res.statusCode, 200);
+  assert.match(res.headers['content-security-policy'], /default-src 'none'/);
+  assert.match(res.body, /class="coat raincoat"/);
+  assert.match(res.body, /class="boots rain"/);
+  assert.match(res.body, /class="beanie"/);
+  assert.match(res.body, /🥶/);
+  assert.ok(!res.body.includes('<script'));
+  assert.match(res.body, /aria-label="Rocky the raccoon wearing raincoat, boots, beanie"/);
+  const plain = await app.inject('/api/connect/rocky.svg?mood=grumpy');
+  assert.match(plain.body, /class="raccoon mood-happy"/);
+  assert.ok(!plain.body.includes('class="coat'));
   await app.close();
 });
 
