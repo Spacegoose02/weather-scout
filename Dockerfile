@@ -1,7 +1,12 @@
 # syntax=docker/dockerfile:1
 
+# The web bundle and the server's dependencies are plain JavaScript (no native
+# modules), so both are built on the CI machine's own CPU ($BUILDPLATFORM). Only
+# the final copy step runs for each target platform, which keeps the arm64 build
+# from crawling through npm under QEMU emulation.
+
 # ---- build the web app ------------------------------------------------------
-FROM node:22-alpine AS web
+FROM --platform=$BUILDPLATFORM node:22-alpine AS web
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY server/package.json server/
@@ -9,6 +14,15 @@ COPY web/package.json web/
 RUN npm ci --no-audit --no-fund
 COPY web web
 RUN npm run build --workspace web
+
+# ---- server production dependencies ----------------------------------------
+FROM --platform=$BUILDPLATFORM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY server/package.json server/
+COPY web/package.json web/
+RUN npm ci --omit=dev --workspace server --include-workspace-root=false --no-audit --no-fund \
+ && mkdir -p server/node_modules
 
 # ---- runtime ------------------------------------------------------------------
 FROM node:22-alpine
@@ -20,8 +34,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY server/package.json server/
 COPY web/package.json web/
-RUN npm ci --omit=dev --workspace server --include-workspace-root=false --no-audit --no-fund \
- && npm cache clean --force
+COPY --from=deps /app/node_modules node_modules
+COPY --from=deps /app/server/node_modules server/node_modules
 COPY server/src server/src
 COPY server/cameras.example.json server/
 COPY --from=web /app/web/dist web/dist
