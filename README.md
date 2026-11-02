@@ -41,7 +41,8 @@ docker compose up -d      # http://localhost:8080
    contact, and apply. App data lives in `/mnt/user/appdata/weather-scout`.
 
 The image is built and published to `ghcr.io/spacegoose02/weather-scout` by GitHub Actions
-on every push to `main` (amd64 and arm64).
+(amd64 and arm64). Every push to `main` updates `:latest`; a release tag such as `v0.1.0`
+also publishes `:0.1.0` and `:0.1`, so you can pin a version in Unraid instead of following `latest`.
 
 ### First visit
 
