@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 import RockyFace from './RockyFace.jsx';
+import ThemePicker from './ThemePicker.jsx';
 
-export default function Header({ location, onLocation, saved, kidMode, onKidMode, units, onUnits, user, onSignIn, onSignOut, onAdmin, onAlerts, sso }) {
+export default function Header({ location, onLocation, saved, kidMode, onKidMode, units, onUnits, user, onSignIn, onSignOut, onAdmin, onAlerts, sso, theme }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -120,6 +121,7 @@ export default function Header({ location, onLocation, saved, kidMode, onKidMode
           </select>
         )}
         <button className="ghost" onClick={onAlerts} title="Weather alerts on this device" aria-label="Weather alerts on this device">🔔</button>
+        {theme && <ThemePicker {...theme} signedIn={!!user} />}
         <label className="switch" title="Big, simple, friendly view for kids">
           <input type="checkbox" checked={kidMode} onChange={(e) => onKidMode(e.target.checked)} />
           <span><RockyFace /> Kid mode</span>
