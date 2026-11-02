@@ -18,5 +18,13 @@ export function radarFrames(now = Date.now(), count = 11) {
     attribution: 'NEXRAD radar via <a href="https://mesonet.agron.iastate.edu/">Iowa Environmental Mesonet</a>',
     maxNativeZoom: 12,
     coverage: 'United States',
+    // Infrared satellite (clouds day and night) from NASA GIBS, as WMS so Leaflet
+    // can ask for any zoom. GOES-East covers the Americas and the Atlantic.
+    satellite: {
+      wms: 'https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi',
+      layers: 'GOES-East_ABI_Band13_Clean_Infrared',
+      name: 'Infrared satellite (GOES-East)',
+      attribution: 'Satellite: <a href="https://earthdata.nasa.gov/gibs">NASA GIBS</a> / NOAA GOES',
+    },
   };
 }

@@ -20,6 +20,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
   const map = useRef(null);
   const radar = useRef([]);
   const camLayer = useRef(null);
+  const satLayer = useRef(null);
   const alertLayer = useRef(null);
   const stormLayer = useRef(null);
   const buoyLayer = useRef(null);
@@ -30,7 +31,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [opacity, setOpacity] = useState(0.7);
-  const [show, setShow] = useState({ radar: true, cams: true, alerts: true, storms: true, buoys: true });
+  const [show, setShow] = useState({ radar: true, cams: true, alerts: true, satellite: false, storms: true, buoys: true });
   const [camInfo, setCamInfo] = useState('');
 
   // Map + radar setup
@@ -49,6 +50,11 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
       radar.current = r.frames.map((f, i) =>
         L.tileLayer(f.url, { opacity: 0, maxNativeZoom: r.maxNativeZoom, maxZoom: 18, zIndex: 10, attribution: i === 0 ? r.attribution : '' }).addTo(m),
       );
+      if (r.satellite) {
+        satLayer.current = L.tileLayer.wms(r.satellite.wms, {
+          layers: r.satellite.layers, format: 'image/png', transparent: true, opacity: 0.65, zIndex: 5, attribution: r.satellite.attribution,
+        });
+      }
       setFrames(r.frames);
       setFrame(r.frames.length - 1);
     });
@@ -155,6 +161,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
       stormLayer.current = null;
       buoyLayer.current = null;
       radar.current = [];
+      satLayer.current = null;
       camLayer.current = null;
     };
   }, [center.lat, center.lon, units]);
@@ -169,6 +176,13 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
   useEffect(() => {
     radar.current.forEach((layer, i) => layer.setOpacity(show.radar && i === frame ? opacity : 0));
   }, [frame, opacity, show.radar, frames.length]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !satLayer.current) return;
+    if (show.satellite) m.addLayer(satLayer.current);
+    else m.removeLayer(satLayer.current);
+  }, [show.satellite, frames.length]);
 
   useEffect(() => {
     const m = map.current;
@@ -211,6 +225,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
         />
         <span className="radar-time">{t ? new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '…'}{frame === frames.length - 1 ? ' (latest)' : ''}</span>
         <label><input type="checkbox" checked={show.radar} onChange={(e) => setShow({ ...show, radar: e.target.checked })} /> Radar</label>
+        <label><input type="checkbox" checked={show.satellite} onChange={(e) => setShow({ ...show, satellite: e.target.checked })} /> Satellite</label>
         <label><input type="checkbox" checked={show.cams} onChange={(e) => setShow({ ...show, cams: e.target.checked })} /> Cameras</label>
         <label><input type="checkbox" checked={show.alerts} onChange={(e) => setShow({ ...show, alerts: e.target.checked })} /> Alerts</label>
         <label><input type="checkbox" checked={show.storms} onChange={(e) => setShow({ ...show, storms: e.target.checked })} /> Hurricanes</label>

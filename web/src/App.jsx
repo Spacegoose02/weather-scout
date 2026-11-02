@@ -13,6 +13,7 @@ import SignIn from './components/SignIn.jsx';
 import Admin from './components/Admin.jsx';
 import HealthSky from './components/HealthSky.jsx';
 import News from './components/News.jsx';
+import { RainNext, AirUv, Wind } from './components/NowCards.jsx';
 import Coast from './components/Coast.jsx';
 import ModelsView from './components/ModelsView.jsx';
 import PushAlerts from './components/PushAlerts.jsx';
@@ -134,6 +135,9 @@ export default function App() {
                 <CurrentConditions weather={weather} kidMode={kidMode} />
                 <DailyForecast daily={weather.forecast.daily} units={weather.forecast.units} />
                 <Details weather={weather} />
+                <RainNext forecast={weather.forecast} />
+                <Wind forecast={weather.forecast} />
+                <AirUv air={weather.air} forecast={weather.forecast} />
                 <HealthSky weather={weather} />
                 {location && <Coast location={location} units={units} onMap={() => setTab('map')} />}
                 <HourlyTimeline hourly={weather.forecast.hourly} units={weather.forecast.units} />
