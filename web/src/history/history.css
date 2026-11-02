@@ -1,0 +1,66 @@
+/* "On this day" card, chart and the kid time machine. */
+.otd, .time-machine { --warm: #e76f51; --cool: #3a86ff; }
+
+.otd-today { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 22px; margin: 4px 0 8px; }
+.otd-today > div { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
+.otd-label { width: 100%; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 700; }
+.otd-big { font-size: 2rem; line-height: 1; }
+.otd-big.muted { color: var(--muted); }
+.otd-sub { color: var(--muted); font-weight: 700; }
+.otd-diff { margin: 0; font-weight: 800; flex: 1; min-width: 10em; }
+.otd-diff.warm { color: var(--warm); }
+.otd-diff.cool { color: var(--cool); }
+.otd-diff .hint { font-weight: 600; }
+.otd-record { margin: 0 0 8px; padding: 6px 10px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 22%, transparent); font-weight: 700; }
+
+.otd-records { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; margin: 6px 0 10px; }
+.otd-records > div { background: var(--bg); border-radius: 12px; padding: 7px 10px; }
+.otd-records dt { font-size: 0.75rem; color: var(--muted); font-weight: 700; }
+.otd-records dd { margin: 0; font-weight: 800; font-size: 1.05rem; }
+.otd-records small { color: var(--muted); font-weight: 600; font-size: 0.78rem; }
+
+.otd-years { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 2px; }
+.otd-years li { display: grid; grid-template-columns: 3.2em 1fr 1.6em auto; gap: 8px; align-items: center; padding: 4px 2px; border-bottom: 1px solid var(--line); font-size: 0.93rem; }
+.otd-years li:last-child { border-bottom: 0; }
+.otd-year { font-weight: 800; }
+.otd-why { color: var(--muted); font-size: 0.85rem; }
+.otd-trend { margin: 4px 0; }
+
+.otd-chart { margin: 8px 0; }
+.otd-chart svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+.otd-chart .grid { stroke: var(--line); stroke-width: 1; }
+.otd-chart .tick { fill: var(--muted); font-size: 11px; font-family: var(--font); }
+.otd-chart .normal { stroke-dasharray: 5 4; stroke-width: 1.5; }
+.otd-chart .normal.warm { stroke: var(--warm); }
+.otd-chart .normal.cool { stroke: var(--cool); }
+.otd-chart .span { stroke: var(--line); stroke-width: 2; }
+.otd-chart .dot.warm { fill: var(--warm); }
+.otd-chart .dot.cool { fill: var(--cool); }
+.otd-chart .dot.today { fill: var(--warm); stroke: var(--card); stroke-width: 2; }
+.otd-chart .dot.today.cool { fill: var(--cool); }
+.otd-chart .hit { fill: transparent; }
+.otd-chart g.on .span { stroke: var(--ink); }
+.otd-chart g.on .dot { r: 4px; }
+.otd-chart figcaption { min-height: 2.6em; }
+.warm-ink { color: var(--warm); }
+.cool-ink { color: var(--cool); }
+
+.otd-table-wrap { max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; margin: 6px 0; }
+.otd-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.otd-table th, .otd-table td { padding: 4px 8px; text-align: left; border-bottom: 1px solid var(--line); }
+.otd-table th { position: sticky; top: 0; background: var(--card); font-size: 0.78rem; color: var(--muted); }
+
+.otd.kid .otd-kid-headline, .time-machine .tm-headline { font-size: 1.15rem; font-weight: 800; margin: 4px 0 8px; }
+.otd-facts, .tm-facts { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 6px; }
+.otd-facts li, .tm-facts li { background: var(--bg); border-radius: 12px; padding: 8px 10px; }
+
+/* Kid Zone: weather time machine */
+.tm-dial { display: grid; gap: 8px; margin: 10px 0; }
+.tm-dial input[type='range'] { width: 100%; accent-color: var(--brand); }
+.tm-year { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; background: var(--bg); }
+.tm-year .tm-icon { font-size: 2.6rem; line-height: 1; }
+.tm-year .tm-when { font-size: 1.6rem; font-weight: 900; }
+.tm-year .tm-temps { font-weight: 800; }
+.tm-year .tm-temps .warm-ink, .tm-year .tm-temps .cool-ink { font-size: 1.2rem; }
+.tm-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.tm-guess { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

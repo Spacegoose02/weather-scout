@@ -285,4 +285,5 @@ export const BADGES = [
   { id: 'storm-ready', emoji: '🛡️', name: 'Storm Ready', how: 'Practice a storm drill with a grown-up.' },
   { id: 'photographer', emoji: '📷', name: 'Photographer', how: 'Add your first seasons photo.' },
   { id: 'four-seasons', emoji: '🍂', name: 'Four Seasons', how: 'Photograph one spot in all four seasons.' },
+  { id: 'time-traveler', emoji: '⏳', name: 'Time Traveler', how: 'Guess right 3 times in the weather time machine.' },
 ];

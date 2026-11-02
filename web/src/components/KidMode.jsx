@@ -11,6 +11,7 @@ import Forecaster from './kid/Forecaster.jsx';
 import FieldTrips from './kid/FieldTrips.jsx';
 import Experiments from './kid/Experiments.jsx';
 import Seasons from './kid/Seasons.jsx';
+import TimeMachine from './kid/TimeMachine.jsx';
 import Badges, { BadgeToast } from './kid/Badges.jsx';
 import SpeakButton from './kid/SpeakButton.jsx';
 import VoicePicker from './VoicePicker.jsx';
@@ -97,6 +98,7 @@ export default function KidMode({ weather, user, location, voice }) {
           <FieldTrips location={location} units={weather.location.units} kid={kidData} today={today} />
           <Experiments weather={weather} kid={kidData} today={today} />
           <Seasons user={user} weather={weather} kid={kidData} today={today} />
+          <TimeMachine location={location} units={weather.location.units} kid={kidData} today={today} />
           {!storm?.active && !drill && (
             <section className="card drill-card">
               <h2>Storm drill</h2>
