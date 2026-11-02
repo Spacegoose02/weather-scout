@@ -88,3 +88,6 @@
   .storm-scale td:last-child { display: none; }
 }
 .learn .cloud-card button.speak, .learn .why-actions button.speak { width: auto; display: inline-flex; }
+
+.cloud-spot-row { margin-top: 8px; }
+.spotted-tick { color: #2e9d4f; font-weight: 700; }

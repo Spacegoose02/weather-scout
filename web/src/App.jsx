@@ -14,6 +14,7 @@ import RockyFace from './components/RockyFace.jsx';
 import AskExpert from './components/AskExpert.jsx';
 import Learn from './components/learn/Learn.jsx';
 import Dashboard from './components/dashboard/Dashboard.jsx';
+import { BadgeCelebration } from './components/kid/Badges.jsx';
 import { configureVoice } from './kid/speak.js';
 import { useTheme } from './theme/useTheme.js';
 
@@ -166,6 +167,7 @@ export default function App() {
           }}
         />
       )}
+      <BadgeCelebration user={user} onShelf={() => setTab('kids')} />
       {modal === 'alerts' && <PushAlerts location={location} saved={prefs.saved} onClose={() => setModal(null)} />}
       {modal === 'admin' && user?.isAdmin && <Admin me={user} onClose={() => setModal(null)} />}
     </div>

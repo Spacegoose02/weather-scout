@@ -1,0 +1,28 @@
+/* Badge shelf extras and the "new badge" celebration (shown anywhere in the app). */
+.badge-meter, .badge-progress { display: block; height: 10px; border-radius: 999px; background: var(--bg); overflow: hidden; }
+.badge-meter { margin: 4px 0 8px; height: 12px; }
+.badge-meter i, .badge-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffb703, #fb8500); }
+.badge-progress { width: 80%; height: 6px; margin-top: 4px; background: var(--line, #d6dbe6); }
+.badge-next { margin: 0 0 10px; }
+.badge-shelf { margin-top: 14px; }
+.badge-shelf h3 { margin: 0 0 8px; font-size: 1rem; }
+.badge-shelf h3 small { color: var(--muted); font-weight: 400; margin-left: 4px; }
+
+.badge-celebrate { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; padding: 16px; background: rgba(10, 16, 30, 0.55); animation: badge-fade 0.2s ease-out; }
+.badge-celebrate-card { position: relative; overflow: hidden; width: min(380px, 100%); text-align: center; background: linear-gradient(170deg, #fff8dc, #ffe066); color: #1d2433; border-radius: 26px; padding: 22px 18px 18px; box-shadow: 0 18px 48px rgba(0,0,0,.35); animation: badge-pop 0.45s cubic-bezier(.2,1.4,.4,1); }
+.badge-celebrate-card h2 { margin: 6px 0 4px; font-size: 1.4rem; }
+.badge-celebrate-card p { margin: 0 0 12px; color: #3d4559; }
+.badge-celebrate-card .dash-row { justify-content: center; flex-wrap: wrap; gap: 8px; }
+.badge-celebrate-card .ghost { color: #1d2433; border-color: #1d243355; }
+.badge-celebrate-rocky { display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; }
+.badge-celebrate-emoji { display: block; font-size: 4.5rem; line-height: 1.1; animation: badge-wiggle 1.2s ease-in-out 0.4s 2; }
+.confetti { position: absolute; inset: 0; pointer-events: none; }
+.confetti i { position: absolute; top: -12px; left: calc(var(--i) * 7.2%); width: 8px; height: 14px; border-radius: 2px; background: hsl(calc(var(--i) * 47deg) 85% 58%); animation: badge-confetti 1.8s ease-in calc(var(--i) * 0.07s) forwards; }
+@keyframes badge-fade { from { opacity: 0; } }
+@keyframes badge-pop { from { transform: scale(0.6); opacity: 0; } }
+@keyframes badge-wiggle { 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+@keyframes badge-confetti { to { transform: translateY(440px) rotate(540deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .badge-celebrate, .badge-celebrate-card, .badge-celebrate-emoji { animation: none; }
+  .confetti { display: none; }
+}
