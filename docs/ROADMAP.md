@@ -60,7 +60,7 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Hurricane tracker | ✅ Active NHC storms with forecast cones, tracks and advisories on the map, and a Hurricane tracker card on Today when a storm is within 2,000 miles |
 | Ocean data | ✅ NOAA NDBC buoys on the map (waves, water temperature, wind) and a Tides card with the next highs and lows from the nearest CO-OPS station within 60 miles |
 | Live lightning | Strike markers with age rings and distance from you (source TBD: Blitzortung community feed or a paid API) |
-| Radar precipitation type and storm cell tracks | Rain/snow/mix layer; NWS storm-track overlays |
+| Radar precipitation type and storm cell tracks | 🚧 Full-screen radar adds single-site NEXRAD (super-res), echo tops, MRMS 1 h / 24 h rain, HRRR future radar, nationwide warning polygons and SPC Day 1-3 outlooks. Rain/snow/mix and storm tracks still to come |
 | Local and national weather news, RSS feeds | ✅ News & Videos tab, admin-managed RSS/Atom list (NWS office, local TV) |
 | YouTube weather gurus | ✅ Admin-curated channels (paste a link or @handle), latest videos play in the app |
 | Admin can edit news and YouTube lists | ✅ Family & settings |
@@ -83,7 +83,7 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | ECMWF, GFS, ICON side-by-side model comparison | ✅ Models tab: ECMWF, GFS, ICON and GEM plotted together (daily highs and next 72 hours), a side-by-side table and a day-by-day agreement rating |
 | HRRR & NAM for short-fuse storms | 🚧 HRRR (3 km, 2 days) is in the Models tab. Next: NAM and a model radar loop |
 | Confidence & spread metrics (10th/50th/90th percentile) | ✅ ECMWF (51 runs) or GFS (31 runs) ensemble: 10th-90th percentile band, median, High/Medium/Low confidence and the share of runs that bring rain, per day |
-| Base velocity / storm-relative velocity | NEXRAD Level 3 products (needs a radar renderer or a tile provider) |
+| Base velocity / storm-relative velocity | NEXRAD Level 3 products. No free tile source today (IEM only renders single-site reflectivity live), so this needs our own Level 3 renderer |
 | Correlation coefficient (debris signatures) | Same |
 | KDP and ZDR (rain vs hail) | Same |
 | Live animated cloud & sky chamber | Animated scene driven by real wind speed, cloud cover, precip type |

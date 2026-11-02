@@ -28,7 +28,9 @@ from free, official data sources.
 - **Health & sky**: pressure-swing warnings for migraine-sensitive folks, wet-bulb globe temperature
   heat stress, moon phase and sunrise/sunset.
 - **NWS alerts** for your exact location, most severe first, with plain-language kid versions.
-- **Radar & Cams map**: a smooth, loopable NEXRAD radar animation, alert polygons, and
+- **Radar & Cams map**: a smooth, loopable NEXRAD radar animation, alert polygons, and a **full-screen
+  radar** (single NEXRAD sites, echo tops, rain totals, HRRR future radar, every active NWS warning
+  nationwide with a warnings list, SPC severe outlooks, dark map), plus
   state DOT 511 road cameras pinned where they really are (clustered, with live snapshots).
 - **Kid Zone**: Rocky the raccoon dresses for the weather (raincoat when rain chance is over
   60%, beanie and mittens when it feels below 35°F, shades on sunny high-UV days), a tap-to-pack
@@ -169,6 +171,7 @@ is billed by Anthropic per search on top of tokens.
 | Air quality (US AQI, PM2.5, PM10, ozone) | Open-Meteo Air Quality (CAMS) | none |
 | Watches, warnings, advisories | [api.weather.gov](https://www.weather.gov/documentation/services-web-api) | none, but set `NWS_USER_AGENT` |
 | Satellite | NASA [GIBS](https://earthdata.nasa.gov/gibs) GOES-East infrared | none |
+| Severe outlooks | NOAA [Storm Prediction Center](https://www.spc.noaa.gov/) | none |
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
 | Map | OpenStreetMap | none |
 | Cameras | VA, SC, MD and KY public feeds, plus any state 511 feed you add | none for the built-in states |

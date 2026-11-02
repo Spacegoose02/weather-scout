@@ -15,10 +15,41 @@ const stormIcon = (s) => L.divIcon({
   iconSize: [36, 36], iconAnchor: [18, 18],
 });
 
+const BASEMAPS = {
+  light: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }],
+  dark: ['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18, subdomains: 'abcd', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' }],
+};
+const LEGENDS = {
+  dbz: { label: 'Rain & snow', stops: ['#04e9e7', '#019ff4', '#0300f4', '#02fd02', '#01c501', '#008e00', '#fdf802', '#e5bc00', '#fd9500', '#fd0000', '#d40000', '#bc0000', '#f800fd', '#9854c6'], ends: ['light', 'heavy', 'hail'] },
+  eet: { label: 'Storm tops', stops: ['#5ebaff', '#00d1c1', '#26d000', '#f4f400', '#ff9900', '#ff0000', '#c0007f'], ends: ['10k ft', '30k', '50k+ ft'] },
+  rain1: { label: 'Rain in the last hour', stops: ['#cbe4ff', '#6bb6ff', '#2a78d6', '#1baf7a', '#eda100', '#e34948', '#9b2fae'], ends: ['a little', '', 'a lot'] },
+  rain24: { label: 'Rain in the last 24 hours', stops: ['#cbe4ff', '#6bb6ff', '#2a78d6', '#1baf7a', '#eda100', '#e34948', '#9b2fae'], ends: ['a little', '', 'a lot'] },
+};
+const siteIcon = (s, selected) => L.divIcon({
+  className: `site-pin ${selected ? 'sel' : ''} ${s.online === false ? 'off' : ''}`,
+  html: `<span>${s.id}</span>`, iconSize: [46, 20], iconAnchor: [23, 10],
+});
+const dist2 = (a, b) => (a.lat - b.lat) ** 2 + ((a.lon - b.lon) * Math.cos((a.lat * Math.PI) / 180)) ** 2;
+
 export default function WeatherMap({ center, alerts, units = 'imperial' }) {
   const el = useRef(null);
+  const card = useRef(null);
+  const base = useRef(null);
+  const siteLayer = useRef(null);
+  const outlookLayer = useRef(null);
+  const [products, setProducts] = useState([]);
+  const [productId, setProductId] = useState('composite');
+  const [sites, setSites] = useState([]);
+  const [site, setSite] = useState(null);
+  const [full, setFull] = useState(false);
+  const [dark, setDark] = useState(false);
+  const [outlookDay, setOutlookDay] = useState(0);
+  const [outlook, setOutlook] = useState(null);
+  const [national, setNational] = useState(null);
+  const [panel, setPanel] = useState(false);
   const map = useRef(null);
   const radar = useRef([]);
+  const radarMeta = useRef(null);
   const camLayer = useRef(null);
   const satLayer = useRef(null);
   const alertLayer = useRef(null);
@@ -38,26 +69,26 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
   useEffect(() => {
     const m = L.map(el.current, { zoomControl: true, attributionControl: true }).setView([center.lat, center.lon], 8);
     map.current = m;
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(m);
+    base.current = L.tileLayer(...BASEMAPS.light).addTo(m);
     L.circleMarker([center.lat, center.lon], { radius: 7, color: '#fff', weight: 3, fillColor: '#2f6fde', fillOpacity: 1 }).addTo(m).bindTooltip('You are here');
 
     let cancelled = false;
     api('/api/radar').then((r) => {
       if (cancelled) return;
-      radar.current = r.frames.map((f, i) =>
-        L.tileLayer(f.url, { opacity: 0, maxNativeZoom: r.maxNativeZoom, maxZoom: 18, zIndex: 10, attribution: i === 0 ? r.attribution : '' }).addTo(m),
-      );
+      radarMeta.current = r;
       if (r.satellite) {
         satLayer.current = L.tileLayer.wms(r.satellite.wms, {
           layers: r.satellite.layers, format: 'image/png', transparent: true, opacity: 0.65, zIndex: 5, attribution: r.satellite.attribution,
         });
       }
-      setFrames(r.frames);
-      setFrame(r.frames.length - 1);
+      setProducts(r.products || [{ id: 'composite', name: 'Radar', legend: 'dbz', frames: r.frames }]);
     });
+
+    // Nationwide warning polygons, refreshed every 2 minutes.
+    const loadNational = () => api('/api/alerts/national').then((n) => !cancelled && setNational(n)).catch(() => {});
+    loadNational();
+    const natTimer = setInterval(loadNational, 120_000);
+    api('/api/radar/sites').then((r) => !cancelled && setSites(r.sites || [])).catch(() => {});
 
     import('leaflet.markercluster').then(() => {
       if (cancelled) return;
@@ -157,7 +188,10 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
       cancelled = true;
       clearTimeout(camTimer);
       clearTimeout(buoyTimer);
+      clearInterval(natTimer);
       m.remove();
+      siteLayer.current = null;
+      outlookLayer.current = null;
       stormLayer.current = null;
       buoyLayer.current = null;
       radar.current = [];
@@ -166,12 +200,102 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
     };
   }, [center.lat, center.lon, units]);
 
+  const product = products.find((p) => p.id === productId) || products[0];
+
+  // Build the tile layers for the chosen product (one per animation frame).
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !product) return undefined;
+    if (product.site && !site) return undefined;
+    const list = product.site ? [{ time: null, url: product.template.replace('{site}', site.id) }] : product.frames;
+    const meta = radarMeta.current || {};
+    radar.current.forEach((l) => l.remove());
+    radar.current = list.map((f, i) => L.tileLayer(f.url, { opacity: 0, maxNativeZoom: meta.maxNativeZoom || 12, maxZoom: 18, zIndex: 10, attribution: i === 0 ? meta.attribution : '' }).addTo(m));
+    setFrames(list);
+    setFrame(product.future ? 0 : list.length - 1);
+    return undefined;
+  }, [product, site]);
+
   // Radar animation
   useEffect(() => {
-    if (!playing || !frames.length) return;
-    const id = setInterval(() => setFrame((f) => (f + 1) % frames.length), 600);
+    if (!playing || frames.length < 2) return;
+    const id = setInterval(() => setFrame((f) => (f + 1) % frames.length), product?.future ? 1000 : 600);
     return () => clearInterval(id);
-  }, [playing, frames.length]);
+  }, [playing, frames.length, product?.future]);
+
+  // Default radar site: the closest one that is reporting.
+  useEffect(() => {
+    if (site || !sites.length) return;
+    const ok = sites.filter((x) => x.online !== false);
+    setSite((ok.length ? ok : sites).reduce((best, x) => (dist2(x, center) < dist2(best, center) ? x : best)));
+  }, [sites, site, center]);
+
+  // Radar site pins, only in single-site mode.
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    siteLayer.current?.remove();
+    siteLayer.current = null;
+    if (productId !== 'site' || !sites.length) return;
+    const g = L.layerGroup();
+    for (const x of sites) {
+      L.marker([x.lat, x.lon], { icon: siteIcon(x, x.id === site?.id), title: `${x.name} radar`, zIndexOffset: x.id === site?.id ? 900 : 0 })
+        .on('click', () => setSite(x))
+        .bindTooltip(`${x.name}${x.online === false ? ' (not reporting)' : ''}`)
+        .addTo(g);
+    }
+    siteLayer.current = g.addTo(m);
+  }, [productId, sites, site]);
+
+  // Base map
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !base.current) return;
+    base.current.remove();
+    base.current = L.tileLayer(...BASEMAPS[dark ? 'dark' : 'light']).addTo(m);
+    base.current.bringToBack();
+  }, [dark]);
+
+  // SPC outlook
+  useEffect(() => {
+    let off = false;
+    if (!outlookDay) { setOutlook(null); return undefined; }
+    api(`/api/outlook?day=${outlookDay}`).then((o) => !off && setOutlook(o)).catch(() => !off && setOutlook({ features: [], failed: true }));
+    return () => { off = true; };
+  }, [outlookDay]);
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    outlookLayer.current?.remove();
+    outlookLayer.current = null;
+    if (!outlook?.features?.length) return;
+    outlookLayer.current = L.geoJSON(outlook, {
+      style: (f) => ({ color: f.properties.stroke, weight: 2, fillColor: f.properties.fill, fillOpacity: 0.3 }),
+      onEachFeature: (f, layer) => layer.bindPopup(() => outlookPopup(f.properties, outlook.day)),
+    }).addTo(m);
+    outlookLayer.current.bringToBack();
+  }, [outlook]);
+
+  // Full screen: the browser's own full screen when allowed, otherwise fill the window.
+  useEffect(() => {
+    const m = map.current;
+    const node = card.current;
+    if (full && node?.requestFullscreen && !document.fullscreenElement) node.requestFullscreen().catch(() => {});
+    if (!full && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    if (full) setDark(true);
+    document.body.classList.toggle('radar-full-open', full);
+    const t = setTimeout(() => m?.invalidateSize(), 120);
+    const onKey = (e) => e.key === 'Escape' && setFull(false);
+    const onChange = () => { if (!document.fullscreenElement) setFull(false); };
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('fullscreenchange', onChange);
+    };
+  }, [full]);
+  useEffect(() => () => document.body.classList.remove('radar-full-open'), []);
 
   useEffect(() => {
     radar.current.forEach((layer, i) => layer.setOpacity(show.radar && i === frame ? opacity : 0));
@@ -206,35 +330,109 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
     const m = map.current;
     if (!m) return;
     alertLayer.current?.remove();
+    alertLayer.current = null;
+    if (!show.alerts) return;
+    if (national?.features?.length) {
+      alertLayer.current = L.geoJSON(national, {
+        style: (f) => ({ color: f.properties.color, weight: f.properties.rank >= 70 ? 2.5 : 1.5, fillColor: f.properties.color, fillOpacity: f.properties.rank >= 70 ? 0.18 : 0.08 }),
+        onEachFeature: (f, layer) => layer.bindPopup(() => alertPopup(f.properties), { maxWidth: 300 }),
+      }).addTo(m);
+      return;
+    }
     const features = alerts.filter((a) => a.geometry).map((a) => ({ type: 'Feature', geometry: a.geometry, properties: a }));
-    if (!features.length || !show.alerts) return;
+    if (!features.length) return;
     alertLayer.current = L.geoJSON(features, {
       style: (f) => ({ color: ALERT_STYLE[f.properties.severity] || '#e8c547', weight: 2, fillOpacity: 0.15 }),
       onEachFeature: (f, layer) => layer.bindTooltip(f.properties.event),
     }).addTo(m);
-  }, [alerts, show.alerts]);
+  }, [alerts, show.alerts, national]);
 
   const t = frames[frame]?.time;
+  const timeText = !frames.length ? '…'
+    : product?.site ? `${site?.name || ''} radar${site?.latest ? `, ${new Date(site.latest).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}`
+      : !t ? 'Latest'
+        : product?.future ? `${frames[frame].lead ? `+${frames[frame].lead} h · ` : 'Now · '}${new Date(t).toLocaleTimeString([], { hour: 'numeric' })}`
+          : `${new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}${frame === frames.length - 1 ? ' (latest)' : ''}`;
+  const warnings = (national?.features || []).filter((f) => f.properties.rank >= 70).slice().reverse();
+  const legend = LEGENDS[product?.legend] || LEGENDS.dbz;
+  const zoomTo = (f) => {
+    const b = L.geoJSON(f).getBounds();
+    if (b.isValid()) map.current?.flyToBounds(b.pad(0.4), { maxZoom: 9 });
+    setPanel(false);
+  };
+
   return (
-    <section className="card map-card">
+    <section className={`card map-card ${full ? 'full' : ''}`} ref={card}>
+      {full && (
+        <div className="radar-bar" role="toolbar" aria-label="Radar products">
+          <span className="radar-brand">🦝 Weather Scout radar</span>
+          {products.map((p) => (
+            <button key={p.id} className={p.id === productId ? 'on' : ''} aria-pressed={p.id === productId} onClick={() => setProductId(p.id)} title={p.note}>{p.name}</button>
+          ))}
+          <button className={show.satellite ? 'on' : ''} aria-pressed={show.satellite} onClick={() => setShow({ ...show, satellite: !show.satellite })}>Satellite</button>
+          <label className="radar-select">Outlook{' '}
+            <select value={outlookDay} onChange={(e) => setOutlookDay(Number(e.target.value))}>
+              <option value={0}>Off</option><option value={1}>Day 1</option><option value={2}>Day 2</option><option value={3}>Day 3</option>
+            </select>
+          </label>
+          <button onClick={() => setDark(!dark)} aria-pressed={dark}>{dark ? '🌙 Dark' : '☀️ Light'} map</button>
+          <button className="radar-exit" onClick={() => setFull(false)} aria-label="Exit full screen">✕</button>
+        </div>
+      )}
+      {full && show.alerts && national && (
+        <div className="warn-badge-wrap">
+          <button className="warn-badge" onClick={() => setPanel(!panel)} aria-expanded={panel}>⚠️ <b>{national.counts?.warning || 0}</b> warnings</button>
+          {panel && (
+            <div className="warn-panel" role="dialog" aria-label="Active warnings">
+              <div className="warn-head"><strong>Active warnings</strong><span>{national.counts?.watch || 0} watches · {national.counts?.advisory || 0} advisories</span></div>
+              {!warnings.length && <p className="hint">No warnings right now.</p>}
+              <ul>
+                {warnings.slice(0, 60).map((f) => (
+                  <li key={f.properties.id}><button onClick={() => zoomTo(f)}><i style={{ background: f.properties.color }} /> <b>{f.properties.event}</b><span>{f.properties.area}</span></button></li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
       <div className="map-controls">
-        <button onClick={() => setPlaying(!playing)} aria-label={playing ? 'Pause radar' : 'Play radar'}>{playing ? '❚❚' : '▶'}</button>
-        <input
-          type="range" min={0} max={Math.max(0, frames.length - 1)} value={frame}
-          onChange={(e) => { setPlaying(false); setFrame(Number(e.target.value)); }} aria-label="Radar time"
-        />
-        <span className="radar-time">{t ? new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '…'}{frame === frames.length - 1 ? ' (latest)' : ''}</span>
+        {frames.length > 1 && (
+          <>
+            <button onClick={() => setPlaying(!playing)} aria-label={playing ? 'Pause radar' : 'Play radar'}>{playing ? '❚❚' : '▶'}</button>
+            <input
+              type="range" min={0} max={Math.max(0, frames.length - 1)} value={frame}
+              onChange={(e) => { setPlaying(false); setFrame(Number(e.target.value)); }} aria-label="Radar time"
+            />
+          </>
+        )}
+        <span className="radar-time">{timeText}</span>
         <label><input type="checkbox" checked={show.radar} onChange={(e) => setShow({ ...show, radar: e.target.checked })} /> Radar</label>
         <label><input type="checkbox" checked={show.satellite} onChange={(e) => setShow({ ...show, satellite: e.target.checked })} /> Satellite</label>
         <label><input type="checkbox" checked={show.cams} onChange={(e) => setShow({ ...show, cams: e.target.checked })} /> Cameras</label>
         <label><input type="checkbox" checked={show.alerts} onChange={(e) => setShow({ ...show, alerts: e.target.checked })} /> Alerts</label>
         <label><input type="checkbox" checked={show.storms} onChange={(e) => setShow({ ...show, storms: e.target.checked })} /> Hurricanes</label>
         <label><input type="checkbox" checked={show.buoys} onChange={(e) => setShow({ ...show, buoys: e.target.checked })} /> Buoys</label>
+        {!full && products.length > 1 && (
+          <label className="radar-select">Show{' '}
+            <select value={productId} onChange={(e) => setProductId(e.target.value)}>
+              {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </label>
+        )}
         <label className="opacity">Opacity <input type="range" min={0.2} max={1} step={0.1} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} /></label>
+        {!full && <button className="full-btn" onClick={() => setFull(true)} aria-label="Full screen radar">⛶ Full screen</button>}
+        {full && (
+          <div className="radar-legend" aria-label={`${legend.label} color scale`}>
+            <span className="lg-label">{legend.label}</span>
+            <span className="lg-bar" style={{ background: `linear-gradient(90deg, ${legend.stops.join(', ')})` }} />
+            <span className="lg-ends">{legend.ends.map((e, i) => <span key={i}>{e}</span>)}</span>
+          </div>
+        )}
+        {full && product?.note && <span className="radar-note">{product.note}{outlook?.features && outlookDay ? ` · SPC Day ${outlookDay} outlook: ${outlook.features.length ? [...new Set(outlook.features.map((f) => f.properties.name))].join(', ') : 'no severe risk'}` : ''}</span>}
       </div>
       <div ref={el} className="map" role="application" aria-label="Radar and camera map" />
       <div className="map-foot">
-        <span className="legend" aria-label="Radar colors from light to heavy"><i /> light <i /> moderate <i /> heavy <i /> intense</span>
+        <span className="legend" aria-label="Radar colors from light to heavy" hidden={product && product.legend !== 'dbz'}><i /> light <i /> moderate <i /> heavy <i /> intense</span>
         <span>
           {storms && (storms.length
             ? <button className="link" onClick={() => stormBounds.current && map.current?.flyToBounds(stormBounds.current.pad(0.1), { maxZoom: 6 })}>🌀 {storms.length} active storm{storms.length === 1 ? '' : 's'}</button>
@@ -280,6 +478,15 @@ function cameraPopup(c) {
     img.onerror = () => showMessage('This camera is not sending pictures right now.');
     refresh();
     button('🔄 Refresh', refresh);
+    // Stills-only cameras (Kentucky, for example) refresh themselves while the popup is open.
+    if (!c.video && !c.embed) {
+      const note = Object.assign(document.createElement('span'), { className: 'cam-auto', textContent: '● Updates every 30 s' });
+      actions.append(note);
+      const timer = setInterval(() => {
+        if (!div.isConnected) return clearInterval(timer);
+        if (stage.contains(img)) img.src = `${c.imageUrl}?t=${Date.now()}`;
+      }, 30_000);
+    }
   }
 
   if (c.video) button('▶ Live video', () => playHls(c, stage, showMessage));
@@ -368,5 +575,26 @@ function stormPopup(s) {
     a.rel = 'noopener noreferrer';
     div.append(a);
   }
+  return div;
+}
+
+function alertPopup(p) {
+  const div = el('div', '', 'buoy-popup');
+  const h = el('strong', p.event);
+  h.style.borderLeft = `6px solid ${p.color}`;
+  h.style.paddingLeft = '6px';
+  div.append(h);
+  if (p.area) div.append(el('div', p.area, 'cam-meta'));
+  if (p.ends) div.append(el('div', `Until ${new Date(p.ends).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`, 'cam-meta'));
+  if (p.headline) div.append(el('p', p.headline, 'storm-kid'));
+  if (p.kid) div.append(el('p', `🦝 ${p.kid}`, 'storm-kid'));
+  return div;
+}
+
+function outlookPopup(p, day) {
+  const div = el('div', '', 'buoy-popup');
+  div.append(el('strong', `Day ${day} severe outlook: ${p.name}`));
+  div.append(el('p', p.meaning, 'storm-kid'));
+  div.append(el('div', 'From the NOAA Storm Prediction Center', 'cam-meta'));
   return div;
 }

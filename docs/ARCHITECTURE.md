@@ -99,4 +99,8 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/tides?lat&lon&units` | Nearest tide station within 60 miles and its next highs and lows (60 min cache) |
 | `GET /api/models?lat&lon&units` | Daily and 72-hour forecasts from each model (ECMWF, GFS, ICON, GEM, HRRR, GraphCast, AIFS) plus day-by-day agreement (30 min cache) |
 | `GET /api/ensemble?lat&lon&units&model=ecmwf_ifs025\|gfs_seamless` | Ensemble 10th/50th/90th percentiles, confidence and rain chance (60 min cache) |
+| `GET /api/radar` | Radar products for the map (composite loop, single site, echo tops, rain totals, future radar) and the satellite layer |
+| `GET /api/radar/sites` | NEXRAD sites and which are reporting (10 min cache) |
+| `GET /api/alerts/national` | Every active NWS alert with a polygon, colored and ranked, plus counts (2 min cache) |
+| `GET /api/outlook?day=1-3` | SPC convective outlook categories (15 min cache) |
 | `GET /api/connect/summary` (Bearer app key) | Kid-safe summary for Den-Duty and other apps, see [CONNECT.md](CONNECT.md) |
