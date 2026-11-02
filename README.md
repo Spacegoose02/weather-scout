@@ -60,16 +60,18 @@ Nothing secret lives in this repository.
 
 ## Camera feeds
 
-**Virginia, Maryland and Kentucky work out of the box.** With no config, Weather Scout loads
-these public camera feeds (no keys needed):
+**Virginia, South Carolina, Maryland and Kentucky work out of the box, and North Carolina with a free key.**
+With no config, Weather Scout loads these camera feeds:
 
 | State | Source | What you get |
 | --- | --- | --- |
 | Virginia | 511 Virginia (VDOT) | Snapshots + live HLS video |
+| South Carolina | 511 South Carolina (SCDOT) | Snapshots + live HLS video |
 | Maryland | MD iMAP / CHART | Live video player |
 | Kentucky | KYTC GIS | Snapshots |
+| North Carolina | DriveNC | Snapshots, once you set `NC_DRIVENC_API_KEY` (free: sign up at drivenc.gov, then request a developer key on its API documentation page) |
 
-Set `CAMERAS_DEFAULT_FEEDS` to `false` to turn them off, or to a list such as `va,md` to pick states.
+Set `CAMERAS_DEFAULT_FEEDS` to `false` to turn them off, or to a list such as `va,md,nc` to pick states.
 
 To add other states or your own cameras, copy
 [`server/cameras.example.json`](server/cameras.example.json) to `/data/cameras.json` and enable
@@ -93,7 +95,7 @@ Feed health (camera counts and errors) shows under *Family & settings*.
 | Watches, warnings, advisories | [api.weather.gov](https://www.weather.gov/documentation/services-web-api) | none, but set `NWS_USER_AGENT` |
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
 | Map | OpenStreetMap | none |
-| Cameras | VA, MD and KY public feeds, plus any state 511 feed you add | none for the built-in states |
+| Cameras | VA, SC, MD and KY public feeds, plus any state 511 feed you add | none for the built-in states |
 
 Open-Meteo's free tier is for non-commercial use, which fits a family server. All upstream
 responses are cached on the server (forecast 10 min, alerts 2 min, cameras 15 min) so a house

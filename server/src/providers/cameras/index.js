@@ -7,8 +7,11 @@ import { fetchJson } from '../../cache.js';
 
 // Built-in feeds used when no cameras.json exists. All are public, no key:
 //  - 511 Virginia: GeoJSON with a snapshot PNG and an HTTPS HLS stream per camera
+//  - 511 South Carolina: same Iteris GeoJSON format as Virginia
 //  - Maryland CHART (MD iMAP ArcGIS layer): live video player page per camera
 //  - Kentucky (KYTC ArcGIS layer): snapshot JPG per camera
+// Plus feeds that switch on once their free developer key is set:
+//  - North Carolina (DriveNC, IBI 511 API v2): NC_DRIVENC_API_KEY
 export const DEFAULT_FEEDS = [
   {
     id: 'va',
@@ -16,7 +19,16 @@ export const DEFAULT_FEEDS = [
     region: 'VA',
     type: 'geojson',
     url: 'https://511.vdot.virginia.gov/services/511/map/layers/map/cams',
-    fields: { id: 'id', name: 'description', image: 'image_url', video: 'https_url', road: 'route', direction: 'direction', active: 'active' },
+    fields: { id: 'id', name: 'description', image: 'image_url', video: 'https_url', road: 'route', direction: 'direction', active: 'active', problem: 'problem_stream' },
+    refreshMinutes: 15,
+  },
+  {
+    id: 'sc',
+    name: '511 South Carolina (SCDOT)',
+    region: 'SC',
+    type: 'geojson',
+    url: 'https://sc.cdn.iteris-atis.com/geojson/icons/metadata/icons.cameras.geojson',
+    fields: { id: 'name', name: 'description', image: 'image_url', video: 'https_url', road: 'route', direction: 'direction', active: 'active', problem: 'problem_stream' },
     refreshMinutes: 15,
   },
   {
@@ -37,14 +49,26 @@ export const DEFAULT_FEEDS = [
     fields: { id: 'OBJECTID', name: 'description', image: 'snapshot', road: 'highway', direction: 'direction' },
     refreshMinutes: 60,
   },
+  {
+    id: 'nc',
+    name: 'DriveNC (NCDOT)',
+    region: 'NC',
+    type: 'ibi511',
+    apiVersion: 2,
+    baseUrl: 'https://www.drivenc.gov',
+    keyEnv: 'NC_DRIVENC_API_KEY',
+    requiresKey: true,
+    refreshMinutes: 15, // DriveNC allows 10 calls a minute; one call every 15 minutes is plenty
+  },
 ];
 
-export function defaultFeeds(setting = '') {
+export function defaultFeeds(setting = '', env = {}) {
   const v = String(setting).trim().toLowerCase();
   if (/^(0|false|no|off|none)$/.test(v)) return [];
-  if (!v || /^(1|true|yes|on|all)$/.test(v)) return DEFAULT_FEEDS;
+  const usable = DEFAULT_FEEDS.filter((f) => !f.requiresKey || env[f.keyEnv]);
+  if (!v || /^(1|true|yes|on|all)$/.test(v)) return usable;
   const wanted = new Set(v.split(/[\s,]+/));
-  return DEFAULT_FEEDS.filter((f) => wanted.has(f.id));
+  return usable.filter((f) => wanted.has(f.id));
 }
 
 const get = (obj, path) => (path ? String(path).split('.').reduce((o, k) => (o == null ? o : o[k]), obj) : undefined);
@@ -66,9 +90,9 @@ export function parseIbi511(list, feed) {
       const image = views ? views[0]?.Url : c.Url;
       return {
         id: String(c.ID ?? c.Id),
-        name: c.Name || c.Location || c.RoadwayName || 'Camera',
-        road: c.RoadwayName || null,
-        direction: c.DirectionOfTravel || null,
+        name: c.Name || c.Location || c.RoadwayName || c.Roadway || 'Camera',
+        road: c.RoadwayName || c.Roadway || null,
+        direction: c.DirectionOfTravel || c.Direction || null,
         lat: Number(c.Latitude),
         lon: Number(c.Longitude),
         image: image || null,
@@ -89,6 +113,7 @@ export function parseGeoJson(raw, feed) {
       const p = feat.properties || {};
       const [lon, lat] = feat.geometry?.coordinates || [];
       if (f.active && get(p, f.active) === false) return null;
+      if (f.problem && get(p, f.problem) === true) return null;
       return {
         id: String(get(p, f.id || 'id') ?? feat.id ?? i),
         name: get(p, f.name || 'name') || get(p, 'name') || 'Camera',
@@ -147,7 +172,7 @@ export class CameraService {
       console.error(`[cameras] could not read camera config: ${err.message}`);
       return [];
     }
-    return defaultFeeds(env.CAMERAS_DEFAULT_FEEDS);
+    return defaultFeeds(env.CAMERAS_DEFAULT_FEEDS, env);
   }
 
   async loadFeed(feed) {

@@ -1,5 +1,5 @@
 {
-  "_readme": "Copy to /data/cameras.json to customize. Without this file, Weather Scout uses the built-in Virginia, Maryland and Kentucky feeds. Put any API keys in environment variables and reference them with keyEnv, never in this file. Types: ibi511 (IBI/Castle Rock 511 developer API), geojson (any GeoJSON point layer), arcgis (ArcGIS layer URL, paged), static (your own cameras).",
+  "_readme": "Copy to /data/cameras.json to customize. Without this file, Weather Scout uses the built-in Virginia, South Carolina, Maryland and Kentucky feeds (plus North Carolina when NC_DRIVENC_API_KEY is set). Put any API keys in environment variables and reference them with keyEnv, never in this file. Types: ibi511 (IBI/Castle Rock 511 developer API), geojson (any GeoJSON point layer), arcgis (ArcGIS layer URL, paged), static (your own cameras).",
   "feeds": [
     {
       "id": "va",
@@ -14,7 +14,26 @@
         "video": "https_url",
         "road": "route",
         "direction": "direction",
-        "active": "active"
+        "active": "active",
+        "problem": "problem_stream"
+      },
+      "refreshMinutes": 15
+    },
+    {
+      "id": "sc",
+      "name": "511 South Carolina (SCDOT)",
+      "region": "SC",
+      "type": "geojson",
+      "url": "https://sc.cdn.iteris-atis.com/geojson/icons/metadata/icons.cameras.geojson",
+      "fields": {
+        "id": "name",
+        "name": "description",
+        "image": "image_url",
+        "video": "https_url",
+        "road": "route",
+        "direction": "direction",
+        "active": "active",
+        "problem": "problem_stream"
       },
       "refreshMinutes": 15
     },
@@ -45,6 +64,16 @@
         "direction": "direction"
       },
       "refreshMinutes": 60
+    },
+    {
+      "id": "nc",
+      "name": "DriveNC (NCDOT)",
+      "region": "NC",
+      "type": "ibi511",
+      "apiVersion": 2,
+      "baseUrl": "https://www.drivenc.gov",
+      "keyEnv": "NC_DRIVENC_API_KEY",
+      "refreshMinutes": 15
     },
     {
       "id": "ny",

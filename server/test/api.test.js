@@ -192,7 +192,34 @@ test('Maryland and Kentucky ArcGIS feeds page through results; MD cams are live 
 
 test('CAMERAS_DEFAULT_FEEDS picks states', async () => {
   const { defaultFeeds } = await import('../src/providers/cameras/index.js');
-  assert.deepEqual(defaultFeeds('').map((f) => f.id), ['va', 'md', 'ky']);
+  assert.deepEqual(defaultFeeds('').map((f) => f.id), ['va', 'sc', 'md', 'ky']);
+  assert.deepEqual(defaultFeeds('', { NC_DRIVENC_API_KEY: 'k' }).map((f) => f.id), ['va', 'sc', 'md', 'ky', 'nc']);
+  assert.deepEqual(defaultFeeds('nc').map((f) => f.id), []);
   assert.deepEqual(defaultFeeds('va, ky').map((f) => f.id), ['va', 'ky']);
   assert.equal(defaultFeeds('false').length, 0);
+});
+
+test('DriveNC cameras load with a key using the 511 v2 API', async () => {
+  const nc = [{ Id: 55, Roadway: 'I-40', Direction: 'East', Latitude: 35.78, Longitude: -78.64, Location: 'I-40 at Wade Ave', Views: [{ Id: 1, Url: 'https://www.drivenc.gov/map/Cctv/55', Status: 'Enabled', VideoUrl: null }] }];
+  const fetchImpl = mockFetch({ 'drivenc.gov/api/v2/get/cameras': () => Response.json(nc) });
+  const { app } = await testApp({ fetchImpl, env: { CAMERAS_DEFAULT_FEEDS: 'nc', NC_DRIVENC_API_KEY: 'nckey' } });
+  const body = (await app.inject('/api/cameras?south=35&west=-79&north=36&east=-78')).json();
+  assert.deepEqual([body.cameras[0].id, body.cameras[0].name, body.cameras[0].road], ['nc:55', 'I-40 at Wade Ave', 'I-40']);
+  assert.ok(fetchImpl.calls.some((c) => c.url.includes('key=nckey')));
+  assert.ok(!JSON.stringify(body).includes('nckey'));
+  await app.close();
+});
+
+test('South Carolina cameras skip offline and problem streams', async () => {
+  const cam = (name, active, problem) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [-79.062775, 33.845627] },
+    properties: { name, description: `US 501 N @ ${name}`, route: 'US 501', direction: 'NB', active, problem_stream: problem,
+      image_url: `https://scdotsnap.us-east-1.skyvdn.com/thumbs/${name}.flv.png`, https_url: `https://s18.us-east-1.skyvdn.com/rtplive/${name}/playlist.m3u8` } });
+  const sc = { type: 'FeatureCollection', features: [cam('50001', true, false), cam('50002', false, false), cam('50003', true, true)] };
+  const fetchImpl = mockFetch({ 'sc.cdn.iteris-atis.com': () => Response.json(sc) });
+  const { app } = await testApp({ fetchImpl, env: { CAMERAS_DEFAULT_FEEDS: 'sc' } });
+  const body = (await app.inject('/api/cameras?south=33&west=-80&north=34&east=-79')).json();
+  assert.deepEqual(body.cameras.map((c) => c.id), ['sc:50001']);
+  assert.equal(body.cameras[0].direction, 'NB');
+  assert.match(body.cameras[0].video, /playlist\.m3u8$/);
+  await app.close();
 });
