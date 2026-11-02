@@ -12,7 +12,7 @@ export default function WhatToWear({ raccoon, kid }) {
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   };
   const check = () => {
-    const r = checkOutfit(picked, raccoon.items);
+    const r = checkOutfit(picked, raccoon.items, { minFeelsLike: raccoon.minFeelsLike });
     setResult(r);
     speak([r.headline, ...r.tips.map((t) => t.text)].join(' '));
     if (r.perfect) kid.earn('dressed-for-it');

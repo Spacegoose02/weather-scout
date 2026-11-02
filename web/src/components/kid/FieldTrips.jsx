@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { icon } from '../../format.js';
+import LiveCam from './LiveCam.jsx';
 
 export default function FieldTrips({ location, units, kid, today }) {
   const [trip, setTrip] = useState(null);
@@ -55,9 +56,9 @@ export default function FieldTrips({ location, units, kid, today }) {
                       <>
                         <p className="clue">🔍 {m.clue}</p>
                         <div className="trip-cams">
-                          {m.cameras.map((c) => (
+                          {m.cameras.map((c, i) => (
                             <figure key={c.id}>
-                              <img src={c.imageUrl} alt={`Road camera: ${c.name}`} loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                              <LiveCam cam={c} autoPlay={i === 0} />
                               <figcaption>
                                 <strong>{c.name}</strong>
                                 <span>{icon(c.icon, c.isDay)} {c.temp}° · {c.kidLabel}</span>
@@ -74,7 +75,7 @@ export default function FieldTrips({ location, units, kid, today }) {
               </li>
             ))}
           </ul>
-          <p className="hint small">Checked {trip.cameraCount} cameras nearby. Camera pictures refresh every few minutes.</p>
+          <p className="hint small">Checked {trip.cameraCount} cameras nearby. Cameras with ▶ can show live video. The others send a new picture every few minutes.</p>
         </>
       )}
     </section>
