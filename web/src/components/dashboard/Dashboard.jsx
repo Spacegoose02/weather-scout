@@ -15,6 +15,7 @@ import OnThisDay from '../history/OnThisDay.jsx';
 import GearChecklist from './GearChecklist.jsx';
 import { useDashboard } from '../../dashboard/useDashboard.js';
 import { CARD, SIZE_NAMES, hidden, addCard, removeCard, moveCard, nudgeCard, resizeCard } from '../../dashboard/layout.js';
+import { usePackedGrid } from '../../dashboard/usePackedGrid.js';
 import '../../dashboard/dashboard.css';
 
 function renderCard(id, size, ctx) {
@@ -67,6 +68,8 @@ export default function Dashboard({ weather, location, units, kidMode, user, loa
   const [dragging, setDragging] = useState(null);
   const [adding, setAdding] = useState(false);
   const dragRef = useRef(null);
+  const gridRef = useRef(null);
+  const packed = usePackedGrid(gridRef);
   const ctx = { weather, location, units, kidMode, user, onTab, onSignIn, onAlerts, onAdmin };
   const { layout, update } = dash;
   const canEdit = !!user;
@@ -140,7 +143,7 @@ export default function Dashboard({ weather, location, units, kidMode, user, loa
 
       {isEditing && <p className="hint dash-help">Drag a card by ⠿ (or use the arrows) to move it, pick S, M or L to resize, and ✕ to hide it. Changes save on their own.</p>}
 
-      <div className={`dash-grid ${isEditing ? 'editing' : ''}`} onPointerMove={dragging ? onDragMove : undefined} onPointerUp={endDrag} onPointerCancel={endDrag}>
+      <div ref={gridRef} className={`dash-grid${packed ? ' packed' : ''}${isEditing ? ' editing' : ''}`} onPointerMove={dragging ? onDragMove : undefined} onPointerUp={endDrag} onPointerCancel={endDrag}>
         {layout.cards.map((c, i) => {
           const def = CARD[c.id];
           return (

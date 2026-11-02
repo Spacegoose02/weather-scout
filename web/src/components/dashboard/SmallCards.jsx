@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { api } from '../../api.js';
 import { round, icon } from '../../format.js';
-import { BASEMAPS } from '../WeatherMap.jsx';
+import { baseMap } from '../basemap.js';
 import LiveCam from '../kid/LiveCam.jsx';
 import Raccoon from '../Raccoon.jsx';
 import RockyFace from '../RockyFace.jsx';
@@ -26,7 +26,7 @@ export function RadarCard({ location, size, onOpen }) {
     const m = L.map(el.current, { zoomControl: false, attributionControl: true, scrollWheelZoom: false })
       .setView([location.lat, location.lon], size === 's' ? 6 : 7);
     map.current = m;
-    L.tileLayer(...BASEMAPS[darkQuery()?.matches ? 'dark' : 'light']).addTo(m);
+    baseMap(darkQuery()?.matches ? 'dark' : 'light').addTo(m);
     L.circleMarker([location.lat, location.lon], { radius: 6, color: '#fff', weight: 3, fillColor: '#2f6fde', fillOpacity: 1 }).addTo(m);
     let live = true;
     const load = () => api('/api/radar').then((r) => {

@@ -66,3 +66,12 @@ describe('stargazing verdict', () => {
     expect(skyVerdict(hours(10), null)).toBe(null);
   });
 });
+
+describe('packed grid', () => {
+  it('spans a card over its height plus the gap, in 1px rows', async () => {
+    const { spanFor } = await import('./usePackedGrid.js');
+    expect(spanFor(224, 14)).toBe(238);
+    expect(spanFor(100.2, 14)).toBe(115);
+    expect(spanFor(0, 14)).toBe(14);
+  });
+});
