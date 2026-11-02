@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { api } from '../api.js';
+import WindyView from './WindyView.jsx';
 
 window.L = L; // leaflet.markercluster is a classic plugin that extends the global L
 
@@ -64,6 +65,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
   const [opacity, setOpacity] = useState(0.7);
   const [show, setShow] = useState({ radar: true, cams: true, alerts: true, satellite: false, storms: true, buoys: true });
   const [camInfo, setCamInfo] = useState('');
+  const [windy, setWindy] = useState(null); // { lat, lon, zoom } while the Windy map is open
 
   // Map + radar setup
   useEffect(() => {
@@ -355,6 +357,10 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
           : `${new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}${frame === frames.length - 1 ? ' (latest)' : ''}`;
   const warnings = (national?.features || []).filter((f) => f.properties.rank >= 70).slice().reverse();
   const legend = LEGENDS[product?.legend] || LEGENDS.dbz;
+  const openWindy = () => {
+    const c = map.current?.getCenter();
+    setWindy(c ? { lat: c.lat, lon: c.lng, zoom: Math.min(map.current.getZoom(), 9) } : { lat: center.lat, lon: center.lon, zoom: 7 });
+  };
   const zoomTo = (f) => {
     const b = L.geoJSON(f).getBounds();
     if (b.isValid()) map.current?.flyToBounds(b.pad(0.4), { maxZoom: 9 });
@@ -376,6 +382,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
             </select>
           </label>
           <button onClick={() => setDark(!dark)} aria-pressed={dark}>{dark ? '🌙 Dark' : '☀️ Light'} map</button>
+          <button onClick={openWindy} title="Animated wind, gusts and forecast models">🌬️ Windy</button>
           <button className="radar-exit" onClick={() => setFull(false)} aria-label="Exit full screen">✕</button>
         </div>
       )}
@@ -420,6 +427,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
           </label>
         )}
         <label className="opacity">Opacity <input type="range" min={0.2} max={1} step={0.1} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} /></label>
+        {!full && <button className="windy-btn" onClick={openWindy} title="Animated wind, gusts and forecast models">🌬️ Windy wind map</button>}
         {!full && <button className="full-btn" onClick={() => setFull(true)} aria-label="Full screen radar">⛶ Full screen</button>}
         {full && (
           <div className="radar-legend" aria-label={`${legend.label} color scale`}>
@@ -441,6 +449,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
           {camInfo && ` · ${camInfo}`}
         </span>
       </div>
+      {windy && <WindyView center={windy} units={units} onClose={() => setWindy(null)} />}
     </section>
   );
 }
