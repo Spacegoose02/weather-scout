@@ -76,4 +76,4 @@ Every card from the planning board, grouped into phases. Phase 1 is this first r
 | Integrate with local weather stations | Ambient Weather / Ecowitt / Tempest APIs, or a local MQTT feed |
 | Webhooks & smart home (Home Assistant, MQTT) | Outbound webhooks and MQTT publish on thresholds (frost, high wind) |
 | Windy for maps | Windy Map Forecast API layer (needs a Windy key) |
-| Integrate with Den-Duty | Need details on what Den-Duty is and what it should exchange |
+| Integrate with Den-Duty | 🚧 Step 1: weather card on Den-Duty kid boards and the family wall (Weather Scout app keys + `/api/connect/summary`). Next: weather steps in the morning routine, severe alerts through Den-Duty push |
