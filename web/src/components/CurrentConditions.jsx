@@ -1,4 +1,5 @@
 import { icon, round, compass, nextRainText } from '../format.js';
+import StationStrip from './stations/StationStrip.jsx';
 
 export default function CurrentConditions({ weather, kidMode }) {
   const { current: c, units, daily, minutely } = weather.forecast;
@@ -20,6 +21,7 @@ export default function CurrentConditions({ weather, kidMode }) {
         {today && <span>☔ {round(today.precipChance)}% chance</span>}
       </div>
       {rain && <p className="nowcast">⏱️ {rain}</p>}
+      <StationStrip units={units.temp === '°C' ? 'metric' : 'imperial'} kidMode={kidMode} />
     </section>
   );
 }

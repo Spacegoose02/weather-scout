@@ -54,6 +54,9 @@ from free, official data sources.
   "why" and news questions (kid-safe science sites only in Kid Mode). See [AI helper](#ai-helper).
 - **Connected apps**: a keyed, kid-safe weather summary for Den-Duty boards, Home Assistant or
   scripts ([docs/CONNECT.md](docs/CONNECT.md)).
+- **Your own weather station** (Ecowitt, Ambient Weather, Tempest, or anything that speaks the
+  Weather Underground protocol) next to the forecast, and **Home Assistant** sensors over MQTT
+  with auto-discovery, or its REST API ([docs/HOME-ASSISTANT.md](docs/HOME-ASSISTANT.md)).
 - Installable as a phone/desktop app (PWA manifest with Rocky app icons), light and dark themes.
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for everything else on the board and when it lands,

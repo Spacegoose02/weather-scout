@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Modal from './Modal.jsx';
+import IntegrationsPanel from './stations/IntegrationsPanel.jsx';
 
 export default function Admin({ me, onClose }) {
   const [users, setUsers] = useState([]);
@@ -213,6 +214,8 @@ export default function Admin({ me, onClose }) {
           </ul>
         </>
       )}
+
+      <IntegrationsPanel />
 
       <h3>Camera feeds</h3>
       {feeds.length === 0 ? (

@@ -8,7 +8,7 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/spacegoose02/weather-scout/issues</Support>
   <Project>https://github.com/spacegoose02/weather-scout</Project>
-  <Overview>Weather Scout: a kid-friendly family weather station with a radar loop, NWS alerts, state 511 road cameras on a map, and a Kid Zone with Rocky the raccoon. API keys stay on your server.</Overview>
+  <Overview>Weather Scout: a kid-friendly family weather station with a radar loop, NWS alerts, state 511 road cameras on a map, a Kid Zone with Rocky the raccoon, your own Ecowitt, Ambient or Tempest weather station, and Home Assistant sensors over MQTT. API keys stay on your server.</Overview>
   <Category>HomeAutomation: Tools:</Category>
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
   <Icon>https://raw.githubusercontent.com/spacegoose02/weather-scout/main/web/public/icon-512.png</Icon>
@@ -42,4 +42,21 @@
   <Config Name="Kokoro voice URL" Target="KOKORO_URL" Default="" Description="Optional. Kokoro-FastAPI container for a natural read-aloud voice, e.g. http://192.168.1.20:8880" Type="Variable" Display="always" Required="false" Mask="false"></Config>
   <Config Name="Kokoro voice" Target="KOKORO_VOICE" Default="af_heart" Description="Rocky's default voice, e.g. af_heart, bf_emma, am_adam" Type="Variable" Display="advanced" Required="false" Mask="false">af_heart</Config>
   <Config Name="Kokoro speed" Target="KOKORO_SPEED" Default="1" Description="Speaking speed, 0.5 to 2" Type="Variable" Display="advanced" Required="false" Mask="false">1</Config>
+  <Config Name="Station upload token" Target="STATION_PUSH_TOKEN" Default="" Description="Optional. Secret for Ecowitt/Ambient uploads to /api/stations/push/TOKEN. Blank = only direct uploads from your home network" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Station names" Target="STATION_NAMES" Default="" Description="e.g. ecowitt_3419d586=Backyard (ids are in Family and settings)" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Main station" Target="STATION_PRIMARY" Default="" Description="Station id to show first. Blank = the freshest one" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Station elevation (m)" Target="STATION_ELEVATION_M" Default="" Description="For Tempest sea-level pressure" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Ambient API key" Target="AMBIENT_API_KEY" Default="" Description="Optional. Ambient Weather cloud, from ambientweather.net/account" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Ambient application key" Target="AMBIENT_APPLICATION_KEY" Default="" Description="" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Tempest token" Target="TEMPEST_TOKEN" Default="" Description="Optional. Personal access token from tempestwx.com/settings/tokens" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Tempest station ids" Target="TEMPEST_STATION_IDS" Default="" Description="Comma list. Blank = every station on the token" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Tempest on the LAN" Target="TEMPEST_UDP" Default="false" Description="true = listen for Tempest hub broadcasts on UDP 50222. Needs Host or br0 network" Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="MQTT broker" Target="MQTT_URL" Default="" Description="Optional. Home Assistant sensors with discovery, e.g. mqtt://192.168.1.10:1883" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="MQTT username" Target="MQTT_USERNAME" Default="" Description="" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="MQTT password" Target="MQTT_PASSWORD" Default="" Description="" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="MQTT topic prefix" Target="MQTT_TOPIC_PREFIX" Default="weather_scout" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">weather_scout</Config>
+  <Config Name="MQTT discovery prefix" Target="MQTT_DISCOVERY_PREFIX" Default="homeassistant" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">homeassistant</Config>
+  <Config Name="Home Assistant URL" Target="HA_URL" Default="" Description="Optional, instead of MQTT. e.g. http://homeassistant.local:8123" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Home Assistant token" Target="HA_TOKEN" Default="" Description="Long-lived access token (your HA profile, Security)" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Home Assistant interval" Target="HA_PUBLISH_SECONDS" Default="300" Description="Seconds between forecast updates (60 or more)" Type="Variable" Display="advanced" Required="false" Mask="false">300</Config>
 </Container>
