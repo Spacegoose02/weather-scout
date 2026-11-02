@@ -27,7 +27,7 @@ const ask = (payload) => ({ method: 'POST', url: '/api/ai/chat', payload });
 
 test('AI is off without a key and says so', async () => {
   const { app } = await testApp();
-  assert.deepEqual((await app.inject('/api/config')).json().ai, { enabled: false, chat: false, cloud: false, search: false });
+  assert.deepEqual((await app.inject('/api/config')).json().ai, { enabled: false, provider: null, chat: false, cloud: false, search: false });
   const res = await app.inject(ask({ messages: [{ role: 'user', content: 'Will it rain?' }] }));
   assert.equal(res.statusCode, 404);
   assert.match(res.json().error, /turned off/);

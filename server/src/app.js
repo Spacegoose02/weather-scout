@@ -22,6 +22,7 @@ import { moonPhase } from './sky.js';
 import { MediaService } from './media.js';
 import { PushService, LEVELS } from './push.js';
 import { AiService, registerAi } from './ai.js';
+import { registerTts } from './tts.js';
 
 const MIN = 60_000;
 
@@ -120,6 +121,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     },
     user: publicUser(req.user),
     ai: ai.status(),
+    tts: { enabled: !!cfg.tts.url, voice: cfg.tts.url ? cfg.tts.voice : null },
   }));
 
   // ---- weather --------------------------------------------------------------
@@ -197,6 +199,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
 
   // ---- AI weather expert, cloud photos, web search ---------------------------
   registerAi(app, { ai, forecast, alerts, air, settle, loc });
+  registerTts(app, { cfg, fetchImpl });
 
   // ---- severe weather push notifications ------------------------------------
   const subSchema = { type: 'object', required: ['endpoint'], properties: { endpoint: { type: 'string', maxLength: 2000 } } };
