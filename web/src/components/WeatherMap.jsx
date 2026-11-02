@@ -7,19 +7,31 @@ window.L = L; // leaflet.markercluster is a classic plugin that extends the glob
 const camIcon = L.divIcon({ className: 'cam-pin', html: '<span>📷</span>', iconSize: [30, 30], iconAnchor: [15, 15] });
 const ALERT_STYLE = { Extreme: '#b0003a', Severe: '#e2401c', Moderate: '#f0a202', Minor: '#e8c547' };
 const CAMERA_MIN_ZOOM = 8;
+const BUOY_MIN_ZOOM = 4;
+const CAT_COLOR = ['#5ebaff', '#ffd23f', '#ff9f1c', '#f25c05', '#d62839', '#8f2d56'];
+const stormIcon = (s) => L.divIcon({
+  className: 'storm-pin',
+  html: `<span style="--cat:${s.category ? CAT_COLOR[s.category] : CAT_COLOR[0]}">🌀</span><b>${s.category ? s.category : s.kind.startsWith('Tropical storm') ? 'TS' : 'TD'}</b>`,
+  iconSize: [36, 36], iconAnchor: [18, 18],
+});
 
-export default function WeatherMap({ center, alerts }) {
+export default function WeatherMap({ center, alerts, units = 'imperial' }) {
   const el = useRef(null);
   const map = useRef(null);
   const radar = useRef([]);
   const camLayer = useRef(null);
   const satLayer = useRef(null);
   const alertLayer = useRef(null);
+  const stormLayer = useRef(null);
+  const buoyLayer = useRef(null);
+  const stormBounds = useRef(null);
+  const [storms, setStorms] = useState(null);
+  const [buoyInfo, setBuoyInfo] = useState('');
   const [frames, setFrames] = useState([]);
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [opacity, setOpacity] = useState(0.7);
-  const [show, setShow] = useState({ radar: true, cams: true, alerts: true, satellite: false });
+  const [show, setShow] = useState({ radar: true, cams: true, alerts: true, satellite: false, storms: true, buoys: true });
   const [camInfo, setCamInfo] = useState('');
 
   // Map + radar setup
@@ -93,15 +105,66 @@ export default function WeatherMap({ center, alerts }) {
     };
     m.on('moveend', loadCams);
 
+    // Ocean buoys (NOAA NDBC), loaded for the current view.
+    buoyLayer.current = L.layerGroup().addTo(m);
+    let buoyTimer;
+    const loadBuoys = () => {
+      clearTimeout(buoyTimer);
+      buoyTimer = setTimeout(async () => {
+        if (!buoyLayer.current) return;
+        if (m.getZoom() < BUOY_MIN_ZOOM) { buoyLayer.current.clearLayers(); setBuoyInfo(''); return; }
+        const b = m.getBounds();
+        try {
+          const r = await api(`/api/buoys?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}&units=${units}`);
+          if (cancelled || !buoyLayer.current) return;
+          buoyLayer.current.clearLayers();
+          for (const x of r.buoys) {
+            L.marker([x.lat, x.lon], { icon: buoyIcon(x), title: `Buoy ${x.id}` })
+              .bindPopup(() => buoyPopup(x, r.units), { maxWidth: 260 })
+              .addTo(buoyLayer.current);
+          }
+          setBuoyInfo(r.total ? `${r.total} buoy${r.total === 1 ? '' : 's'}` : '');
+        } catch {
+          setBuoyInfo('Buoys unavailable');
+        }
+      }, 400);
+    };
+    m.on('moveend', loadBuoys);
+    loadBuoys();
+
+    // Active tropical storms (NHC): cone, forecast track and current position.
+    api('/api/tropics').then((t) => {
+      if (cancelled) return;
+      setStorms(t.storms);
+      const g = L.layerGroup();
+      const shapes = L.geoJSON(t.features, {
+        style: (f) => (f.properties.kind === 'cone'
+          ? { color: '#f25c05', weight: 1.5, fillColor: '#ffffff', fillOpacity: 0.35, dashArray: '4 3' }
+          : { color: '#1d2433', weight: 2 }),
+        filter: (f) => f.geometry.type !== 'Point' || f.properties.kind === 'track',
+        pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 4, color: '#1d2433', weight: 1, fillColor: '#fff', fillOpacity: 1 }),
+        onEachFeature: (f, layer) => f.properties.name && f.geometry.type === 'Point' && layer.bindTooltip(f.properties.name),
+      }).addTo(g);
+      const bounds = t.features.features.length ? shapes.getBounds() : L.latLngBounds([]);
+      for (const s of t.storms) bounds.extend([s.lat, s.lon]);
+      stormBounds.current = bounds.isValid() ? bounds : null;
+      for (const s of t.storms) L.marker([s.lat, s.lon], { icon: stormIcon(s), title: s.name, zIndexOffset: 1000 }).bindPopup(() => stormPopup(s)).addTo(g);
+      stormLayer.current = g;
+      g.addTo(m);
+    }).catch(() => setStorms([]));
+
     return () => {
       cancelled = true;
       clearTimeout(camTimer);
+      clearTimeout(buoyTimer);
       m.remove();
+      stormLayer.current = null;
+      buoyLayer.current = null;
       radar.current = [];
       satLayer.current = null;
       camLayer.current = null;
     };
-  }, [center.lat, center.lon]);
+  }, [center.lat, center.lon, units]);
 
   // Radar animation
   useEffect(() => {
@@ -127,6 +190,16 @@ export default function WeatherMap({ center, alerts }) {
     if (show.cams) m.addLayer(camLayer.current);
     else m.removeLayer(camLayer.current);
   }, [show.cams]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    for (const [on, layer] of [[show.storms, stormLayer.current], [show.buoys, buoyLayer.current]]) {
+      if (!layer) continue;
+      if (on) m.addLayer(layer);
+      else m.removeLayer(layer);
+    }
+  }, [show.storms, show.buoys, storms]);
 
   // Alert polygons
   useEffect(() => {
@@ -155,12 +228,20 @@ export default function WeatherMap({ center, alerts }) {
         <label><input type="checkbox" checked={show.satellite} onChange={(e) => setShow({ ...show, satellite: e.target.checked })} /> Satellite</label>
         <label><input type="checkbox" checked={show.cams} onChange={(e) => setShow({ ...show, cams: e.target.checked })} /> Cameras</label>
         <label><input type="checkbox" checked={show.alerts} onChange={(e) => setShow({ ...show, alerts: e.target.checked })} /> Alerts</label>
+        <label><input type="checkbox" checked={show.storms} onChange={(e) => setShow({ ...show, storms: e.target.checked })} /> Hurricanes</label>
+        <label><input type="checkbox" checked={show.buoys} onChange={(e) => setShow({ ...show, buoys: e.target.checked })} /> Buoys</label>
         <label className="opacity">Opacity <input type="range" min={0.2} max={1} step={0.1} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} /></label>
       </div>
       <div ref={el} className="map" role="application" aria-label="Radar and camera map" />
       <div className="map-foot">
         <span className="legend" aria-label="Radar colors from light to heavy"><i /> light <i /> moderate <i /> heavy <i /> intense</span>
-        <span>{camInfo}</span>
+        <span>
+          {storms && (storms.length
+            ? <button className="link" onClick={() => stormBounds.current && map.current?.flyToBounds(stormBounds.current.pad(0.1), { maxZoom: 6 })}>🌀 {storms.length} active storm{storms.length === 1 ? '' : 's'}</button>
+            : 'No active tropical storms.')}
+          {buoyInfo && ` · ${buoyInfo}`}
+          {camInfo && ` · ${camInfo}`}
+        </span>
       </div>
     </section>
   );
@@ -240,4 +321,52 @@ async function playHls(c, stage, showMessage) {
     }
   });
   watch.observe(document.body, { childList: true, subtree: true });
+}
+
+function buoyIcon(b) {
+  const label = b.waveHeight != null ? `${Math.round(b.waveHeight)}` : '';
+  return L.divIcon({ className: 'buoy-pin', html: `<span>${label}</span>`, iconSize: [22, 22], iconAnchor: [11, 11] });
+}
+
+const el = (tag, text, className) => Object.assign(document.createElement(tag), { textContent: text ?? '', ...(className ? { className } : {}) });
+
+function buoyPopup(b, units) {
+  const imp = units !== 'metric';
+  const div = el('div', '', 'buoy-popup');
+  div.append(el('strong', `NOAA buoy ${b.id}`));
+  const rows = [
+    ['🌊 Waves', b.waveHeight != null ? `${b.waveHeight} ${imp ? 'ft' : 'm'}${b.wavePeriod ? ` every ${b.wavePeriod} s` : ''}` : null],
+    ['🌡️ Water', b.waterTemp != null ? `${Math.round(b.waterTemp)}°` : null],
+    ['🌬️ Wind', b.wind != null ? `${b.wind}${b.gust ? `, gusts ${b.gust}` : ''} ${imp ? 'mph' : 'km/h'}` : null],
+    ['☁️ Air', b.airTemp != null ? `${Math.round(b.airTemp)}°` : null],
+  ].filter(([, v]) => v);
+  for (const [k, v] of rows) { const r = el('div', '', 'buoy-row'); r.append(el('span', k), el('b', v)); div.append(r); }
+  if (b.time) div.append(el('div', `Reported ${new Date(b.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`, 'cam-meta'));
+  const a = el('a', 'Station page');
+  a.href = `https://www.ndbc.noaa.gov/station_page.php?station=${encodeURIComponent(b.id)}`;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  div.append(a);
+  return div;
+}
+
+function stormPopup(s) {
+  const div = el('div', '', 'buoy-popup');
+  div.append(el('strong', `${s.kind} ${s.name}`));
+  if (s.category) div.append(el('div', `Category ${s.category}`, 'cam-meta'));
+  const rows = [
+    ['🌬️ Winds', s.windMph != null ? `${s.windMph} mph` : null],
+    ['🧭 Moving', s.movement ? `${s.movement.dir} at ${s.movement.mph} mph` : null],
+    ['📉 Pressure', s.pressure ? `${s.pressure} mb` : null],
+  ].filter(([, v]) => v);
+  for (const [k, v] of rows) { const r = el('div', '', 'buoy-row'); r.append(el('span', k), el('b', v)); div.append(r); }
+  div.append(el('p', s.kid, 'storm-kid'));
+  if (s.advisoryUrl) {
+    const a = el('a', 'Latest NHC advisory');
+    a.href = s.advisoryUrl;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    div.append(a);
+  }
+  return div;
 }
