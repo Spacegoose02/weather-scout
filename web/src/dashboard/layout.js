@@ -24,6 +24,7 @@ export const CARDS = [
   { id: 'stars', title: 'Stargazing tonight', emoji: '🔭', sizes: ['s', 'm', 'l'], blurb: 'Which planets are up and where to look' },
   { id: 'gear', title: 'Gear checklist', emoji: '🎒', sizes: ['s', 'm', 'l'], blurb: 'What to bring for an outing, from the forecast for those hours' },
   { id: 'why', title: 'Why is this happening?', emoji: '🎓', sizes: ['m', 'l'], blurb: "Short lessons about today's weather" },
+  { id: 'history', title: 'On this day', emoji: '📜', sizes: ['s', 'm', 'l'], blurb: 'Records, normals and past years for today' },
   { id: 'rocky', title: "Rocky's outfit", emoji: '🦝', sizes: ['s', 'm', 'l'], blurb: 'Rocky dresses for the weather' },
   { id: 'journal', title: 'Weather journal', emoji: '📓', sizes: ['m', 'l'], signIn: true, blurb: 'Write down what you saw each day' },
   { id: 'denduty', title: 'Den-Duty board', emoji: '🏠', sizes: ['s', 'm'], blurb: 'What the family board shows today' },
@@ -47,6 +48,7 @@ export const DEFAULT_LAYOUT = {
     { id: 'tides', size: 'm' },
     { id: 'cameras', size: 'm' },
     { id: 'why', size: 'm' },
+    { id: 'history', size: 'm' },
     { id: 'hourly', size: 'l' },
   ],
 };
