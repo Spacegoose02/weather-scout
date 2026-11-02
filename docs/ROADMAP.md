@@ -69,10 +69,6 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Health: wet-bulb globe temperature | ✅ Shade WBGT now and 24-hour peak, with heat-stress flag advice. Full-sun WBGT needs solar radiation, later |
 | Golden hour: planets and Moon | ✅ Moon phase, % lit and next full/new Moon (`server/src/sky.js`), plus a Stargazing tonight card (`server/src/stars.js`, astronomy-engine): when it gets dark, Mercury to Saturn with where to look and when, brightness and constellation, moonrise and moonset, and a clear/cloudy verdict from tonight's cloud forecast |
 | Custom dashboards (pin, hide, rearrange widgets) | ✅ Today is now a dashboard of 17 cards (forecast, radar, cameras, alerts, tides, why-lessons, Rocky, Den-Duty board, journal, stargazing…). Signed-in people add, hide, drag to reorder and resize (S/M/L) cards, saved per user on the server. Guests see a sensible default, and an admin can make their layout the guest default |
-| Android APK | Wrap the PWA with a Trusted Web Activity (Bubblewrap) once push works |
-| Windows 11 widget | PWA widgets (Windows supports them for installed PWAs) |
-| Golden hour: planets and Moon | 🚧 Moon phase, % lit and next full/new Moon on the Today card's Health & sky tile and in the Kid Zone's Sky watch (`server/src/sky.js`, also in `/api/connect/summary`). Next: moonrise/moonset and bright planets |
-| Custom dashboards (pin, hide, rearrange widgets) | Drag-and-drop layout saved per user |
 | Android APK | ✅ Trusted Web Activity in `android/`, built by the *Android app* GitHub Actions workflow (run it or publish a release). Full screen once `ANDROID_CERT_SHA256` is set. See docs/APPS.md |
 | Windows 11 widget | ✅ "Weather Scout today" Widgets board card (manifest `widgets`, Adaptive Card in `web/public/widgets/`, data from `/api/widget/summary`). Needs the PWABuilder Windows package. See docs/APPS.md |
 
