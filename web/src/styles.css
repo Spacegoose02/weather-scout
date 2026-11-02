@@ -256,3 +256,8 @@ h3 { font-size: 1rem; margin: 18px 0 8px; }
 .news-list a { color: var(--ink); font-weight: 800; text-decoration: none; }
 .news-list a:hover { color: var(--brand); text-decoration: underline; }
 .news-list .tile-note { margin: 4px 0 0; }
+
+/* "Use my location" help */
+.locate-msg { position: absolute; top: 46px; left: 0; right: 0; z-index: 1001; padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.locate-msg p { margin: 0 0 8px; font-size: 0.92rem; }
+.locate-msg .row-actions { display: flex; flex-wrap: wrap; gap: 8px; }

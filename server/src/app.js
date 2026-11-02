@@ -5,7 +5,7 @@ import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import { registerKidZone } from './kidzone.js';
 import { loadConfig, loadOrCreateSecret } from './config.js';
-import { TtlCache, UpstreamError } from './cache.js';
+import { TtlCache, UpstreamError, fetchJson } from './cache.js';
 import { openDb, publicUser } from './db.js';
 import { AuthService, AuthError, SESSION_COOKIE } from './auth.js';
 import { CameraService } from './providers/cameras/index.js';
@@ -153,6 +153,27 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
   app.get('/api/reverse-geocode', { schema: latLonSchema }, async (req) => {
     const l = loc(req.query);
     return cache.wrap(`rgeo:${l.lat},${l.lon}`, 24 * 60 * MIN, () => nws.reverseGeocode(l, { userAgent: cfg.nwsUserAgent, fetchImpl }));
+  });
+
+  // Approximate location from the internet connection, for when the browser won't
+  // share GPS (plain http, or permission denied). On a home LAN the visitor's IP is
+  // private, so we look up the server's own public IP, which is the same house.
+  const PRIVATE_IP = /^(::1$|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|fc|fd|fe80:|::ffff:(127|10|192\.168)\.)/i;
+  app.get('/api/ip-location', async (req, reply) => {
+    if (/^(0|false|no|off)$/i.test(cfg.env.IP_LOCATION || '')) return reply.code(404).send({ error: 'Approximate location is turned off on this server.' });
+    const ip = String(req.ip || '').replace(/^::ffff:(?=\d)/, '');
+    const pub = ip && !PRIVATE_IP.test(ip) && /^[\d.:a-f]+$/i.test(ip) ? ip : '';
+    const r = await cache.wrap(`ipgeo:${pub || 'self'}`, 24 * 60 * MIN, async () => {
+      const raw = await fetchJson(`https://ipapi.co/${pub ? `${pub}/` : ''}json/`, { source: 'ipapi.co', fetchImpl, headers: { 'user-agent': cfg.nwsUserAgent } });
+      if (raw.error || !Number.isFinite(raw.latitude)) throw new UpstreamError('ipapi.co', 502, raw.reason || 'no location for this connection');
+      return {
+        name: [raw.city, raw.country_code === 'US' ? raw.region_code : raw.country_name].filter(Boolean).join(', ') || 'Approximate location',
+        lat: Math.round(raw.latitude * 100) / 100,
+        lon: Math.round(raw.longitude * 100) / 100,
+        approximate: true,
+      };
+    });
+    return r;
   });
 
   // ---- cameras ----------------------------------------------------------------
