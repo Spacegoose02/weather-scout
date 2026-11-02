@@ -57,8 +57,8 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Learning section for kids and adults | Lesson library; same lessons at two reading levels |
 | Storm center: tornadoes, wildfires, hurricanes | Explainers + live data where it exists |
 | Learn about clouds, droughts, El Niño, ocean | Lessons; US Drought Monitor and NOAA ENSO status feeds |
-| Hurricane tracker | NHC active storms, cones and advisories on the map |
-| Ocean data | NOAA NDBC buoys and tides |
+| Hurricane tracker | ✅ Active NHC storms with forecast cones, tracks and advisories on the map, and a Hurricane tracker card on Today when a storm is within 2,000 miles |
+| Ocean data | ✅ NOAA NDBC buoys on the map (waves, water temperature, wind) and a Tides card with the next highs and lows from the nearest CO-OPS station within 60 miles |
 | Live lightning | Strike markers with age rings and distance from you (source TBD: Blitzortung community feed or a paid API) |
 | Radar precipitation type and storm cell tracks | Rain/snow/mix layer; NWS storm-track overlays |
 | Local and national weather news, RSS feeds | ✅ News & Videos tab, admin-managed RSS/Atom list (NWS office, local TV) |

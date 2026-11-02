@@ -13,6 +13,7 @@ import SignIn from './components/SignIn.jsx';
 import Admin from './components/Admin.jsx';
 import HealthSky from './components/HealthSky.jsx';
 import News from './components/News.jsx';
+import Coast from './components/Coast.jsx';
 import PushAlerts from './components/PushAlerts.jsx';
 import RockyFace from './components/RockyFace.jsx';
 
@@ -126,6 +127,7 @@ export default function App() {
                 <DailyForecast daily={weather.forecast.daily} units={weather.forecast.units} />
                 <Details weather={weather} />
                 <HealthSky weather={weather} />
+                {location && <Coast location={location} units={units} onMap={() => setTab('map')} />}
                 <HourlyTimeline hourly={weather.forecast.hourly} units={weather.forecast.units} />
                 <p className="source">
                   Forecast: {weather.forecast.source}. Alerts: National Weather Service.
@@ -133,7 +135,7 @@ export default function App() {
                 </p>
               </div>
             )}
-            {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} />}
+            {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} />}
             {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} />}
             {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} />}
           </main>
