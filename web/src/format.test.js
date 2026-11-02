@@ -25,3 +25,18 @@ describe('format', () => {
     expect(nextRainText([{ precip: 0.2 }, { precip: 0 }])).toMatch(/stopping in about 15/);
   });
 });
+
+import { rainWord, windWord, sunscreenWindow } from './components/NowCards.jsx';
+describe('now cards', () => {
+  it('words for rain rate, wind and the sunscreen window', () => {
+    expect(rainWord(0, 'imperial')).toBe('Dry');
+    expect(rainWord(0.05, 'imperial')).toBe('Light');
+    expect(rainWord(0.2, 'imperial')).toBe('Moderate');
+    expect(rainWord(10, 'metric')).toBe('Heavy');
+    expect(windWord(2)).toBe('Calm');
+    expect(windWord(18)).toBe('Windy');
+    const hrs = ['09', '10', '11', '15', '16'].map((h, i) => ({ time: `2026-06-01T${h}:00`, uv: [2, 3, 6, 4, 2][i] }));
+    expect(sunscreenWindow(hrs, '2026-06-01')).toEqual({ from: '2026-06-01T10:00', to: '2026-06-01T15:00', peak: 6 });
+    expect(sunscreenWindow(hrs, '2026-06-02')).toBe(null);
+  });
+});

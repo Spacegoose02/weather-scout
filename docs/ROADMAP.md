@@ -17,12 +17,12 @@ Every card from the planning board, grouped into phases. Phase 1 is this first r
 | Admin can link SSO and username | ✅ Family & settings |
 | 7 to 10-day extended forecast, weekly forecast | ✅ 10-day |
 | Current / feels like temp | ✅ |
-| Hyperlocal minute-by-minute rain forecast | ✅ 15-minute nowcast for 2 hours (Open-Meteo). True 1-minute needs a paid source, see Phase 3 |
+| Hyperlocal minute-by-minute rain forecast | ✅ 15-minute nowcast for 2 hours (Open-Meteo), with a "Next 2 hours" bar chart (light, moderate or heavy, rain or snow). True 1-minute needs a paid source, see Phase 3 |
 | Scannable hourly timeline (24-48 h) | ✅ 48-hour chart with scrubber |
-| Fast-loading Doppler radar map, loopable | ✅ 55-minute NEXRAD loop. Precipitation type and storm tracks in Phase 2 |
+| Fast-loading Doppler radar map, loopable | ✅ 55-minute NEXRAD loop, plus an infrared satellite layer (NASA GIBS, GOES-East). Precipitation type and storm tracks in Phase 2 |
 | Pull alerts from NWS by local area | ✅ |
 | Air Quality Index & UV | ✅ US AQI, PM2.5, PM10, ozone, UV |
-| Wind data, temperature tracking | ✅ Current + hourly + daily |
+| Wind data, temperature tracking | ✅ Current + hourly + daily, and a Wind card with a compass, gusts and a 24-hour wind and gust chart |
 | Pull up Virginia VDOT 511 cam feeds by map / state cameras / cameras on the map where they belong | ✅ Virginia, South Carolina, Maryland and Kentucky built in (public feeds, no keys), North Carolina with a free DriveNC key; other states plug in via cameras.json. WV, TN and DC: no documented public feed found yet |
 | Kid Mode: gear checklist | ✅ |
 | Kid Mode: playground / recess rating | ✅ |
@@ -65,7 +65,7 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | YouTube weather gurus | ✅ Admin-curated channels (paste a link or @handle), latest videos play in the app |
 | Admin can edit news and YouTube lists | ✅ Family & settings |
 | Health: barometric pressure warnings | ✅ Health & sky card flags 4+ hPa (watch) and 6+ hPa (big swing) changes within 6 hours. Push alerts come with notifications |
-| Health: pollen & particulates | Pollen needs a US source (Open-Meteo pollen is Europe-only); candidates: Google Pollen API, Tomorrow.io |
+| Health: pollen & particulates | 🚧 Air & UV card on Today: AQI per pollutant (PM2.5, PM10, ozone, NO₂) and the main pollutant, a 48-hour AQI and UV strip and a sunscreen window. Pollen shows where Open-Meteo has it (Europe); a US source still needs a key (Google Pollen API, Tomorrow.io) |
 | Health: wet-bulb globe temperature | ✅ Shade WBGT now and 24-hour peak, with heat-stress flag advice. Full-sun WBGT needs solar radiation, later |
 | Golden hour: planets and Moon | 🚧 Moon phase, % lit and next full/new Moon on the Today card's Health & sky tile and in the Kid Zone's Sky watch (`server/src/sky.js`, also in `/api/connect/summary`). Next: moonrise/moonset and bright planets |
 | Custom dashboards (pin, hide, rearrange widgets) | Drag-and-drop layout saved per user |

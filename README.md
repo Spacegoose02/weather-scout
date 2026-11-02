@@ -16,6 +16,9 @@ from free, official data sources.
 
 - **Today**: current conditions, feels-like, dew point, pressure trend, UV, air quality,
   a 2-hour "rain starting in…" nowcast, a scrubbable 48-hour timeline and a 10-day forecast.
+- **Next 2 hours, wind, air & UV**: a 15-minute rain chart for the next 2 hours, a wind compass
+  with a 24-hour wind and gust chart, and an air quality breakdown by pollutant with 48-hour AQI and
+  UV strips and a sunscreen window. The map adds an infrared satellite layer.
 - **Health & sky**: pressure-swing warnings for migraine-sensitive folks, wet-bulb globe temperature
   heat stress, moon phase and sunrise/sunset.
 - **NWS alerts** for your exact location, most severe first, with plain-language kid versions.
@@ -156,6 +159,7 @@ is billed by Anthropic per search on top of tokens.
 | Forecast, current, hourly, 10-day, nowcast | [Open-Meteo](https://open-meteo.com/) best-match blend (HRRR, GFS, ECMWF, ICON, …) | none |
 | Air quality (US AQI, PM2.5, PM10, ozone) | Open-Meteo Air Quality (CAMS) | none |
 | Watches, warnings, advisories | [api.weather.gov](https://www.weather.gov/documentation/services-web-api) | none, but set `NWS_USER_AGENT` |
+| Satellite | NASA [GIBS](https://earthdata.nasa.gov/gibs) GOES-East infrared | none |
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
 | Map | OpenStreetMap | none |
 | Cameras | VA, SC, MD and KY public feeds, plus any state 511 feed you add | none for the built-in states |

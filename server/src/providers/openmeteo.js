@@ -143,15 +143,45 @@ export function aqiCategory(aqi) {
   return { label, color, kid };
 }
 
-export async function getAirQuality({ lat, lon }, fetchImpl) {
-  const p = new URLSearchParams({
-    latitude: lat.toFixed(4),
-    longitude: lon.toFixed(4),
-    current: 'us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,uv_index',
-    timezone: 'auto',
-  });
-  const raw = await fetchJson(`${AIR_URL}?${p}`, { source: 'open-meteo-air', fetchImpl });
+const POLLEN = ['alder_pollen', 'birch_pollen', 'olive_pollen', 'grass_pollen', 'mugwort_pollen', 'ragweed_pollen'];
+const SUB = { pm25: 'us_aqi_pm2_5', pm10: 'us_aqi_pm10', ozone: 'us_aqi_ozone', no2: 'us_aqi_nitrogen_dioxide' };
+export const POLLUTANTS = {
+  pm25: { name: 'Fine particles (PM2.5)', kid: 'Tiny bits of smoke and dust, small enough to get deep into your lungs.' },
+  pm10: { name: 'Dust and pollen-size particles (PM10)', kid: 'Bigger bits like dust and pollen.' },
+  ozone: { name: 'Ozone', kid: 'Made when sunlight cooks car and factory fumes. Highest on hot sunny afternoons.' },
+  no2: { name: 'Nitrogen dioxide', kid: 'Comes mostly from car and truck exhaust.' },
+};
+
+// Pollen (grains/m³) to a simple level. Open-Meteo only has pollen for Europe.
+export function pollenLevel(v, type) {
+  if (v == null) return null;
+  const [low, mid, high] = type === 'grass' ? [5, 20, 50] : type === 'weed' ? [5, 20, 50] : [10, 50, 200];
+  if (v < low) return 'Low';
+  if (v < mid) return 'Moderate';
+  if (v < high) return 'High';
+  return 'Very high';
+}
+
+export function normalizeAir(raw, now = Date.now()) {
   const c = raw.current || {};
+  const h = raw.hourly || {};
+  const offsetMs = (raw.utc_offset_seconds || 0) * 1000;
+  const nowLocal = new Date(now + offsetMs).toISOString().slice(0, 13);
+  const hours = (h.time || []).map((time, i) => ({ time, i })).filter((x) => x.time.slice(0, 13) >= nowLocal);
+  const at = hours[0]?.i;
+  const pick = (k) => (at == null ? null : h[k]?.[at] ?? null);
+  const subIndex = Object.fromEntries(Object.entries(SUB).map(([k, v]) => [k, pick(v)]));
+  const ranked = Object.entries(subIndex).filter(([, v]) => v != null).sort((a, b) => b[1] - a[1]);
+  const maxOf = (keys) => {
+    const vals = keys.map((k) => c[k] ?? pick(k)).filter((v) => v != null);
+    return vals.length ? Math.max(...vals) : null;
+  };
+  const tree = maxOf(['alder_pollen', 'birch_pollen', 'olive_pollen']);
+  const grass = maxOf(['grass_pollen']);
+  const weed = maxOf(['mugwort_pollen', 'ragweed_pollen']);
+  const pollen = [tree, grass, weed].some((v) => v != null)
+    ? { tree: { value: tree, level: pollenLevel(tree, 'tree') }, grass: { value: grass, level: pollenLevel(grass, 'grass') }, weed: { value: weed, level: pollenLevel(weed, 'weed') } }
+    : null;
   return {
     aqi: c.us_aqi ?? null,
     category: aqiCategory(c.us_aqi),
@@ -160,8 +190,25 @@ export async function getAirQuality({ lat, lon }, fetchImpl) {
     ozone: c.ozone ?? null,
     no2: c.nitrogen_dioxide ?? null,
     uv: c.uv_index ?? null,
+    subIndex,
+    main: ranked[0] ? { id: ranked[0][0], ...POLLUTANTS[ranked[0][0]] } : null,
+    hourly: hours.slice(0, 48).map(({ time, i }) => ({ time, aqi: h.us_aqi?.[i] ?? null, uv: h.uv_index?.[i] ?? null, uvClear: h.uv_index_clear_sky?.[i] ?? null })),
+    pollen,
     source: 'Open-Meteo Air Quality (CAMS)',
   };
+}
+
+export async function getAirQuality({ lat, lon }, fetchImpl) {
+  const p = new URLSearchParams({
+    latitude: lat.toFixed(4),
+    longitude: lon.toFixed(4),
+    current: ['us_aqi', 'pm2_5', 'pm10', 'ozone', 'nitrogen_dioxide', 'uv_index', ...POLLEN].join(','),
+    hourly: ['us_aqi', ...Object.values(SUB), 'uv_index', 'uv_index_clear_sky'].join(','),
+    forecast_days: '3',
+    timezone: 'auto',
+  });
+  const raw = await fetchJson(`${AIR_URL}?${p}`, { source: 'open-meteo-air', fetchImpl });
+  return normalizeAir(raw);
 }
 
 export async function geocode(query, fetchImpl) {
