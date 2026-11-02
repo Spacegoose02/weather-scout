@@ -92,6 +92,30 @@ test('field trip cameras are spread out and nearest first', () => {
   assert.equal(directionWord(home, { lat: 38.5, lon: -77.4 }), 'north');
 });
 
+test('field trips prefer live-video cameras and keep video-only ones', () => {
+  const home = { lat: 37.5, lon: -77.4 };
+  const cams = [
+    { id: 'still', lat: 37.51, lon: -77.41, hasImage: true, video: null },
+    { id: 'live', lat: 37.515, lon: -77.415, hasImage: true, video: 'https://v.example/live.m3u8' }, // same cell, live wins
+    { id: 'md', lat: 38.2, lon: -77.4, hasImage: false, embed: 'https://md.example/player' },
+    { id: 'nothing', lat: 37.3, lon: -77.9, hasImage: false },
+  ];
+  assert.deepEqual(spreadCameras(home, cams).map((c) => c.id), ['live', 'md']);
+});
+
+test('field trip missions pass live video and embeds through', () => {
+  const home = { lat: 37.5, lon: -77.4 };
+  const base = { name: 'x', lat: 37.6, lon: -77.4, miles: 7, temp: 50, code: 63, gust: 5, precip: 0.1, snowfall: 0, isDay: true, cloudCover: 90 };
+  const missions = fieldTripMissions(home, [
+    { ...base, id: 'v', imageUrl: '/img/v', video: 'https://v.example/a.m3u8' },
+    { ...base, id: 'e', imageUrl: null, embed: 'https://md.example/p', precip: 0.05 },
+  ]);
+  const cams = missions.find((m) => m.id === 'rain').cameras;
+  assert.equal(cams[0].video, 'https://v.example/a.m3u8');
+  assert.equal(cams[1].embed, 'https://md.example/p');
+  assert.equal(cams[1].imageUrl, null);
+});
+
 test('field trip missions find rain and the coldest camera', () => {
   const home = { lat: 37.5, lon: -77.4 };
   const spot = (id, o) => ({ id, name: id, lat: 37.6, lon: -77.4, miles: 7, imageUrl: `/img/${id}`, temp: 50, code: 1, gust: 5, precip: 0, snowfall: 0, isDay: true, cloudCover: 10, ...o });

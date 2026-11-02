@@ -49,17 +49,21 @@ export function directionWord(a, b) {
 }
 
 // One camera per ~13-mile grid cell, nearest first, so the trip covers the area.
+// Within a cell, a camera with live video wins over a still-only one.
+const canShow = (c) => c.hasImage !== false || c.video || c.embed;
+const isLive = (c) => !!(c.video || c.embed);
 export function spreadCameras(home, cams, max = 30, cell = 0.2) {
   const seen = new Map();
   const sorted = cams
-    .filter((c) => c.hasImage !== false)
+    .filter(canShow)
     .map((c) => ({ ...c, miles: distanceMiles(home, c) }))
     .sort((a, b) => a.miles - b.miles);
   for (const c of sorted) {
     const k = `${Math.floor(c.lat / cell)},${Math.floor(c.lon / cell)}`;
-    if (!seen.has(k)) seen.set(k, c);
+    const prev = seen.get(k);
+    if (!prev || (isLive(c) && !isLive(prev))) seen.set(k, c);
   }
-  return [...seen.values()].slice(0, max);
+  return [...seen.values()].sort((a, b) => a.miles - b.miles).slice(0, max);
 }
 
 const MISSIONS = [
@@ -94,7 +98,7 @@ export function fieldTripMissions(home, spots, units = { temp: '°F', wind: 'mph
       found: found.length > 0,
       none: m.none || 'No cameras to visit right now.',
       cameras: found.map((p) => ({
-        id: p.id, name: p.name, road: p.road || null, imageUrl: p.imageUrl,
+        id: p.id, name: p.name, road: p.road || null, imageUrl: p.imageUrl || null, video: p.video || null, embed: p.embed || null,
         miles: Math.round(p.miles), direction: directionWord(home, p),
         temp: Math.round(p.temp), gust: Math.round(p.gust), kidLabel: p.kidLabel, icon: p.icon, isDay: p.isDay,
       })),
@@ -235,7 +239,7 @@ export function registerKidZone(app, { db, cameras, cache, fetchImpl, requireUse
         const cur = raw[i]?.current || {};
         return {
           ...c,
-          imageUrl: `/api/cameras/image/${encodeURIComponent(c.id)}`,
+          imageUrl: c.hasImage === false ? null : `/api/cameras/image/${encodeURIComponent(c.id)}`,
           temp: cur.temperature_2m ?? null, code: cur.weather_code ?? null, gust: cur.wind_gusts_10m ?? 0,
           precip: cur.precipitation ?? 0, snowfall: cur.snowfall ?? 0, isDay: !!cur.is_day, cloudCover: cur.cloud_cover ?? 100,
           ...describeCode(cur.weather_code),
