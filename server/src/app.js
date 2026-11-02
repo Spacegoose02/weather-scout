@@ -27,7 +27,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const cache = new TtlCache();
   const db = openDb(cfg.dataDir);
   const auth = new AuthService(db, cfg);
-  const cameras = new CameraService(cfg, cache, fetchImpl);
+  const cameras = new CameraService(cfg, cache, fetchImpl, { retry: { baseDelayMs: Number(cfg.env.CAMERA_RETRY_DELAY_MS) || 1500 } });
   const appKeys = new AppKeys(db);
   const media = new MediaService(db, cache, fetchImpl);
   const push = cfg.push.enabled ? new PushService(db, cfg, { send: pushSend, log: app.log }) : null;
