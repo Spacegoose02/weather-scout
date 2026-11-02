@@ -13,6 +13,9 @@ export function bingoStatus(squares, marked) {
 // ---- what to wear --------------------------------------------------------------
 export const WARDROBE = [
   { id: 't-shirt', emoji: '👕', label: 'T-shirt' },
+  { id: 'pants', emoji: '👖', label: 'Pants' },
+  { id: 'shorts', emoji: '🩳', label: 'Shorts' },
+  { id: 'swim-trunks', emoji: '🏊', label: 'Swim trunks' },
   { id: 'jacket', emoji: '🧥', label: 'Light jacket' },
   { id: 'winter-coat', emoji: '🧣', label: 'Winter coat' },
   { id: 'raincoat', emoji: '🦺', label: 'Raincoat' },
@@ -45,6 +48,8 @@ const WHY_NOT = {
 
 const WHY_NEED = {
   't-shirt': 'It is warm! A T-shirt is perfect.',
+  pants: 'It is chilly. Pants will keep your legs warm.',
+  shorts: 'It is warm! Shorts are just right.',
   jacket: 'It is a bit chilly. Grab a jacket.',
   'winter-coat': 'Brrr! You need your warm coat.',
   raincoat: 'Rain is coming. Do not forget your raincoat!',
@@ -59,26 +64,50 @@ const WHY_NEED = {
 // Clothes that go on Rocky's body. A T-shirt is an under-layer, so it is never
 // "too much" under a coat.
 const TOPS = ['t-shirt', 'jacket', 'winter-coat', 'raincoat'];
+const BOTTOMS = ['pants', 'shorts', 'swim-trunks'];
 
-export function checkOutfit(picked, forecastItems) {
+// minFeelsLike is the coldest it will feel in the next 12 hours, in °F (from the
+// server's outfit rules, whatever the display units).
+export function checkOutfit(picked, forecastItems, { minFeelsLike } = {}) {
   // The forecast only lists special gear, so on a mild, dry day it is empty. In the
-  // game Rocky still can't go out in just his fur: he needs a T-shirt (or a light jacket).
+  // game Rocky still can't go out in just his fur: he needs a T-shirt (or a light
+  // jacket) and something on his legs.
   const base = !forecastItems.some((id) => TOPS.includes(id));
-  const needed = base ? [...forecastItems, 't-shirt'] : forecastItems;
-  const covers = (id) => [...(COVERS[id] || []), ...(base && id === 't-shirt' ? ['jacket'] : [])];
+  const hot = forecastItems.includes('t-shirt');
+  const cool = minFeelsLike != null ? minFeelsLike < 60 : forecastItems.some((id) => ['jacket', 'winter-coat'].includes(id));
+  const bottom = cool && !hot ? 'pants' : 'shorts';
+  const needed = [...forecastItems, ...(base ? ['t-shirt'] : []), bottom];
+  const covers = (id) => {
+    const out = [...(COVERS[id] || [])];
+    if (base && id === 't-shirt') out.push('jacket');
+    if (id === 'shorts') out.push(hot ? 'swim-trunks' : 'pants');
+    return out;
+  };
   const has = (id) => picked.includes(id) || covers(id).some((c) => picked.includes(c));
   const missing = needed.filter((id) => !has(id));
   const covering = new Set(needed.flatMap((id) => (picked.includes(id) ? [] : covers(id).filter((c) => picked.includes(c)))));
   // A winter coat covering a jacket is extra warm, so it still counts as too much.
   const extras = picked.filter((id) => id !== 't-shirt' && !needed.includes(id) && !(covering.has(id) && id !== 'winter-coat'));
   const stars = missing.length ? (missing.length === 1 ? 1 : 0) : extras.length ? 2 : 3;
+  const wearsTop = picked.some((p) => TOPS.includes(p));
+  const wearsBottom = picked.some((p) => BOTTOMS.includes(p));
   const needText = (id) => {
-    if (id === 't-shirt' && base) return picked.some((p) => TOPS.includes(p)) ? WHY_NEED[id] : 'Rocky can\'t go out in just his fur! A T-shirt is just right today.';
+    if (id === 't-shirt' && base && !wearsTop) return 'Rocky can\'t go out in just his fur! A T-shirt is just right today.';
+    if (id === bottom && !wearsBottom) return `Rocky needs something on his legs! ${WHY_NEED[id]}`;
     return WHY_NEED[id] || `You need your ${NAME[id] || id}.`;
+  };
+  const bottomsOn = picked.filter((p) => BOTTOMS.includes(p)).length;
+  const okBottoms = [bottom, ...covers(bottom)];
+  const extraText = (id) => {
+    if (bottomsOn > 1 && okBottoms.includes(id)) return 'Just one pair of bottoms, please!';
+    if (id === 'shorts') return 'Brrr! It is too chilly for shorts.';
+    if (id === 'pants') return 'Pants would be too hot today.';
+    if (id === 'swim-trunks') return 'Swim trunks? It is not a pool day!';
+    return WHY_NOT[id] || `You will not need your ${NAME[id] || id}.`;
   };
   const tips = [
     ...missing.map((id) => ({ kind: 'need', id, text: needText(id) })),
-    ...extras.map((id) => ({ kind: 'extra', id, text: WHY_NOT[id] || `You will not need your ${NAME[id] || id}.` })),
+    ...extras.map((id) => ({ kind: 'extra', id, text: extraText(id) })),
   ];
   let headline = 'Perfect! You are dressed exactly right for today.';
   if (missing.length) headline = 'Almost! Rocky still needs something.';
