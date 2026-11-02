@@ -52,7 +52,7 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Board card | Plan |
 | --- | --- |
 | Severe weather push notifications (watches, warnings, lightning, high wind) | ✅ Web Push per device: pick a place and warnings / watches / advisories (high wind is an NWS warning). Lightning alerts wait on a lightning source |
-| Daily observation journal | Per-kid entries (icons, high/low, rain gauge), stored per user |
+| Daily observation journal | ✅ Weather journal card: sky stickers, your own high/low and rain-gauge reading, a note, a snapshot of the forecast to compare with, earlier pages and a day streak. One page per person per day, saved on the server |
 | Badges & achievements | 🚧 19 Kid Zone badges are in (bingo, forecaster, experiments, field trips, storm drill, seasons). Still to come: first frost, thunderstorm spotted, double rainbow, journal streaks |
 | Learning section for kids and adults | Lesson library; same lessons at two reading levels |
 | Storm center: tornadoes, wildfires, hurricanes | Explainers + live data where it exists |
@@ -67,8 +67,8 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Health: barometric pressure warnings | ✅ Health & sky card flags 4+ hPa (watch) and 6+ hPa (big swing) changes within 6 hours. Push alerts come with notifications |
 | Health: pollen & particulates | 🚧 Air & UV card on Today: AQI per pollutant (PM2.5, PM10, ozone, NO₂) and the main pollutant, a 48-hour AQI and UV strip and a sunscreen window. Pollen shows where Open-Meteo has it (Europe); a US source still needs a key (Google Pollen API, Tomorrow.io) |
 | Health: wet-bulb globe temperature | ✅ Shade WBGT now and 24-hour peak, with heat-stress flag advice. Full-sun WBGT needs solar radiation, later |
-| Golden hour: planets and Moon | 🚧 Moon phase, % lit and next full/new Moon on the Today card's Health & sky tile and in the Kid Zone's Sky watch (`server/src/sky.js`, also in `/api/connect/summary`). Next: moonrise/moonset and bright planets |
-| Custom dashboards (pin, hide, rearrange widgets) | Drag-and-drop layout saved per user |
+| Golden hour: planets and Moon | ✅ Moon phase, % lit and next full/new Moon (`server/src/sky.js`), plus a Stargazing tonight card (`server/src/stars.js`, astronomy-engine): when it gets dark, Mercury to Saturn with where to look and when, brightness and constellation, moonrise and moonset, and a clear/cloudy verdict from tonight's cloud forecast |
+| Custom dashboards (pin, hide, rearrange widgets) | ✅ Today is now a dashboard of 17 cards (forecast, radar, cameras, alerts, tides, why-lessons, Rocky, Den-Duty board, journal, stargazing…). Signed-in people add, hide, drag to reorder and resize (S/M/L) cards, saved per user on the server. Guests see a sensible default, and an admin can make their layout the guest default |
 | Android APK | ✅ Trusted Web Activity in `android/`, built by the *Android app* GitHub Actions workflow (run it or publish a release). Full screen once `ANDROID_CERT_SHA256` is set. See docs/APPS.md |
 | Windows 11 widget | ✅ "Weather Scout today" Widgets board card (manifest `widgets`, Adaptive Card in `web/public/widgets/`, data from `/api/widget/summary`). Needs the PWABuilder Windows package. See docs/APPS.md |
 

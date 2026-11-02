@@ -15,7 +15,7 @@ const stormIcon = (s) => L.divIcon({
   iconSize: [36, 36], iconAnchor: [18, 18],
 });
 
-const BASEMAPS = {
+export const BASEMAPS = {
   light: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }],
   dark: ['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18, subdomains: 'abcd', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' }],
 };

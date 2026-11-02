@@ -16,6 +16,10 @@ from free, official data sources.
 
 - **Today**: current conditions, feels-like, dew point, pressure trend, UV, air quality,
   a 2-hour "rain starting in…" nowcast, a scrubbable 48-hour timeline and a 10-day forecast.
+- **Your own dashboard**: Today is a grid of cards you can pick, drag into order and size (S, M, L):
+  forecast, radar loop, nearby cameras, alerts, tides, why-lessons, Rocky's outfit, the Den-Duty board,
+  a weather journal and Stargazing tonight (which planets are up, where to look, moonrise and moonset).
+  Layouts are saved per account; guests get a sensible default that an admin can replace with their own.
 - **Next 2 hours, wind, air & UV**: a 15-minute rain chart for the next 2 hours, a wind compass
   with a 24-hour wind and gust chart, and an air quality breakdown by pollutant with 48-hour AQI and
   UV strips and a sunscreen window. The map adds an infrared satellite layer.
