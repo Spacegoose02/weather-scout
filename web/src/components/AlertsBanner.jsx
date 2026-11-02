@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { hazardFor } from '../../../shared/safety-plan.js';
+import { openSafety } from '../safety/useSafetyPlan.js';
 
 const COLORS = { Extreme: 'extreme', Severe: 'severe', Moderate: 'moderate', Minor: 'minor' };
 
@@ -13,6 +15,11 @@ export default function AlertsBanner({ alerts, kidMode }) {
             <strong>⚠️ {a.event}</strong>
             <span>{kidMode ? a.kid : a.headline}</span>
           </button>
+          {hazardFor(a) && (
+            <button className="shelter-btn" onClick={() => openSafety('shelter', hazardFor(a).id)}>
+              🛡️ {kidMode ? 'Where is our safe spot?' : 'Where to shelter'}
+            </button>
+          )}
           {open === a.id && (
             <div className="alert-body">
               {kidMode && <p className="kid-text">{a.kid}</p>}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import SpeakButton from './SpeakButton.jsx';
 import Raccoon from '../Raccoon.jsx';
+import { openSafety, useSafetyPlan } from '../../safety/useSafetyPlan.js';
 
 function clock(iso) {
   if (!iso) return '';
@@ -13,10 +14,12 @@ export default function StormSafe({ plans, reassure, kid, drill = false, onDone 
   const [done, setDone] = useState([]);
   const [editing, setEditing] = useState(false);
   const plan = plans[0];
-  const spot = kid.data.safeSpot || '';
+  // The grown-ups' family plan wins; a kid's own pick is the fallback.
+  const familySpot = useSafetyPlan().plan.shelters[plan.id]?.spot || '';
+  const spot = familySpot || (plan.id === 'tornado' ? kid.data.safeSpot || '' : '');
   const allDone = plan.steps.every((_, i) => done.includes(i));
   const toggle = (i) => setDone((d) => (d.includes(i) ? d.filter((x) => x !== i) : [...d, i]));
-  const words = [plan.title, plan.calm, ...plan.steps.map((s, i) => `Step ${i + 1}. ${s}.`), spot && plan.id === 'tornado' ? `Our safe spot is ${spot}.` : '', reassure || ''].join(' ');
+  const words = [plan.title, plan.calm, ...plan.steps.map((s, i) => `Step ${i + 1}. ${s}.`), spot ? `Our safe spot is ${spot}.` : '', reassure || ''].join(' ');
 
   return (
     <section className={`card storm-safe ${drill ? 'drill' : ''}`} aria-live="polite">
@@ -29,7 +32,12 @@ export default function StormSafe({ plans, reassure, kid, drill = false, onDone 
         </div>
       </div>
 
-      {plan.id === 'tornado' && (
+      {familySpot && (
+        <div className="safe-spot">
+          <p>🏠 Our family's safe spot: <strong>{familySpot}</strong> <button className="link" onClick={() => openSafety('plan')}>Our family plan</button></p>
+        </div>
+      )}
+      {!familySpot && plan.id === 'tornado' && (
         <div className="safe-spot">
           {editing ? (
             <form onSubmit={(e) => { e.preventDefault(); setEditing(false); }}>

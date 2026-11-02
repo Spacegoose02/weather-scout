@@ -5,6 +5,7 @@ import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import { registerKidZone } from './kidzone.js';
 import { registerDashboard } from './dashboard.js';
+import { registerSafetyPlan } from './safetyplan.js';
 import { registerHistory } from './history.js';
 import { loadConfig, loadOrCreateSecret } from './config.js';
 import { TtlCache, UpstreamError, fetchJson } from './cache.js';
@@ -262,6 +263,8 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----
   registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });
   registerDashboard(app, { db, requireUser, requireAdmin, cache, latLonSchema, loc });
+  const safety = registerSafetyPlan(app, { db, requireUser, requireAdmin });
+  if (push) push.shelterFor = safety.shelterFor;
   registerHistory(app, { cache, fetchImpl, latLonSchema, loc, forecast, settle });
 
   // ---- AI weather expert, cloud photos, web search ---------------------------

@@ -27,6 +27,7 @@ export const CARDS = [
   { id: 'history', title: 'On this day', emoji: '📜', sizes: ['s', 'm', 'l'], blurb: 'Records, normals and past years for today' },
   { id: 'rocky', title: "Rocky's outfit", emoji: '🦝', sizes: ['s', 'm', 'l'], blurb: 'Rocky dresses for the weather' },
   { id: 'journal', title: 'Weather journal', emoji: '📓', sizes: ['m', 'l'], signIn: true, blurb: 'Write down what you saw each day' },
+  { id: 'safety', title: 'Family safety plan', emoji: '🛡️', sizes: ['s', 'm', 'l'], blurb: 'Shelter spot, kit and where to go in a warning' },
   { id: 'denduty', title: 'Den-Duty board', emoji: '🏠', sizes: ['s', 'm'], blurb: 'What the family board shows today' },
 ];
 
@@ -40,6 +41,7 @@ export const DEFAULT_LAYOUT = {
     { id: 'radar', size: 'm' },
     { id: 'rain', size: 'm' },
     { id: 'gear', size: 'm' },
+    { id: 'safety', size: 'm' },
     { id: 'wind', size: 's' },
     { id: 'details', size: 's' },
     { id: 'stars', size: 's' },

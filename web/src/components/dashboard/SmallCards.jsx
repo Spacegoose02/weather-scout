@@ -8,6 +8,7 @@ import Raccoon from '../Raccoon.jsx';
 import RockyFace from '../RockyFace.jsx';
 import SpeakButton from '../kid/SpeakButton.jsx';
 import { rockySays } from '../KidMode.jsx';
+import { openSafety } from '../../safety/useSafetyPlan.js';
 
 const darkQuery = () => window.matchMedia?.('(prefers-color-scheme: dark)');
 
@@ -143,7 +144,10 @@ export function AlertsCard({ weather, kidMode, onAlerts }) {
     <section className="card dash-alerts">
       <div className="card-title">
         <h2>⚠️ Alerts</h2>
-        <button className="link" onClick={onAlerts}>Push alerts</button>
+        <span className="row-actions">
+          <button className="link" onClick={() => openSafety('plan')}>Safety plan</button>
+          <button className="link" onClick={onAlerts}>Push alerts</button>
+        </span>
       </div>
       {!weather.alertsAvailable && <p className="hint">The National Weather Service did not answer. Alerts will show again soon.</p>}
       {weather.alertsAvailable && list.length === 0 && <p className="dash-calm">✅ {kidMode ? 'No weather warnings. All calm!' : 'No watches, warnings or advisories here right now.'}</p>}

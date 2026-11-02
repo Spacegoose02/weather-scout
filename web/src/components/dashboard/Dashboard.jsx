@@ -10,6 +10,7 @@ import { RainNext, AirUv, Wind } from '../NowCards.jsx';
 import { RadarCard, CamerasCard, AlertsCard, RockyCard, DenDutyCard } from './SmallCards.jsx';
 import Journal from './Journal.jsx';
 import Stargazing from './Stargazing.jsx';
+import SafetyCard from '../safety/SafetyCard.jsx';
 import OnThisDay from '../history/OnThisDay.jsx';
 import GearChecklist from './GearChecklist.jsx';
 import { useDashboard } from '../../dashboard/useDashboard.js';
@@ -33,6 +34,7 @@ function renderCard(id, size, ctx) {
     case 'alerts': return <AlertsCard weather={weather} kidMode={kidMode} onAlerts={ctx.onAlerts} />;
     case 'why': return <WhyNow weather={weather} audience={kidMode ? 'kid' : 'adult'} onTopic={() => ctx.onTab('learn')} limit={size === 'l' ? 6 : 4} />;
     case 'rocky': return <RockyCard weather={weather} size={size} onKids={() => ctx.onTab('kids')} />;
+    case 'safety': return <SafetyCard weather={weather} user={user} kidMode={kidMode} />;
     case 'denduty': return <DenDutyCard weather={weather} isAdmin={!!user?.isAdmin} onAdmin={ctx.onAdmin} />;
     case 'journal': return <Journal weather={weather} user={user} size={size} onSignIn={ctx.onSignIn} />;
     case 'history': return location ? <OnThisDay location={location} units={units} kidMode={kidMode} size={size} onKids={() => ctx.onTab('kids')} /> : null;

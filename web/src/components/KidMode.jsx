@@ -18,6 +18,7 @@ import SpeakButton from './kid/SpeakButton.jsx';
 import Briefing from './kid/Briefing.jsx';
 import VoicePicker from './VoicePicker.jsx';
 import '../kid/kid.css';
+import { openSafety } from '../safety/useSafetyPlan.js';
 
 const todayKey = () => `weather-scout:checklist:${new Date().toISOString().slice(0, 10)}`;
 
@@ -113,7 +114,8 @@ export default function KidMode({ weather, user, location, voice, onAlerts }) {
             <section className="card drill-card">
               <h2>Storm drill</h2>
               <p>Practice what to do in a big storm, with a grown-up. Then you will know just what to do!</p>
-              <button onClick={() => { setDrill(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Start a practice drill 🛡️</button>
+              <button onClick={() => { setDrill(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Start a practice drill 🛡️</button>{' '}
+              <button className="ghost" onClick={() => openSafety('plan')}>Our family plan 🏠</button>
             </section>
           )}
         </div>

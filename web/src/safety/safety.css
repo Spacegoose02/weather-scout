@@ -1,0 +1,93 @@
+/* Family safety plan + the "where to shelter" pop-up.
+   The pop-up is high-contrast and steady: no flashing, big type, one clear spot. */
+
+.shelter-backdrop { position: fixed; inset: 0; z-index: 2100; background: rgba(10, 15, 25, 0.65); display: grid; place-items: center; padding: 12px; }
+.shelter { width: min(640px, 100%); max-height: calc(100vh - 24px); overflow: auto; border: 4px solid #9d0035; outline: none; }
+.shelter.practice { border-style: dashed; border-color: var(--brand); }
+.shelter.kid { background: linear-gradient(160deg, #dbeafe, #e0f2f1); color: #1d2433; border-color: #7aa7e0; }
+.shelter-head { display: flex; gap: 12px; align-items: flex-start; }
+.shelter-emoji { font-size: 2.6rem; line-height: 1; }
+.shelter-head > div { flex: 1; min-width: 0; }
+.shelter-kicker { margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.8rem; color: #9d0035; }
+.shelter.practice .shelter-kicker, .shelter.kid .shelter-kicker { color: var(--brand); }
+.shelter.kid .shelter-kicker { color: #2f5ea8; }
+.shelter h2 { margin: 2px 0 0; font-size: 1.6rem; line-height: 1.2; }
+.shelter-x { flex: none; }
+.shelter-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.shelter-tabs button { border-radius: 999px; padding: 6px 12px; }
+.shelter-tabs button:not(.active) { background: transparent; color: inherit; border: 2px solid currentColor; }
+
+.shelter-go { display: flex; gap: 14px; align-items: center; margin: 14px 0 8px; padding: 14px 16px; border-radius: 14px; background: #9d0035; color: #fff; }
+.shelter.practice .shelter-go { background: var(--brand); color: var(--brand-ink); }
+.shelter.kid .shelter-go { background: #fff; color: #1d2433; border: 3px solid #7aa7e0; }
+.shelter-go > div { min-width: 0; }
+.shelter-go .raccoon { flex: none; }
+.shelter-go-label { margin: 0; font-weight: 700; opacity: 0.9; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.05em; }
+.shelter-spot { margin: 2px 0 0; font-size: 1.9rem; font-weight: 900; line-height: 1.15; overflow-wrap: anywhere; }
+.shelter-note { margin: 6px 0 0; }
+.shelter-go .link { color: inherit; text-decoration: underline; }
+
+.shelter-steps { margin: 8px 0; padding-left: 1.4em; display: grid; gap: 6px; font-size: 1.05rem; }
+.shelter.kid .shelter-steps { font-size: 1.25rem; font-weight: 700; }
+.shelter-line { margin: 6px 0; }
+.shelter-contacts { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.shelter-contacts a { display: inline-block; padding: 6px 12px; border-radius: 999px; border: 2px solid var(--line); font-weight: 700; text-decoration: none; color: inherit; }
+.shelter-small { font-size: 0.85rem; color: var(--muted); margin: 6px 0; }
+.shelter.kid .shelter-small { color: #3d4559; }
+.shelter-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.shelter-ok { margin-left: auto; }
+
+/* the plan window */
+.safety-summary { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.safety-meter { display: grid; padding: 8px 14px; border-radius: 14px; background: color-mix(in srgb, var(--brand) 12%, transparent); }
+.safety-meter strong { font-size: 1.4rem; }
+.safety-meter span { font-size: 0.8rem; color: var(--muted); }
+.safety-todo { margin: 0; padding-left: 1.2em; font-size: 0.9rem; }
+.safety-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.safety-tabs button:not(.active) { background: transparent; color: inherit; border: 2px solid var(--line); }
+.safety-section h3 { margin: 14px 0 6px; }
+.safety-hazards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.safety-hazard { border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.safety-hazard h3 { margin: 0 0 6px; }
+.safety-field { display: grid; gap: 4px; margin: 6px 0; }
+.safety-field > span { font-size: 0.85rem; font-weight: 700; color: var(--muted); }
+.safety-field input, .safety-field textarea { width: 100%; box-sizing: border-box; font: inherit; }
+.safety-field .muted { color: var(--muted); font-weight: 500; }
+.safety-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 14px; }
+.safety-contacts { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 6px; }
+.safety-contacts li { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.safety-contacts input { flex: 1 1 120px; min-width: 0; }
+.safety-progress { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; margin: 4px 0 10px; }
+.safety-progress span { display: block; height: 100%; background: var(--good); transition: width 0.3s; }
+.safety-kit { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 4px 14px; }
+.safety-kit li { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.safety-kit label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.safety-kit input { margin-top: 4px; width: 18px; height: 18px; flex: none; }
+.safety-kit .ghost, .safety-contacts .ghost { padding: 2px 8px; min-height: 0; font-size: 0.8rem; }
+.safety-add { display: flex; gap: 6px; margin-top: 10px; }
+.safety-add input { flex: 1; min-width: 0; }
+.safety-drills { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.safety-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+
+/* the dashboard card */
+.dash-safety .safety-card-spot { font-size: 1.15rem; font-weight: 800; margin: 4px 0; }
+.dash-safety .shelter-now { background: #9d0035; color: #fff; width: 100%; font-weight: 800; }
+.alert .shelter-btn { margin: 0 14px 12px; background: #fff; color: #9d0035; font-weight: 800; }
+
+.print-only { display: none; }
+@media print {
+  body { background: #fff; }
+  body * { visibility: hidden; }
+  .safety-print, .safety-print * { visibility: visible; }
+  .safety-print { display: block; position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; }
+  .safety-print table { width: 100%; border-collapse: collapse; }
+  .safety-print th, .safety-print td { text-align: left; border-bottom: 1px solid #999; padding: 6px; vertical-align: top; }
+  .safety-print .print-kit { columns: 2; list-style: none; padding: 0; }
+  .modal-backdrop { position: static; background: none; }
+}
+@media (max-width: 520px) {
+  .shelter h2 { font-size: 1.3rem; }
+  .shelter-spot { font-size: 1.5rem; }
+  .shelter:not(.kid) .shelter-go { flex-direction: column; align-items: flex-start; }
+  .shelter-ok { margin-left: 0; width: 100%; }
+}

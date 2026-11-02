@@ -38,6 +38,13 @@ from free, official data sources.
 - **Health & sky**: pressure-swing warnings for migraine-sensitive folks, wet-bulb globe temperature
   heat stress, moon phase and sunrise/sunset.
 - **NWS alerts** for your exact location, most severe first, with plain-language kid versions.
+- **Family safety plan** (🛡️ in the account menu, the Safety plan dashboard card, or the alerts banner):
+  a shelter spot for tornadoes, severe thunderstorms, floods and hurricanes, meeting places, emergency
+  contacts, an editable Ready.gov-style emergency kit checklist, drill log, and a one-page printout for
+  the fridge. Grown-ups (admins) edit it; anyone signed in can tick off the kit. When a tornado, severe
+  thunderstorm, flood or hurricane **warning** comes in, a big "where to shelter" pop-up opens on its own
+  (once per warning) with your family's spot; in Kid Mode Rocky walks kids through it calmly. Warning push
+  notifications say where to shelter, and the plan is cached on each device in case the internet drops.
 - **Radar & Cams map**: a smooth, loopable NEXRAD radar animation, alert polygons, and a **full-screen
   radar** (single NEXRAD sites, echo tops, rain totals, HRRR future radar, every active NWS warning
   nationwide with a warnings list, SPC severe outlooks, dark map), plus

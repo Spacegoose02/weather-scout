@@ -30,6 +30,11 @@ self.addEventListener('notificationclick', (event) => {
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
       const open = wins.find((w) => w.url.startsWith(self.location.origin));
       if (!open) return self.clients.openWindow(url);
+      // A warning tap on an already-open app: show the shelter guide there.
+      if (url.includes('shelter=1')) {
+        open.postMessage({ type: 'weather-scout:shelter' });
+        return open.focus();
+      }
       // A link with its own page (like the morning briefing) opens that page in the open window.
       if (url === `${self.location.origin}/`) return open.focus();
       return open.focus().then((w) => (w || open).navigate?.(url)).catch(() => self.clients.openWindow(url));
