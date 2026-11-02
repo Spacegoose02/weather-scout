@@ -13,11 +13,12 @@ import SignIn from './components/SignIn.jsx';
 import Admin from './components/Admin.jsx';
 import HealthSky from './components/HealthSky.jsx';
 import News from './components/News.jsx';
+import RockyFace from './components/RockyFace.jsx';
 
 const TABS = [
   ['today', 'Today', '🌤️'],
   ['map', 'Radar & Cams', '🗺️'],
-  ['kids', 'Kid Zone', '🦝'],
+  ['kids', 'Kid Zone', <RockyFace key="rocky" />],
   ['news', 'News & Videos', '📰'],
 ];
 
@@ -131,7 +132,7 @@ export default function App() {
               </div>
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} />}
-            {weather && tab === 'kids' && <KidMode weather={weather} name={user?.displayName} />}
+            {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} />}
             {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} />}
           </main>
         </>

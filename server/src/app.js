@@ -3,6 +3,7 @@ import path from 'node:path';
 import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
+import { registerKidZone } from './kidzone.js';
 import { loadConfig, loadOrCreateSecret } from './config.js';
 import { TtlCache, UpstreamError } from './cache.js';
 import { openDb, publicUser } from './db.js';
@@ -135,6 +136,9 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
   app.get('/api/alerts', { schema: latLonSchema }, async (req) => alerts(loc(req.query)));
   app.get('/api/air', { schema: latLonSchema }, async (req) => air(loc(req.query)));
   app.get('/api/radar', async () => radarFrames());
+
+  // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----
+  registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });
 
   // ---- news & videos -------------------------------------------------------
   app.get('/api/news', async () => {
@@ -299,7 +303,8 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
       units: fc.units,
       current: { temp: c.temp, feelsLike: c.feelsLike, icon: c.icon, label: c.label, kidLabel: c.kidLabel, isDay: c.isDay, windSpeed: c.windSpeed, uv: c.uv },
       today: { high: today.high ?? null, low: today.low ?? null, precipChance: today.precipChance ?? null, icon: today.icon ?? null, kidLabel: today.kidLabel ?? null },
-      raccoon: kid.raccoon,
+      // Paths are relative to this server, so connected apps can show the same Rocky.
+      raccoon: { ...kid.raccoon, art: { full: '/rocky/rocky.png', face: '/rocky/rocky-face.png', icon: '/icon-192.png' } },
       checklist: kid.checklist,
       playground: kid.playground,
       sky: kid.sky,

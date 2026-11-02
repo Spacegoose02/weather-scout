@@ -166,6 +166,7 @@ test('app keys: admin makes one, Den-Duty reads the summary with it, revoke stop
   assert.equal(body.playground.rating, 'red');
   assert.equal(body.alerts[0].event, 'Tornado Warning');
   assert.ok(Array.isArray(body.checklist));
+  assert.equal(body.raccoon.art.full, '/rocky/rocky.png');
   assert.ok(!('description' in body.alerts[0]));
   assert.ok((await app.inject({ url: '/api/admin/app-keys', headers })).json().keys[0].lastUsedAt);
 

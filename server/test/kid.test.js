@@ -60,6 +60,7 @@ test('kidReport has every section', () => {
   const r = kidReport(fc({}));
   for (const k of ['raccoon', 'checklist', 'playground', 'lessons', 'sky']) assert.ok(k in r, k);
   assert.ok(r.sky.sunset);
+  assert.ok(r.sky.moon.name && r.sky.moon.illumination >= 0 && r.sky.moon.illumination <= 100);
 });
 
 test('no light jacket on top of a raincoat', () => {

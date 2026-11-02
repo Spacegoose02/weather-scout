@@ -1,6 +1,19 @@
 import { useEffect, useState } from 'react';
 import Raccoon from './Raccoon.jsx';
+import RockyFace from './RockyFace.jsx';
 import { icon, round, duration, clockLabel } from '../format.js';
+import { useKidData } from '../kid/useKidData.js';
+import DailyFact from './kid/DailyFact.jsx';
+import StormSafe from './kid/StormSafe.jsx';
+import Bingo from './kid/Bingo.jsx';
+import WhatToWear from './kid/WhatToWear.jsx';
+import Forecaster from './kid/Forecaster.jsx';
+import FieldTrips from './kid/FieldTrips.jsx';
+import Experiments from './kid/Experiments.jsx';
+import Seasons from './kid/Seasons.jsx';
+import Badges, { BadgeToast } from './kid/Badges.jsx';
+import SpeakButton from './kid/SpeakButton.jsx';
+import '../kid/kid.css';
 
 const todayKey = () => `weather-scout:checklist:${new Date().toISOString().slice(0, 10)}`;
 
@@ -23,7 +36,8 @@ function useChecklist() {
   return [done, toggle];
 }
 
-function rockySays({ raccoon, playground }, c) {
+function rockySays({ raccoon, playground, stormSafe }, c) {
+  if (stormSafe?.active) return 'Grown-ups are keeping watch. Let\'s follow our storm steps together.';
   if (playground.rating === 'red') return `Uh-oh, inside day! ${playground.reasons[0]}`;
   if (raccoon.items.includes('raincoat')) return 'Splash time! Grab your raincoat and boots.';
   if (raccoon.items.includes('mittens')) return 'It is chilly! Hat and mittens on, please.';
@@ -31,12 +45,80 @@ function rockySays({ raccoon, playground }, c) {
   return `It's ${round(c.temp)} degrees and ${c.kidLabel.toLowerCase()}. Let's go explore!`;
 }
 
-export default function KidMode({ weather, name }) {
+const KID_TABS = [
+  ['today', 'Today', <RockyFace key="rocky" />],
+  ['play', 'Play', '🎲'],
+  ['explore', 'Explore', '🔭'],
+  ['badges', 'Badges', '🏅'],
+];
+
+export default function KidMode({ weather, user, location }) {
+  const today = weather.kid.date;
+  const kidData = useKidData(user, today);
+  const [tab, setTab] = useState('today');
+  const [drill, setDrill] = useState(false);
+  const storm = weather.kid.stormSafe;
+  const badgeCount = Object.keys(kidData.data.badges || {}).length;
+
+  return (
+    <div className="kid-zone">
+      {storm?.active && <StormSafe plans={storm.plans} reassure={storm.reassure} kid={kidData} />}
+      {drill && !storm?.active && (
+        <StormSafe
+          plans={[storm.drill]}
+          kid={kidData}
+          drill
+          onDone={() => {
+            setDrill(false);
+            kidData.earn('storm-ready');
+          }}
+        />
+      )}
+
+      <nav className="kid-tabs" aria-label="Kid Zone">
+        {KID_TABS.map(([id, label, emoji]) => (
+          <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)} aria-current={tab === id}>
+            <span aria-hidden>{emoji}</span> {label}{id === 'badges' && badgeCount > 0 ? ` (${badgeCount})` : ''}
+          </button>
+        ))}
+      </nav>
+
+      {tab === 'today' && <KidToday weather={weather} name={user?.displayName} kid={kidData} today={today} />}
+      {tab === 'play' && (
+        <div className="kid-grid">
+          <WhatToWear raccoon={weather.kid.raccoon} kid={kidData} />
+          <Bingo card={weather.kid.bingo} kid={kidData} />
+          <Forecaster weather={weather} kid={kidData} today={today} />
+        </div>
+      )}
+      {tab === 'explore' && (
+        <div className="kid-grid">
+          <FieldTrips location={location} units={weather.location.units} kid={kidData} today={today} />
+          <Experiments weather={weather} kid={kidData} today={today} />
+          <Seasons user={user} weather={weather} kid={kidData} today={today} />
+          {!storm?.active && !drill && (
+            <section className="card drill-card">
+              <h2>Storm drill</h2>
+              <p>Practice what to do in a big storm, with a grown-up. Then you will know just what to do!</p>
+              <button onClick={() => { setDrill(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Start a practice drill 🛡️</button>
+            </section>
+          )}
+        </div>
+      )}
+      {tab === 'badges' && <div className="kid-grid"><Badges kid={kidData} /></div>}
+
+      <BadgeToast ids={kidData.toast} />
+    </div>
+  );
+}
+
+function KidToday({ weather, name, kid: kidData, today }) {
   const { kid, forecast } = weather;
   const c = forecast.current;
   const [done, toggle] = useChecklist();
   const [open, setOpen] = useState(null);
   const allPacked = kid.checklist.length > 0 && kid.checklist.every((i) => done.includes(i.id));
+  const said = rockySays(kid, c);
 
   return (
     <div className="kid-grid">
@@ -44,7 +126,8 @@ export default function KidMode({ weather, name }) {
         <Raccoon items={kid.raccoon.items} mood={kid.raccoon.mood} />
         <div>
           <p className="hello">Hi{name ? ` ${name}` : ''}! I'm Rocky.</p>
-          <p className="bubble">{rockySays(kid, c)}</p>
+          <p className="bubble">{said}</p>
+          <SpeakButton text={`${said} It's ${round(c.temp)} degrees, and it feels like ${round(c.feelsLike)}.`} label="Hear Rocky" />
           <div className="kid-temp">
             <span className="big-icon" aria-hidden>{icon(c.icon, c.isDay)}</span>
             <span className="temp">{round(c.temp)}°</span>
@@ -52,6 +135,8 @@ export default function KidMode({ weather, name }) {
           <p className="kid-feels">Feels like {round(c.feelsLike)}°</p>
         </div>
       </section>
+
+      <DailyFact fact={kid.fact} today={today} kid={kidData} />
 
       <section className={`card playground ${kid.playground.rating}`}>
         <h2>Recess check</h2>
@@ -93,6 +178,7 @@ export default function KidMode({ weather, name }) {
             <p>🌙 The sun set at {clockLabel(kid.sky.sunset)}.</p>
           )}
           {kid.sky.stargazing && <p>{kid.sky.stargazing.good ? '✨' : '☁️'} {kid.sky.stargazing.text}</p>}
+          {kid.sky.moon && <MoonWatch moon={kid.sky.moon} />}
         </section>
       )}
 
@@ -122,6 +208,30 @@ export default function KidMode({ weather, name }) {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function MoonWatch({ moon }) {
+  const [why, setWhy] = useState(false);
+  const full = moon.phase === 'full' ? 'Tonight is the full Moon!'
+    : moon.daysToFull <= 1 ? 'Full Moon tomorrow!'
+    : `Full Moon in ${moon.daysToFull} days.`;
+  return (
+    <div className="moon-watch">
+      <span className="moon-emoji" aria-hidden>{moon.emoji}</span>
+      <div>
+        <p><strong>{moon.name}</strong>, {moon.illumination}% lit. {full}</p>
+        <p className="moon-kid">{moon.kid}</p>
+        <button className="link" onClick={() => setWhy(!why)} aria-expanded={why}>Why does the Moon change shape?</button>
+        {why && (
+          <p className="moon-why">
+            The Sun always lights half of the Moon. As the Moon travels around Earth (about 29 and a half days),
+            we see different amounts of that sunny half. Rocky likes to say: the Moon isn't changing, we're just
+            peeking at it from a new spot!
+          </p>
+        )}
+      </div>
     </div>
   );
 }

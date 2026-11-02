@@ -71,7 +71,9 @@ server/src/
 web/src/
   App.jsx           layout, tabs, data loading
   components/       CurrentConditions, HourlyTimeline, DailyForecast, Details,
-                    AlertsBanner, WeatherMap, KidMode, Raccoon, SignIn, Admin
+                    AlertsBanner, WeatherMap, KidMode, Raccoon (Rocky + outfits),
+                    RockyFace, SignIn, Admin
+public/             Rocky art, app icons, favicon (built by scripts/make-brand-assets.py)
 ```
 
 ## API

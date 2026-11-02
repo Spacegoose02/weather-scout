@@ -1,7 +1,9 @@
 // Kid Mode brain: turns raw numbers into an outfit for the raccoon mascot, a
 // morning gear checklist, a playground/recess rating and "Why is this
 // happening?" mini-lessons. Pure functions, so they are easy to test.
+import { moonPhase } from './sky.js';
 import { isThunder, isSnow, isFreezing, isWet } from './weathercodes.js';
+import { dailyFact, bingoCard, stormSafe, localDate } from './kidfun.js';
 
 // Work internally in °F, mph and inches regardless of display units.
 function imperial(forecast) {
@@ -156,6 +158,7 @@ export function skyTimes(forecast, now = Date.now()) {
     stargazing: clouds == null ? null : clouds < 30
       ? { good: true, text: 'Clear skies tonight. Great for spotting stars, planets and the Moon!' }
       : { good: false, text: 'Clouds will probably hide the stars tonight.' },
+    moon: moonPhase(now),
   };
 }
 
@@ -166,5 +169,9 @@ export function kidReport(forecast, ctx = {}) {
     playground: playgroundRating(forecast, ctx),
     lessons: lessons(forecast, ctx),
     sky: skyTimes(forecast),
+    date: localDate(forecast),
+    fact: dailyFact(localDate(forecast)),
+    bingo: bingoCard(forecast),
+    stormSafe: stormSafe(ctx.alerts, forecast),
   };
 }
