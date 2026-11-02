@@ -36,6 +36,9 @@ from free, official data sources.
   radar** (single NEXRAD sites, echo tops, rain totals, HRRR future radar, every active NWS warning
   nationwide with a warnings list, SPC severe outlooks, dark map), plus
   state DOT 511 road cameras pinned where they really are (clustered, with live snapshots).
+  A **🌬️ Windy** button opens [Windy](https://www.windy.com) right where you're looking: animated
+  wind, gusts, rain, temperature, clouds, pressure, storm energy and waves from ECMWF, GFS or ICON,
+  at the ground or up to the jet stream, with a one-line kid explanation of each layer.
 - **Kid Zone**: Rocky the raccoon dresses for the weather (raincoat when rain chance is over
   60%, beanie and mittens when it feels below 35°F, shades on sunny high-UV days), a tap-to-pack
   gear checklist, a green/yellow/red recess rating, "Why is this happening?" mini-lessons,
@@ -236,6 +239,15 @@ Unraid, add the `ghcr.io/remsky/kokoro-fastapi-cpu` container, port 8880) and se
 Speech goes through the Weather Scout server (and is cached), so phones never talk to Kokoro
 directly. If Kokoro is down, read-aloud quietly falls back to the device voice.
 
+## Windy maps
+
+The 🌬️ *Windy* button on the Radar & Cams map works with no setup: it opens the free Windy embed.
+For the full Windy map (smoother layer switching, no embed limits), get a **Map Forecast API** key at
+[api.windy.com/keys](https://api.windy.com/keys), set its allowed domain to your Weather Scout address,
+and paste it into `WINDY_MAP_KEY` (Unraid: *Windy map key*). Windy map keys are browser keys, so the key
+is sent to the browser inside the Windy map page; it is never in the repository or `/api/config`, and
+the page needs sign-in when `AUTH_REQUIRED=true`. Which models and layers show depends on your key's plan.
+
 ## Data sources
 
 | Data | Source | Key |
@@ -250,6 +262,7 @@ directly. If Kokoro is down, read-aloud quietly falls back to the device voice.
 | Severe outlooks | NOAA [Storm Prediction Center](https://www.spc.noaa.gov/) | none |
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
 | Map | OpenStreetMap | none |
+| Wind and model maps | [Windy](https://www.windy.com) embed, or the Map Forecast API | none for the embed, optional `WINDY_MAP_KEY` |
 | Cameras | VA, SC, MD, KY and DE public feeds; NC, NY, GA and OH with free keys; plus any state 511 feed you add | none for VA, SC, MD, KY, DE |
 | Ask an Expert, cloud photos, web search (optional) | [Claude](https://www.anthropic.com/claude) via the Anthropic API, or your own [Ollama](https://ollama.com/) | `ANTHROPIC_API_KEY`, or `OLLAMA_URL` |
 | Read-aloud voice (optional) | Your own [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) | none |

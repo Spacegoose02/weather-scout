@@ -95,6 +95,8 @@ export function loadConfig(env = process.env) {
       packageName: env.ANDROID_PACKAGE_NAME || 'app.weatherscout.android',
       certFingerprints: String(env.ANDROID_CERT_SHA256 || '').split(/[\s,]+/).map((f) => f.trim().toUpperCase()).filter(Boolean),
     },
+    // Windy maps. Blank = the free Windy embed; a key turns on the Map Forecast API.
+    windy: { mapKey: env.WINDY_MAP_KEY || '' },
     camerasFile: env.CAMERAS_FILE || path.join(dataDir, 'cameras.json'),
     env,
   };

@@ -27,6 +27,7 @@ import { PushService, LEVELS } from './push.js';
 import { AiService, registerAi } from './ai.js';
 import { registerTts } from './tts.js';
 import { registerBriefing, buildBriefing } from './briefing.js';
+import { registerWindy } from './windy.js';
 import { StationService, registerStations } from './stations.js';
 import { HomeAssistantService } from './homeassistant.js';
 import { cleanOutfit, rockySvg } from '../../shared/rocky-outfit.js';
@@ -265,6 +266,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   registerAi(app, { ai, forecast, alerts, air, settle, loc });
   registerTts(app, { cfg, fetchImpl });
   registerBriefing(app, { ai, forecast, alerts, air, settle, loc });
+  registerWindy(app, { cfg });
 
   // ---- personal weather stations & Home Assistant ----------------------------
   registerStations(app, { stations, cfg, requireAdmin });
