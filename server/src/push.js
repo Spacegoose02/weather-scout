@@ -7,6 +7,29 @@ import webpush from 'web-push';
 
 export const LEVELS = ['warning', 'watch', 'advisory'];
 const MAX_SUBSCRIPTIONS = 200;
+const TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
+// A briefing that could not go out on time (server down) is still sent up to
+// this long after the chosen time, and skipped after that.
+const BRIEFING_GRACE_MIN = 90;
+
+const minutesOf = (hhmm) => {
+  const m = TIME.exec(hhmm || '');
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
+
+// Local date and minutes-after-midnight at a place, from its UTC offset.
+export function localClock(offsetSeconds, now = Date.now()) {
+  const d = new Date(now + offsetSeconds * 1000);
+  return { date: d.toISOString().slice(0, 10), minutes: d.getUTCHours() * 60 + d.getUTCMinutes() };
+}
+
+// Is a briefing due for this subscription right now?
+export function briefingDue(row, offsetSeconds, now = Date.now()) {
+  const at = minutesOf(row.briefing_time);
+  if (at == null || offsetSeconds == null) return false;
+  const { date, minutes } = localClock(offsetSeconds, now);
+  return row.briefing_sent !== date && minutes >= at && minutes < at + BRIEFING_GRACE_MIN;
+}
 
 // warning: tornado, severe thunderstorm, flash flood, high wind warnings...
 // watch:   tornado watch, winter storm watch...
@@ -54,6 +77,9 @@ function vapidSubject(cfg) {
   return email ? `mailto:${email}` : 'mailto:weather-scout@localhost';
 }
 
+// Tapping the briefing opens the app on that device's briefing place.
+export const briefingLink = (row) => `/?${new URLSearchParams({ briefing: '1', lat: row.lat, lon: row.lon, place: row.place_name || '' })}`;
+
 export class PushService {
   constructor(db, cfg, { send = webpush.sendNotification.bind(webpush), log = console } = {}) {
     this.db = db;
@@ -68,29 +94,37 @@ export class PushService {
     return this.vapid.publicKey;
   }
 
-  subscribe({ subscription, place, levels }, userId = null) {
+  subscribe({ subscription, place, levels, briefingTime }, userId = null) {
     const { endpoint, keys } = subscription || {};
     if (!/^https:\/\//.test(endpoint || '') || !keys?.p256dh || !keys?.auth) throw Object.assign(new Error('That is not a valid push subscription.'), { statusCode: 400 });
     const lv = (levels || ['warning']).filter((l) => LEVELS.includes(l));
-    if (!lv.length) throw Object.assign(new Error('Pick at least one kind of alert.'), { statusCode: 400 });
+    const briefing = briefingTime ? (TIME.test(briefingTime) ? briefingTime : null) : null;
+    if (briefingTime && !briefing) throw Object.assign(new Error('Pick a time for the morning briefing, like 07:00.'), { statusCode: 400 });
+    if (!lv.length && !briefing) throw Object.assign(new Error('Pick at least one kind of alert, or the morning briefing.'), { statusCode: 400 });
     const lat = Math.round(Number(place?.lat) * 100) / 100;
     const lon = Math.round(Number(place?.lon) * 100) / 100;
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) throw Object.assign(new Error('Pick a place for alerts.'), { statusCode: 400 });
     const name = String(place?.name || '').slice(0, 80);
     const exists = this.db.prepare('SELECT 1 FROM push_subscriptions WHERE endpoint = ?').get(endpoint);
     if (!exists && this.count() >= MAX_SUBSCRIPTIONS) throw Object.assign(new Error('This server has too many devices signed up for alerts.'), { statusCode: 429 });
+    // Changing the place or time clears the stored offset and "sent today" mark,
+    // so a new time later today still gets its briefing.
     this.db.prepare(`
-      INSERT INTO push_subscriptions (endpoint, p256dh, auth, user_id, lat, lon, place_name, levels)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO push_subscriptions (endpoint, p256dh, auth, user_id, lat, lon, place_name, levels, briefing_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, user_id = excluded.user_id,
-        lat = excluded.lat, lon = excluded.lon, place_name = excluded.place_name, levels = excluded.levels
-    `).run(endpoint, keys.p256dh, keys.auth, userId, lat, lon, name, JSON.stringify(lv));
+        utc_offset = CASE WHEN lat = excluded.lat AND lon = excluded.lon THEN utc_offset ELSE NULL END,
+        briefing_sent = CASE WHEN briefing_time IS excluded.briefing_time AND lat = excluded.lat AND lon = excluded.lon THEN briefing_sent ELSE NULL END,
+        lat = excluded.lat, lon = excluded.lon, place_name = excluded.place_name, levels = excluded.levels, briefing_time = excluded.briefing_time
+    `).run(endpoint, keys.p256dh, keys.auth, userId, lat, lon, name, JSON.stringify(lv), briefing);
     return this.status(endpoint);
   }
 
   status(endpoint) {
-    const r = this.db.prepare('SELECT lat, lon, place_name, levels, last_sent_at FROM push_subscriptions WHERE endpoint = ?').get(endpoint);
-    return r ? { subscribed: true, place: { lat: r.lat, lon: r.lon, name: r.place_name }, levels: JSON.parse(r.levels), lastSentAt: r.last_sent_at } : { subscribed: false };
+    const r = this.db.prepare('SELECT lat, lon, place_name, levels, last_sent_at, briefing_time FROM push_subscriptions WHERE endpoint = ?').get(endpoint);
+    return r
+      ? { subscribed: true, place: { lat: r.lat, lon: r.lon, name: r.place_name }, levels: JSON.parse(r.levels), lastSentAt: r.last_sent_at, briefingTime: r.briefing_time || null }
+      : { subscribed: false };
   }
 
   unsubscribe(endpoint) {
@@ -130,6 +164,15 @@ export class PushService {
     return { ok };
   }
 
+  async testBriefing(endpoint, getBriefing) {
+    const row = this.db.prepare('SELECT s.*, u.display_name FROM push_subscriptions s LEFT JOIN users u ON u.id = s.user_id WHERE s.endpoint = ?').get(endpoint);
+    if (!row) throw Object.assign(new Error('This device is not signed up for notifications.'), { statusCode: 404 });
+    const { briefing: b } = await getBriefing({ lat: row.lat, lon: row.lon, place: row.place_name, name: row.display_name || '' });
+    const ok = await this.deliver(row, { title: b.title, body: b.short, tag: 'briefing', url: briefingLink(row) });
+    if (!ok) throw Object.assign(new Error('The push service did not accept the test. Try turning notifications off and on again.'), { statusCode: 502 });
+    return { ok, briefing: b };
+  }
+
   // One pass: fetch alerts once per subscribed place and send anything new.
   async check(getAlerts) {
     const rows = this.db.prepare('SELECT * FROM push_subscriptions').all();
@@ -164,14 +207,62 @@ export class PushService {
     return { places: places.size, sent };
   }
 
-  start(getAlerts, everyMs) {
+  // Rocky's morning briefing. getBriefing({ lat, lon, place, name }) returns
+  // { utcOffsetSeconds, briefing } for a place (the forecast is cached, so this is cheap).
+  // A place is only looked up when one of its devices might be due.
+  async checkBriefings(getBriefing, now = Date.now()) {
+    const rows = this.db.prepare(`
+      SELECT s.*, u.display_name FROM push_subscriptions s LEFT JOIN users u ON u.id = s.user_id
+      WHERE s.briefing_time IS NOT NULL
+    `).all();
+    const places = new Map();
+    for (const r of rows) {
+      // Unknown offset: look it up. Known: only when the clock says it is time.
+      if (r.utc_offset != null && !briefingDue(r, r.utc_offset, now)) continue;
+      const k = `${r.lat},${r.lon}`;
+      if (!places.has(k)) places.set(k, []);
+      places.get(k).push(r);
+    }
+    const setOffset = this.db.prepare('UPDATE push_subscriptions SET utc_offset = ? WHERE id = ?');
+    const markSent = this.db.prepare('UPDATE push_subscriptions SET briefing_sent = ? WHERE id = ?');
+    let sent = 0;
+    for (const [k, subs] of places) {
+      const [lat, lon] = k.split(',').map(Number);
+      let offset;
+      for (const sub of subs) {
+        let b;
+        try {
+          b = await getBriefing({ lat, lon, place: sub.place_name, name: sub.display_name || '' });
+        } catch (err) {
+          this.log.warn?.({ err: err.message, place: k }, 'push: could not build the morning briefing');
+          break;
+        }
+        offset = b.utcOffsetSeconds ?? 0;
+        if (sub.utc_offset !== offset) setOffset.run(offset, sub.id);
+        if (!briefingDue(sub, offset, now)) continue;
+        markSent.run(localClock(offset, now).date, sub.id);
+        const payload = { title: b.briefing.title, body: b.briefing.short, tag: 'briefing', url: briefingLink(sub), requireInteraction: false };
+        if (await this.deliver(sub, payload)) sent++;
+      }
+    }
+    return { places: places.size, sent };
+  }
+
+  start(getAlerts, everyMs, getBriefing) {
     const run = () => this.check(getAlerts).catch((err) => this.log.error?.(err, 'push check failed'));
     this.timer = setInterval(run, everyMs);
     this.timer.unref?.();
     setTimeout(run, 5000).unref?.();
+    if (getBriefing) {
+      const brief = () => this.checkBriefings(getBriefing).catch((err) => this.log.error?.(err, 'briefing check failed'));
+      this.briefTimer = setInterval(brief, 60_000);
+      this.briefTimer.unref?.();
+      setTimeout(brief, 8000).unref?.();
+    }
   }
 
   stop() {
     clearInterval(this.timer);
+    clearInterval(this.briefTimer);
   }
 }

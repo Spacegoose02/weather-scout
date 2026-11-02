@@ -1,5 +1,5 @@
-// Weather Scout service worker: shows severe weather alerts pushed by the server,
-// even when the app is closed. It does not cache anything.
+// Weather Scout service worker: shows severe weather alerts and Rocky's morning
+// briefing pushed by the server, even when the app is closed. It does not cache anything.
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
@@ -31,8 +31,13 @@ self.addEventListener('notificationclick', (event) => {
       const open = wins.find((w) => w.url.startsWith(self.location.origin));
       if (!open) return self.clients.openWindow(url);
       // A warning tap on an already-open app: show the shelter guide there.
-      if (url.includes('shelter=1')) open.postMessage({ type: 'weather-scout:shelter' });
-      return open.focus();
+      if (url.includes('shelter=1')) {
+        open.postMessage({ type: 'weather-scout:shelter' });
+        return open.focus();
+      }
+      // A link with its own page (like the morning briefing) opens that page in the open window.
+      if (url === `${self.location.origin}/`) return open.focus();
+      return open.focus().then((w) => (w || open).navigate?.(url)).catch(() => self.clients.openWindow(url));
     }),
   );
 });

@@ -62,6 +62,11 @@ from free, official data sources.
 - **Severe weather alerts on your phone**: tap 🔔 to get a push notification when the NWS issues a
   warning, watch or advisory for your place, even with the app closed. Needs an https address
   (behind your reverse proxy); on iPhone, add Weather Scout to the Home Screen first.
+- **Rocky's morning briefing**: a short kid-friendly rundown of the day (temperature, rain chance,
+  what to wear, recess, any alerts, plus a fun fact) at the top of the Kid Zone, with a 🔊 button that
+  reads it in the Kokoro voice. In 🔔 alerts, tick *Rocky's morning briefing* and pick a time to get it
+  as a notification every morning at that place's local time; tapping it opens the briefing ready to
+  play. Works without AI; with the AI helper on, *Rocky's own words* lets Rocky retell it.
 - **Ask an Expert / Ask Rocky** (optional, runs on Claude or your own Ollama): a chat that answers weather
   questions using your live forecast and alerts, in kid language as Rocky when Kid Mode is on.
   Snap a photo of the sky and it names the cloud and what it means. Turn on web search for
