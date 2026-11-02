@@ -285,6 +285,7 @@ export const BADGES = [
   { id: 'storm-ready', group: 'explore', emoji: '🛡️', name: 'Storm Ready', how: 'Practice a storm drill with a grown-up.' },
   { id: 'photographer', group: 'explore', emoji: '📷', name: 'Photographer', how: 'Add your first seasons photo.' },
   { id: 'four-seasons', group: 'explore', emoji: '🍂', name: 'Four Seasons', how: 'Photograph one spot in all four seasons.' },
+  { id: 'time-traveler', group: 'explore', emoji: '⏳', name: 'Time Traveler', how: 'Guess right 3 times in the weather time machine.' },
   { id: 'journal-first', group: 'journal', emoji: '📓', name: 'Weather Reporter', how: 'Write your first weather journal page.' },
   { id: 'streak-3', group: 'journal', emoji: '🔥', name: 'On a Roll', how: 'Write in your journal 3 days in a row.' },
   { id: 'streak-7', group: 'journal', emoji: '📅', name: 'Week Watcher', how: 'Write in your journal 7 days in a row.' },
