@@ -15,6 +15,7 @@ import AskExpert from './components/AskExpert.jsx';
 import Learn from './components/learn/Learn.jsx';
 import Dashboard from './components/dashboard/Dashboard.jsx';
 import SafetyCenter from './components/safety/SafetyCenter.jsx';
+import { BadgeCelebration } from './components/kid/Badges.jsx';
 import Briefing from './components/kid/Briefing.jsx';
 import Modal from './components/Modal.jsx';
 import { configureVoice } from './kid/speak.js';
@@ -172,6 +173,7 @@ export default function App() {
           }}
         />
       )}
+      <BadgeCelebration user={user} onShelf={() => setTab('kids')} />
       {modal === 'alerts' && <PushAlerts location={location} saved={prefs.saved} onClose={() => setModal(null)} />}
       {modal === 'briefing' && (briefingPlace() || location) && (
         <Modal title="Your weather from Rocky" onClose={() => { setModal(null); window.history.replaceState(null, '', window.location.pathname); }}>

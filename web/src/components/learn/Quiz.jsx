@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { speak } from '../../kid/speak.js';
+import { trackProgress } from '../../kid/badges.js';
 
 // One or more quick multiple-choice questions with instant feedback.
-export default function Quiz({ questions }) {
+// quizId (e.g. 'clouds' or 'storm-tornado') records the finished quiz for badges.
+export default function Quiz({ questions, quizId }) {
   const list = Array.isArray(questions) ? questions : [questions];
   const [picked, setPicked] = useState({});
   const score = list.filter((q, i) => picked[i] === q.answer).length;
@@ -22,7 +24,12 @@ export default function Quiz({ questions }) {
                   className={`ghost ${p == null ? '' : j === q.answer ? 'right' : j === p ? 'wrong' : ''}`}
                   disabled={p != null}
                   onClick={() => {
-                    setPicked((x) => ({ ...x, [i]: j }));
+                    const next = { ...picked, [i]: j };
+                    setPicked(next);
+                    if (quizId && Object.keys(next).length === list.length) {
+                      const right = list.filter((qq, k) => next[k] === qq.answer).length;
+                      trackProgress({ quizzes: { [quizId]: right }, ...(right === list.length ? { perfect: { [quizId]: 1 } } : {}) });
+                    }
                     speak(j === q.answer ? `Yes! ${q.why}` : `Not quite. ${q.why}`);
                   }}
                 >

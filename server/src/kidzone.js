@@ -147,6 +147,44 @@ export function decodePhoto(dataUrl) {
   return { mime: m[1], buf };
 }
 
+// ---- badges & progress -----------------------------------------------------------
+// Badges ({ id: 'YYYY-MM-DD' }) and progress counters ({ clouds: { cumulus: day },
+// quizzes: { tornado: 3 }, journalBest: 7 }) only ever grow, so saves from different
+// tabs or devices are unioned instead of overwriting each other.
+const BADGE_ID = /^[a-z0-9-]{1,40}$/;
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const KEY = /^[A-Za-z0-9-]{1,40}$/;
+function mergeValue(a, b) {
+  if (typeof a === 'number' && typeof b === 'number') return Math.max(a, b);
+  return a ?? b;
+}
+export function mergeProgress(have = {}, add = {}) {
+  const out = { ...have };
+  for (const [k, v] of Object.entries(add || {})) {
+    if (!KEY.test(k)) continue;
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      const inner = { ...(out[k] && typeof out[k] === 'object' ? out[k] : {}) };
+      for (const [ik, iv] of Object.entries(v)) {
+        if (KEY.test(ik) && (typeof iv === 'number' || typeof iv === 'string')) inner[ik] = mergeValue(inner[ik], iv);
+      }
+      out[k] = inner;
+    } else if (typeof v === 'number' || typeof v === 'string') {
+      out[k] = mergeValue(out[k], v);
+    }
+  }
+  return out;
+}
+export function mergeBadges(have = {}, add = {}) {
+  const out = { ...have };
+  const fresh = [];
+  for (const [id, day] of Object.entries(add || {})) {
+    if (!BADGE_ID.test(id) || out[id]) continue;
+    out[id] = DAY_RE.test(day) ? day : new Date().toISOString().slice(0, 10);
+    fresh.push(id);
+  }
+  return { badges: out, fresh };
+}
+
 export function registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc }) {
   db.exec(SCHEMA);
 
@@ -164,11 +202,41 @@ export function registerKidZone(app, { db, cameras, cache, fetchImpl, requireUse
     }
   });
 
+  const readData = (userId) => {
+    try {
+      return JSON.parse(getData.get(userId)?.data || '{}');
+    } catch {
+      return {};
+    }
+  };
+
   app.put('/api/me/kid', { preHandler: requireUser, schema: { body: { type: 'object' } } }, async (req, reply) => {
-    const json = JSON.stringify(req.body);
+    // Keep badges and progress earned elsewhere (Learn, journal, another device)
+    // even if this client had an older copy.
+    const have = readData(req.user.id);
+    const body = { ...req.body };
+    body.badges = mergeBadges(have.badges, body.badges).badges;
+    body.progress = mergeProgress(have.progress, body.progress);
+    const json = JSON.stringify(body);
     if (json.length > MAX_DATA_BYTES) return reply.code(413).send({ error: 'That is a lot of kid data. Try clearing old guesses.' });
     putData.run(req.user.id, json);
     return { ok: true };
+  });
+
+  // Add progress and/or badges without touching anything else. Returns the
+  // merged data plus which badges are brand new (for the celebration).
+  app.post('/api/me/kid/merge', {
+    preHandler: requireUser,
+    schema: { body: { type: 'object', properties: { progress: { type: 'object' }, badges: { type: 'object' } }, additionalProperties: false } },
+  }, async (req, reply) => {
+    const data = readData(req.user.id);
+    data.progress = mergeProgress(data.progress, req.body.progress);
+    const { badges, fresh } = mergeBadges(data.badges, req.body.badges);
+    data.badges = badges;
+    const json = JSON.stringify(data);
+    if (json.length > MAX_DATA_BYTES) return reply.code(413).send({ error: 'That is a lot of kid data. Try clearing old guesses.' });
+    putData.run(req.user.id, json);
+    return { data, fresh };
   });
 
   // ---- seasons tracker photos ---------------------------------------------------------

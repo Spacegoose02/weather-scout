@@ -20,6 +20,12 @@ from free, official data sources.
   forecast, radar loop, nearby cameras, alerts, tides, why-lessons, Rocky's outfit, the Den-Duty board,
   a weather journal and Stargazing tonight (which planets are up, where to look, moonrise and moonset).
   Layouts are saved per account; guests get a sensible default that an admin can replace with their own.
+- **On this day**: a dashboard card with today's forecast against the 1991–2020 normal, the record
+  high, low, wettest and snowiest for today's date, where today ranks, notable past years, a chart and
+  table of every year since 1940, and how the date has warmed or cooled. In the US the records come from
+  the nearest NOAA ThreadEx city station (via ACIS, often back to the 1800s); elsewhere from Open-Meteo's
+  free ERA5 archive. Kids get a **weather time machine** in Kid Zone › Explore: slide back through the
+  years, play "warmer or colder than today?", hear Rocky's record book and earn the Time Traveler badge.
 - **Next 2 hours, wind, air & UV**: a 15-minute rain chart for the next 2 hours, a wind compass
   with a 24-hour wind and gust chart, and an air quality breakdown by pollutant with 48-hour AQI and
   UV strips and a sunscreen window. The map adds an infrared satellite layer.

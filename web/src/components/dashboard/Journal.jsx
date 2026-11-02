@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api.js';
 import { round } from '../../format.js';
-import { SKY, SKY_EMOJI, streak, compareForecast, localToday } from '../../dashboard/journal.js';
+import { SKY, SKY_EMOJI, streak, bestStreak, compareForecast, localToday } from '../../dashboard/journal.js';
+import { trackProgress } from '../../kid/badges.js';
 
 // Daily observation journal: what did the sky look like, what did your
 // thermometer and rain gauge say, and anything else you noticed. One page a day.
@@ -28,6 +29,11 @@ export default function Journal({ weather, user, size, onSignIn }) {
   useEffect(() => {
     if (entries) setDraft(todays ? { ...todays } : { sky: [], high: null, low: null, rain: null, note: '' });
   }, [entries == null, todays?.updatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Catch up on streak badges for pages written before badges existed (or on another device).
+  useEffect(() => {
+    if (entries?.length) trackProgress({ journalPages: entries.length, journalBest: bestStreak(entries) }, { day: today });
+  }, [entries == null]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const run = useMemo(() => (entries ? streak(entries, today) : 0), [entries, today]);
 
@@ -62,8 +68,10 @@ export default function Journal({ weather, user, size, onSignIn }) {
     };
     try {
       const r = await api(`/api/me/journal/${today}`, { method: 'PUT', body });
-      setEntries((list) => [{ ...r.entry, updatedAt: new Date().toISOString() }, ...list.filter((e) => e.day !== today)]);
+      const list = [{ ...r.entry, updatedAt: new Date().toISOString() }, ...entries.filter((e) => e.day !== today)];
+      setEntries(list);
       setStatus('saved');
+      trackProgress({ journalPages: list.length, journalBest: bestStreak(list) }, { day: today });
     } catch (e) {
       setStatus(e.message);
     }
