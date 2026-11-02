@@ -14,6 +14,7 @@ import Experiments from './kid/Experiments.jsx';
 import Seasons from './kid/Seasons.jsx';
 import Badges from './kid/Badges.jsx';
 import SpeakButton from './kid/SpeakButton.jsx';
+import Briefing from './kid/Briefing.jsx';
 import VoicePicker from './VoicePicker.jsx';
 import '../kid/kid.css';
 
@@ -54,7 +55,7 @@ const KID_TABS = [
   ['badges', 'Badges', '🏅'],
 ];
 
-export default function KidMode({ weather, user, location, voice }) {
+export default function KidMode({ weather, user, location, voice, onAlerts }) {
   const today = weather.kid.date;
   const kidData = useKidData(user, today);
   const [tab, setTab] = useState(() => (takeShelfRequest() ? 'badges' : 'today'));
@@ -93,7 +94,7 @@ export default function KidMode({ weather, user, location, voice }) {
         ))}
       </nav>
 
-      {tab === 'today' && <KidToday weather={weather} name={user?.displayName} kid={kidData} today={today} voice={voice} />}
+      {tab === 'today' && <KidToday weather={weather} name={user?.displayName} kid={kidData} today={today} voice={voice} location={location} onAlerts={onAlerts} />}
       {tab === 'play' && (
         <div className="kid-grid">
           <WhatToWear raccoon={weather.kid.raccoon} kid={kidData} />
@@ -121,7 +122,7 @@ export default function KidMode({ weather, user, location, voice }) {
   );
 }
 
-function KidToday({ weather, name, kid: kidData, today, voice }) {
+function KidToday({ weather, name, kid: kidData, today, voice, location, onAlerts }) {
   const { kid, forecast } = weather;
   const c = forecast.current;
   const [done, toggle] = useChecklist();
@@ -145,6 +146,8 @@ function KidToday({ weather, name, kid: kidData, today, voice }) {
           <p className="kid-feels">Feels like {round(c.feelsLike)}°</p>
         </div>
       </section>
+
+      {location && <Briefing location={location} units={weather.location.units} name={name} onAlerts={onAlerts} />}
 
       <DailyFact fact={kid.fact} today={today} kid={kidData} />
 

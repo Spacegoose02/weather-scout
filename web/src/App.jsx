@@ -15,6 +15,8 @@ import AskExpert from './components/AskExpert.jsx';
 import Learn from './components/learn/Learn.jsx';
 import Dashboard from './components/dashboard/Dashboard.jsx';
 import { BadgeCelebration } from './components/kid/Badges.jsx';
+import Briefing from './components/kid/Briefing.jsx';
+import Modal from './components/Modal.jsx';
 import { configureVoice } from './kid/speak.js';
 import { useTheme } from './theme/useTheme.js';
 
@@ -35,7 +37,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState('today');
-  const [modal, setModal] = useState(null); // 'signin' | 'admin'
+  const [modal, setModal] = useState(null); // 'signin' | 'admin' | 'alerts' | 'briefing'
 
   useEffect(() => {
     api('/api/config')
@@ -43,6 +45,7 @@ export default function App() {
         setConfig(c);
         setUser(c.user);
         if (c.auth.needsSetup || (c.auth.required && !c.user)) setModal('signin');
+        else if (new URLSearchParams(window.location.search).has('briefing')) setModal('briefing'); // tapped the morning push
       })
       .catch((e) => setError(e.message));
   }, []);
@@ -145,7 +148,7 @@ export default function App() {
               />
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} />}
-            {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} voice={voice} />}
+            {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} voice={voice} onAlerts={() => setModal('alerts')} />}
             {weather && tab === 'learn' && <Learn weather={weather} location={location} kidMode={kidMode} />}
             {tab === 'models' && location && <ModelsView location={location} units={units} />}
             {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} voice={voice} />}
@@ -169,9 +172,24 @@ export default function App() {
       )}
       <BadgeCelebration user={user} onShelf={() => setTab('kids')} />
       {modal === 'alerts' && <PushAlerts location={location} saved={prefs.saved} onClose={() => setModal(null)} />}
+      {modal === 'briefing' && (briefingPlace() || location) && (
+        <Modal title="Your weather from Rocky" onClose={() => { setModal(null); window.history.replaceState(null, '', window.location.pathname); }}>
+          <Briefing location={briefingPlace() || location} units={units} name={user?.displayName} highlight />
+        </Modal>
+      )}
       {modal === 'admin' && user?.isAdmin && <Admin me={user} onClose={() => setModal(null)} />}
     </div>
   );
+}
+
+// The place in a morning-briefing notification link (/?briefing=1&lat=..&lon=..&place=..).
+function briefingPlace() {
+  const q = new URLSearchParams(window.location.search);
+  if (!q.has('briefing')) return null;
+  const lat = Number(q.get('lat'));
+  const lon = Number(q.get('lon'));
+  if (!q.get('lat') || !q.get('lon') || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return { lat, lon, name: q.get('place') || '' };
 }
 
 function dedupe(list) {

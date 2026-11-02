@@ -10,6 +10,7 @@ import { RainNext, AirUv, Wind } from '../NowCards.jsx';
 import { RadarCard, CamerasCard, AlertsCard, RockyCard, DenDutyCard } from './SmallCards.jsx';
 import Journal from './Journal.jsx';
 import Stargazing from './Stargazing.jsx';
+import GearChecklist from './GearChecklist.jsx';
 import { useDashboard } from '../../dashboard/useDashboard.js';
 import { CARD, SIZE_NAMES, hidden, addCard, removeCard, moveCard, nudgeCard, resizeCard } from '../../dashboard/layout.js';
 import '../../dashboard/dashboard.css';
@@ -34,6 +35,7 @@ function renderCard(id, size, ctx) {
     case 'denduty': return <DenDutyCard weather={weather} isAdmin={!!user?.isAdmin} onAdmin={ctx.onAdmin} />;
     case 'journal': return <Journal weather={weather} user={user} size={size} onSignIn={ctx.onSignIn} />;
     case 'stars': return location ? <Stargazing weather={weather} location={location} kidMode={kidMode} size={size} /> : null;
+    case 'gear': return <GearChecklist weather={weather} kidMode={kidMode} size={size} />;
     default: return null;
   }
 }
