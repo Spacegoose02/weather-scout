@@ -55,26 +55,38 @@ Nothing secret lives in this repository.
 
 - Settings and keys come from environment variables (`.env`, git-ignored, or the Unraid template).
 - Camera feeds are defined in `/data/cameras.json` and refer to keys by variable name
-  (`"keyEnv": "VDOT_SMARTERROADS_TOKEN"`), so the file itself is safe to share.
+  (`"keyEnv": "NY511_API_KEY"`), so the file itself is safe to share.
 - The browser never sees upstream URLs or keys: camera snapshots are proxied through the server,
   and only for cameras in your configured feeds.
 - The database, session secret and camera config live in the `/data` volume.
 
 ## Camera feeds
 
-Copy [`server/cameras.example.json`](server/cameras.example.json) to `/data/cameras.json` and
-enable the feeds you want. Supported types:
+**Virginia, South Carolina, Maryland and Kentucky work out of the box, and North Carolina with a free key.**
+With no config, Weather Scout loads these camera feeds:
+
+| State | Source | What you get |
+| --- | --- | --- |
+| Virginia | 511 Virginia (VDOT) | Snapshots + live HLS video |
+| South Carolina | 511 South Carolina (SCDOT) | Snapshots + live HLS video |
+| Maryland | MD iMAP / CHART | Live video player |
+| Kentucky | KYTC GIS | Snapshots |
+| North Carolina | DriveNC | Snapshots, once you set `NC_DRIVENC_API_KEY` (free: sign up at drivenc.gov, then request a developer key on its API documentation page) |
+
+Set `CAMERAS_DEFAULT_FEEDS` to `false` to turn them off, or to a list such as `va,md,nc` to pick states.
+
+To add other states or your own cameras, copy
+[`server/cameras.example.json`](server/cameras.example.json) to `/data/cameras.json` and enable
+the feeds you want (a cameras.json replaces the built-in list, so copy in the entries you want to keep). Supported types:
 
 | type | for | key |
 | --- | --- | --- |
 | `ibi511` | States on the IBI/Castle Rock 511 developer API (511NY, 511GA, 511WI, 511AZ, Idaho, Alaska…) | free developer key from that state's 511 site |
-| `geojson` | Any GeoJSON point layer with a snapshot URL property, including ArcGIS `f=geojson` layers and VDOT SmarterRoads exports. Map property names with `fields`. | optional, sent as a query param (`keyParam`) or header (`keyHeader`) |
+| `geojson` | Any GeoJSON point layer with a snapshot (`image`), HLS (`video`) or player page (`embed`) property, such as 511 Virginia. Map property names with `fields`. |
+| `arcgis` | An ArcGIS MapServer/FeatureServer layer URL (paged automatically), such as Maryland and Kentucky. Same `fields` mapping. | optional, sent as a query param (`keyParam`) or header (`keyHeader`) |
 | `static` | Your own cameras (porch cam, sky cam) | none |
 
-Virginia: VDOT publishes its camera list through [SmarterRoads](https://smarterroads.vdot.virginia.gov/)
-(free account, token required). Put the token in `VDOT_SMARTERROADS_TOKEN`, paste the camera
-dataset URL into the `va` feed, check the `fields` names match the dataset, and set
-`"enabled": true`. The feed status shows up under *Family & settings*.
+Feed health (camera counts and errors) shows under *Family & settings*.
 
 ## Data sources
 
@@ -85,7 +97,7 @@ dataset URL into the `va` feed, check the `fields` names match the dataset, and 
 | Watches, warnings, advisories | [api.weather.gov](https://www.weather.gov/documentation/services-web-api) | none, but set `NWS_USER_AGENT` |
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
 | Map | OpenStreetMap | none |
-| Cameras | State DOT 511 feeds | per state |
+| Cameras | VA, SC, MD and KY public feeds, plus any state 511 feed you add | none for the built-in states |
 
 Open-Meteo's free tier is for non-commercial use, which fits a family server. All upstream
 responses are cached on the server (forecast 10 min, alerts 2 min, cameras 15 min) so a house

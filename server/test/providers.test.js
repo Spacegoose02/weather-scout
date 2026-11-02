@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeForecast, aqiCategory, forecastUrl } from '../src/providers/openmeteo.js';
 import { normalizeAlerts, kidSummary } from '../src/providers/nws.js';
 import { radarFrames } from '../src/providers/radar.js';
-import { parseIbi511, parseGeoJson } from '../src/providers/cameras/index.js';
+import { parseIbi511, parseGeoJson, DEFAULT_FEEDS } from '../src/providers/cameras/index.js';
 import { fakeForecast, fakeAlerts, fakeIbiCameras } from './helpers.js';
 
 test('forecast normalizes to 48 hours and 10 days', () => {
@@ -59,4 +59,15 @@ test('GeoJSON cameras honor field mapping', () => {
   const raw = { features: [{ geometry: { type: 'Point', coordinates: [-77.4, 37.5] }, properties: { cam_id: 'a', desc: 'Main St', img: 'http://i/a.jpg' } }] };
   const c = parseGeoJson(raw, { fields: { id: 'cam_id', name: 'desc', image: 'img' } });
   assert.deepEqual([c[0].id, c[0].name, c[0].lat, c[0].lon], ['a', 'Main St', 37.5, -77.4]);
+});
+
+test('511 Virginia GeoJSON parses with the built-in feed mapping', () => {
+  const feat = (id, active, desc) => ({
+    type: 'Feature', geometry: { type: 'Point', coordinates: [-77.3055, 38.84519] },
+    properties: { id, name: `CAM${id}`, description: desc, route: '', direction: '', active, image_url: `https://snapshot.example/${id}.png`, https_url: `https://media.example/${id}.m3u8`, jurisdiction: 'City of Fairfax' },
+  });
+  const raw = { type: 'FeatureCollection', features: [feat('3958', true, 'University Drive and Sager Avenue'), feat('1', false, 'Offline cam')] };
+  const c = parseGeoJson(raw, DEFAULT_FEEDS[0]);
+  assert.equal(c.length, 1);
+  assert.deepEqual([c[0].id, c[0].name, c[0].lat, c[0].lon, c[0].video], ['3958', 'University Drive and Sager Avenue', 38.84519, -77.3055, 'https://media.example/3958.m3u8']);
 });
