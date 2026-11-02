@@ -256,3 +256,12 @@ h3 { font-size: 1rem; margin: 18px 0 8px; }
 .news-list a { color: var(--ink); font-weight: 800; text-decoration: none; }
 .news-list a:hover { color: var(--brand); text-decoration: underline; }
 .news-list .tile-note { margin: 4px 0 0; }
+
+/* Push alerts */
+.ok-text { color: var(--good); font-weight: 700; }
+.push-form fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; display: grid; gap: 8px; margin: 0; }
+.push-form legend { font-weight: 700; padding: 0 4px; }
+.push-form .check { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; }
+.push-form .check input { margin-top: 4px; }
+.push-form select { padding: 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+.push-form .row-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
