@@ -3,7 +3,8 @@
 // are referenced by environment variable name so they never live in a file that
 // could be committed or shared.
 import fs from 'node:fs';
-import { fetchJson } from '../../cache.js';
+import path from 'node:path';
+import { fetchJson, UpstreamError } from '../../cache.js';
 
 // Built-in feeds used when no cameras.json exists. All are public, no key:
 //  - 511 Virginia: GeoJSON with a snapshot PNG and an HTTPS HLS stream per camera
@@ -78,6 +79,24 @@ function feedKey(feed, env) {
   return '';
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const retryable = (err) => (err instanceof UpstreamError ? [429, 500, 502, 503, 504].includes(err.status) : true);
+
+// DOT servers have brief hiccups (503s, timeouts). Try a few times with a growing pause.
+export async function fetchJsonRetry(url, opts, { tries = 3, baseDelayMs = 1500 } = {}) {
+  let last;
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await fetchJson(url, opts);
+    } catch (err) {
+      last = err;
+      if (!retryable(err) || i === tries - 1) break;
+      await sleep(baseDelayMs * 2 ** i);
+    }
+  }
+  throw last;
+}
+
 // IBI Group / Castle Rock "511" developer API, used by many states
 // (511NY, 511GA, 511WI, 511AZ, Idaho 511, 511 Alaska, ...):
 //   {baseUrl}/api/getcameras?key=KEY&format=json        (v1)
@@ -132,22 +151,42 @@ export function parseGeoJson(raw, feed) {
 const isHttps = (u) => typeof u === 'string' && u.startsWith('https://');
 
 // ArcGIS MapServer/FeatureServer layers cap results per request, so page through.
-async function fetchArcgis(feed, fetchImpl) {
+// Some servers fail on f=geojson but still answer f=json (Esri JSON), so fall back to that.
+async function fetchArcgis(feed, fetchImpl, opts) {
+  try {
+    return await fetchArcgisPages(feed, fetchImpl, opts, 'geojson');
+  } catch (err) {
+    try {
+      return await fetchArcgisPages(feed, fetchImpl, { ...opts, retry: { tries: 1 } }, 'json');
+    } catch {
+      throw err;
+    }
+  }
+}
+
+async function fetchArcgisPages(feed, fetchImpl, { headers, retry } = {}, format) {
   const pageSize = feed.pageSize || 500;
   const all = [];
   for (let page = 0; page < 40; page++) {
     const u = new URL(`${feed.url.replace(/\/$/, '')}/query`);
     u.search = new URLSearchParams({
-      where: feed.where || '1=1', outFields: '*', outSR: '4326', f: 'geojson',
+      where: feed.where || '1=1', outFields: '*', outSR: '4326', f: format,
       resultOffset: String(page * pageSize), resultRecordCount: String(pageSize),
     }).toString();
-    const raw = await fetchJson(u.toString(), { source: feed.id, fetchImpl, timeoutMs: 20000 });
-    const features = Array.isArray(raw?.features) ? raw.features : [];
+    const raw = await fetchJsonRetry(u.toString(), { source: feed.id, fetchImpl, headers, timeoutMs: 20000 }, retry);
+    if (raw?.error) throw new UpstreamError(feed.id, raw.error.code || 500, `${feed.id} answered: ${raw.error.message || 'error'}`);
+    const features = format === 'json' ? esriToGeoJson(raw) : Array.isArray(raw?.features) ? raw.features : [];
     all.push(...features);
     const more = raw?.exceededTransferLimit ?? raw?.properties?.exceededTransferLimit;
     if (!more || !features.length) break;
   }
   return { type: 'FeatureCollection', features: all };
+}
+
+export function esriToGeoJson(raw) {
+  return (Array.isArray(raw?.features) ? raw.features : [])
+    .filter((f) => Number.isFinite(f.geometry?.x) && Number.isFinite(f.geometry?.y))
+    .map((f) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [f.geometry.x, f.geometry.y] }, properties: f.attributes || {} }));
 }
 
 export function parseStatic(feed) {
@@ -156,11 +195,22 @@ export function parseStatic(feed) {
     .filter((c) => c.image && Number.isFinite(c.lat) && Number.isFinite(c.lon));
 }
 
+// After a feed fails we keep showing its last good camera list (also saved to the
+// data volume, so it survives restarts) and wait before asking the DOT again:
+// 2 minutes, then 4, 8, ... up to 30.
+const BACKOFF_MIN_MS = 2 * 60_000;
+const BACKOFF_MAX_MS = 30 * 60_000;
+
 export class CameraService {
-  constructor(cfg, cache, fetchImpl = fetch) {
+  constructor(cfg, cache, fetchImpl = fetch, { retry } = {}) {
     this.cfg = cfg;
     this.cache = cache;
     this.fetchImpl = fetchImpl;
+    this.retry = retry;
+    this.lastGood = new Map(); // feed id -> { cameras, at }
+    this.failures = new Map(); // feed id -> { count, until, error }
+    this.headers = { 'user-agent': cfg.nwsUserAgent || 'WeatherScout (self-hosted)', accept: 'application/json, application/geo+json;q=0.9, */*;q=0.5' };
+    this.cacheDir = cfg.dataDir && cfg.dataDir !== ':memory:' ? path.join(cfg.dataDir, 'camera-cache') : null;
   }
 
   feeds() {
@@ -175,31 +225,88 @@ export class CameraService {
     return defaultFeeds(env.CAMERAS_DEFAULT_FEEDS, env);
   }
 
-  async loadFeed(feed) {
+  async fetchFeed(feed) {
     const env = this.cfg.env;
+    const opts = { source: feed.id, fetchImpl: this.fetchImpl, headers: { ...this.headers }, timeoutMs: 20000 };
+    let cams = [];
+    if (feed.type === 'static') {
+      cams = parseStatic(feed);
+    } else if (feed.type === 'ibi511') {
+      const key = feedKey(feed, env);
+      const p = feed.apiVersion === 2 ? '/api/v2/get/cameras' : '/api/getcameras';
+      const url = `${feed.baseUrl.replace(/\/$/, '')}${p}?key=${encodeURIComponent(key)}&format=json`;
+      cams = parseIbi511(await fetchJsonRetry(url, opts, this.retry), feed);
+    } else if (feed.type === 'geojson') {
+      const url = new URL(feed.url);
+      const key = feedKey(feed, env);
+      if (key && feed.keyParam) url.searchParams.set(feed.keyParam, key);
+      if (key && feed.keyHeader) opts.headers[feed.keyHeader] = key;
+      cams = parseGeoJson(await fetchJsonRetry(url.toString(), opts, this.retry), feed);
+    } else if (feed.type === 'arcgis') {
+      cams = parseGeoJson(await fetchArcgis(feed, this.fetchImpl, { headers: opts.headers, retry: this.retry }), feed);
+    } else {
+      throw new Error(`Unknown camera feed type "${feed.type}"`);
+    }
+    return cams.map((c) => ({ ...c, id: `${feed.id}:${c.id}`, feed: feed.id, feedName: feed.name || feed.id, region: feed.region || null }));
+  }
+
+  cacheFile(feed) {
+    return this.cacheDir && path.join(this.cacheDir, `${String(feed.id).replace(/[^\w-]/g, '_')}.json`);
+  }
+
+  saved(feed) {
+    if (this.lastGood.has(feed.id)) return this.lastGood.get(feed.id);
+    const file = this.cacheFile(feed);
+    try {
+      const data = file && JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (Array.isArray(data?.cameras)) {
+        this.lastGood.set(feed.id, data);
+        return data;
+      }
+    } catch { /* nothing saved yet */ }
+    return null;
+  }
+
+  remember(feed, cameras) {
+    const entry = { cameras, at: new Date().toISOString() };
+    this.lastGood.set(feed.id, entry);
+    const file = this.cacheFile(feed);
+    if (!file || feed.type === 'static') return;
+    try {
+      fs.mkdirSync(this.cacheDir, { recursive: true });
+      fs.writeFileSync(`${file}.tmp`, JSON.stringify(entry));
+      fs.renameSync(`${file}.tmp`, file);
+    } catch (err) {
+      console.error(`[cameras] could not save ${feed.id} cache: ${err.message}`);
+    }
+  }
+
+  // Resolves to { cameras, stale, error, savedAt }. Only rejects when there is
+  // nothing saved to fall back on.
+  async loadFeed(feed) {
     const ttl = (feed.refreshMinutes || 15) * 60_000;
     return this.cache.wrap(`cams:${feed.id}`, ttl, async () => {
-      let cams = [];
-      if (feed.type === 'static') {
-        cams = parseStatic(feed);
-      } else if (feed.type === 'ibi511') {
-        const key = feedKey(feed, env);
-        const path = feed.apiVersion === 2 ? '/api/v2/get/cameras' : '/api/getcameras';
-        const url = `${feed.baseUrl.replace(/\/$/, '')}${path}?key=${encodeURIComponent(key)}&format=json`;
-        cams = parseIbi511(await fetchJson(url, { source: feed.id, fetchImpl: this.fetchImpl, timeoutMs: 20000 }), feed);
-      } else if (feed.type === 'geojson') {
-        const url = new URL(feed.url);
-        const key = feedKey(feed, env);
-        const headers = {};
-        if (key && feed.keyParam) url.searchParams.set(feed.keyParam, key);
-        if (key && feed.keyHeader) headers[feed.keyHeader] = key;
-        cams = parseGeoJson(await fetchJson(url.toString(), { source: feed.id, headers, fetchImpl: this.fetchImpl, timeoutMs: 20000 }), feed);
-      } else if (feed.type === 'arcgis') {
-        cams = parseGeoJson(await fetchArcgis(feed, this.fetchImpl), feed);
-      } else {
-        throw new Error(`Unknown camera feed type "${feed.type}"`);
+      const fail = this.failures.get(feed.id);
+      const fallback = (error) => {
+        const saved = this.saved(feed);
+        if (!saved) throw Object.assign(new Error(error), { feedError: true });
+        return { cameras: saved.cameras, stale: true, error, savedAt: saved.at };
+      };
+      if (fail && fail.until > Date.now()) return fallback(fail.error);
+      try {
+        const cameras = await this.fetchFeed(feed);
+        this.failures.delete(feed.id);
+        this.remember(feed, cameras);
+        return { cameras, stale: false };
+      } catch (err) {
+        const count = (fail?.count || 0) + 1;
+        const wait = Math.min(BACKOFF_MAX_MS, BACKOFF_MIN_MS * 2 ** (count - 1));
+        this.failures.set(feed.id, { count, until: Date.now() + wait, error: err.message });
+        console.warn(`[cameras] ${feed.id} failed (${err.message}); retrying in ${Math.round(wait / 60_000)} min`);
+        // Don't let the cache hold a failure for the feed's full refresh time.
+        setTimeout(() => this.cache.map.delete(`cams:${feed.id}`), wait).unref?.();
+        return fallback(err.message);
       }
-      return cams.map((c) => ({ ...c, id: `${feed.id}:${c.id}`, feed: feed.id, feedName: feed.name || feed.id, region: feed.region || null }));
     });
   }
 
@@ -210,11 +317,12 @@ export class CameraService {
     const status = [];
     results.forEach((r, i) => {
       const f = feeds[i];
+      const name = f.name || f.id;
       if (r.status === 'fulfilled') {
-        cameras.push(...r.value);
-        status.push({ id: f.id, name: f.name || f.id, ok: true, count: r.value.length });
+        cameras.push(...r.value.cameras);
+        status.push({ id: f.id, name, ok: !r.value.stale, stale: r.value.stale, count: r.value.cameras.length, ...(r.value.stale ? { error: r.value.error, savedAt: r.value.savedAt } : {}) });
       } else {
-        status.push({ id: f.id, name: f.name || f.id, ok: false, error: r.reason?.message || 'failed' });
+        status.push({ id: f.id, name, ok: false, error: r.reason?.message || 'failed' });
       }
     });
     return { cameras, feeds: status };

@@ -31,6 +31,9 @@ from free, official data sources.
   username. Saved places, units and Kid Mode follow you between devices.
 - **News & Videos**: weather news from RSS feeds and the latest videos from YouTube channels the
   admin picks (paste a channel link or @handle in *Family & settings*).
+- **Severe weather alerts on your phone**: tap 🔔 to get a push notification when the NWS issues a
+  warning, watch or advisory for your place, even with the app closed. Needs an https address
+  (behind your reverse proxy); on iPhone, add Weather Scout to the Home Screen first.
 - **Connected apps**: a keyed, kid-safe weather summary for Den-Duty boards, Home Assistant or
   scripts ([docs/CONNECT.md](docs/CONNECT.md)).
 - Installable as a phone/desktop app (PWA manifest with Rocky app icons), light and dark themes.

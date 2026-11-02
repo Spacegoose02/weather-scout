@@ -153,7 +153,14 @@ export default function Admin({ me, onClose }) {
         <p className="hint">No feeds configured. Copy <code>cameras.example.json</code> to <code>/data/cameras.json</code> and put API keys in environment variables.</p>
       ) : (
         <ul className="feeds">
-          {feeds.map((f) => <li key={f.id}>{f.ok ? '🟢' : '🔴'} {f.name}: {f.ok ? `${f.count} cameras` : f.error}</li>)}
+          {feeds.map((f) => (
+            <li key={f.id}>
+              {f.ok ? '🟢' : f.stale ? '🟡' : '🔴'} {f.name}:{' '}
+              {f.ok ? `${f.count} cameras`
+                : f.stale ? `showing ${f.count} saved cameras from ${new Date(f.savedAt).toLocaleString()} (live feed: ${f.error}, retrying automatically)`
+                : `${f.error} (retrying automatically)`}
+            </li>
+          ))}
         </ul>
       )}
     </Modal>

@@ -13,6 +13,7 @@ import SignIn from './components/SignIn.jsx';
 import Admin from './components/Admin.jsx';
 import HealthSky from './components/HealthSky.jsx';
 import News from './components/News.jsx';
+import PushAlerts from './components/PushAlerts.jsx';
 import RockyFace from './components/RockyFace.jsx';
 
 const TABS = [
@@ -95,6 +96,7 @@ export default function App() {
         onSignIn={() => setModal('signin')}
         onSignOut={signOut}
         onAdmin={() => setModal('admin')}
+        onAlerts={() => setModal('alerts')}
         sso={config.auth.sso}
       />
 
@@ -151,6 +153,7 @@ export default function App() {
           }}
         />
       )}
+      {modal === 'alerts' && <PushAlerts location={location} saved={prefs.saved} onClose={() => setModal(null)} />}
       {modal === 'admin' && user?.isAdmin && <Admin me={user} onClose={() => setModal(null)} />}
     </div>
   );
