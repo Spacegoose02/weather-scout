@@ -39,6 +39,13 @@ export function loadConfig(env = process.env) {
       enabled: bool(env.PUSH_ENABLED, true),
       pollSeconds: Math.max(60, num(env.PUSH_POLL_SECONDS, 120)),
     },
+    // "Ask a weather expert" chat, cloud photo identifier and web search. Off without a key.
+    ai: {
+      apiKey: env.ANTHROPIC_API_KEY || '',
+      model: env.AI_MODEL || 'claude-opus-5-5',
+      webSearch: bool(env.AI_WEB_SEARCH, true),
+      dailyLimit: Math.max(0, num(env.AI_DAILY_LIMIT, 40)),
+    },
     camerasFile: env.CAMERAS_FILE || path.join(dataDir, 'cameras.json'),
     env,
   };
