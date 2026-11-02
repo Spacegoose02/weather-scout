@@ -1,8 +1,10 @@
 // AI helpers: "Ask a weather expert" chat (Rocky in Kid Mode), cloud photo
-// identifier, and optional web search. Everything here is off until the server
-// has an ANTHROPIC_API_KEY; the key never leaves the server. Kept in its own
-// file so it stays out of the way of the core app.
+// identifier, and optional web search. Runs on Claude (ANTHROPIC_API_KEY) or a
+// self-hosted Ollama (OLLAMA_URL). Everything here is off until one is set up;
+// keys never leave the server. Kept in its own file so it stays out of the way
+// of the core app.
 import Anthropic from '@anthropic-ai/sdk';
+import { OllamaClient, OllamaError, onDomains } from './providers/ollama.js';
 
 const DEFAULT_MODEL = 'claude-opus-5-5';
 // Models that take the server-side refusal fallback (`fallbacks: "default"`).
@@ -140,22 +142,39 @@ export class AiError extends Error {
 }
 
 // ---- service -------------------------------------------------------------------
+// Which provider runs the AI helper: AI_PROVIDER wins, otherwise whichever is configured.
+export function pickProvider(ai) {
+  if (ai.provider === 'anthropic') return ai.apiKey ? 'anthropic' : null;
+  if (ai.provider === 'ollama') return ai.ollama.url ? 'ollama' : null;
+  if (ai.provider === 'off') return null;
+  if (ai.apiKey) return 'anthropic';
+  if (ai.ollama.url) return 'ollama';
+  return null;
+}
+
 export class AiService {
   constructor(cfg, { fetchImpl, log } = {}) {
     this.cfg = cfg.ai;
     this.log = log;
-    this.client = this.cfg.apiKey
+    this.provider = pickProvider(this.cfg);
+    this.client = this.provider === 'anthropic'
       ? new Anthropic({ apiKey: this.cfg.apiKey, fetch: fetchImpl, maxRetries: 1, timeout: 120_000 })
       : null;
+    this.ollama = this.provider === 'ollama' ? new OllamaClient(this.cfg.ollama, fetchImpl) : null;
     this.usage = new Map(); // who -> { day, n }
   }
 
   get enabled() {
-    return !!this.client;
+    return !!this.provider;
+  }
+
+  get canSearch() {
+    if (!this.cfg.webSearch) return false;
+    return this.provider === 'anthropic' || !!this.ollama?.canSearch;
   }
 
   status() {
-    return { enabled: this.enabled, chat: this.enabled, cloud: this.enabled, search: this.enabled && this.cfg.webSearch };
+    return { enabled: this.enabled, provider: this.provider, chat: this.enabled, cloud: this.enabled, search: this.canSearch };
   }
 
   // A simple per-person daily cap so a curious kid can't run up the bill.
@@ -201,7 +220,8 @@ export class AiService {
   async chat({ messages, kidMode, search, context }) {
     const history = cleanHistory(messages);
     if (!history.length) throw new AiError(400, 'Ask a question first.');
-    const useSearch = !!search && this.cfg.webSearch;
+    if (this.ollama) return this.ollamaChat({ history, kidMode, search: !!search && this.canSearch, context });
+    const useSearch = !!search && this.canSearch;
     const tools = useSearch
       ? [{
         type: 'web_search_20260209',
@@ -244,6 +264,7 @@ export class AiService {
     const img = decodeImage(image);
     if (!img) throw new AiError(400, 'That does not look like a photo.');
     if (img.bytes > MAX_IMAGE_BYTES) throw new AiError(413, 'That photo is too big. Try a smaller one.');
+    if (this.ollama) return this.ollamaCloud({ img, kidMode, context });
     const res = await this.create({
       max_tokens: 4000,
       output_config: { effort: 'low', format: { type: 'json_schema', schema: CLOUD_SCHEMA } },
@@ -257,19 +278,83 @@ export class AiService {
       }],
     });
     if (res.stop_reason === 'refusal') throw new AiError(422, 'Could not look at that photo. Try a photo of the sky.');
+    return parseCloud(textOf(res.content));
+  }
+
+  // ---- Ollama -----------------------------------------------------------------
+  async ollamaCall(params) {
     try {
-      const out = JSON.parse(textOf(res.content));
-      if (!CLOUD_TYPES.includes(out.cloudType)) out.cloudType = out.isSky ? 'cumulus' : 'not-sky';
-      return out;
-    } catch {
-      throw new AiError(502, 'Could not read the cloud answer. Try again.');
+      return await this.ollama.chat(params);
+    } catch (err) {
+      if (err instanceof OllamaError) {
+        this.log?.warn({ msg: err.message }, 'Ollama request failed');
+        throw new AiError(err.statusCode, err.message);
+      }
+      throw err;
     }
   }
+
+  // Local models don't search on their own: look the question up first and hand
+  // the results over as reading material.
+  async ollamaChat({ history, kidMode, search, context }) {
+    let results = [];
+    if (search) {
+      try {
+        results = await this.ollama.search(history.at(-1).content, kidMode ? 10 : 5);
+        if (kidMode) results = onDomains(results, KID_SEARCH_DOMAINS);
+        results = results.slice(0, 5);
+      } catch (err) {
+        this.log?.warn({ msg: err.message }, 'Ollama web search failed');
+      }
+    }
+    const reading = results.length
+      ? `\nWeb search results for the latest question (use them if they help, and do not make up other sources):\n${results.map((r, i) => `[${i + 1}] ${r.title} (${r.url})\n${r.content.slice(0, 1500)}`).join('\n\n')}`
+      : '';
+    const answer = await this.ollamaCall({
+      model: this.cfg.ollama.model,
+      system: `${kidMode ? ROCKY : EXPERT}\n\nLive weather data for the person's place:\n${context}${reading}`,
+      messages: history,
+    });
+    return {
+      answer: answer || (kidMode ? 'Hmm, my thinking cap slipped. Can you ask that again?' : 'No answer came back. Try asking again.'),
+      sources: results.map(({ url, title }) => ({ url, title })),
+      searched: results.length > 0,
+    };
+  }
+
+  async ollamaCloud({ img, kidMode, context }) {
+    const raw = await this.ollamaCall({
+      model: this.cfg.ollama.visionModel || this.cfg.ollama.model,
+      system: `${kidMode ? ROCKY : EXPERT}\n\nLive weather data for the person's place:\n${context}`,
+      messages: [{ role: 'user', content: `${CLOUD_PROMPT(kidMode)}\nAnswer only with JSON matching the schema.`, images: [img.data] }],
+      format: CLOUD_SCHEMA,
+    });
+    return parseCloud(raw);
+  }
+}
+
+function parseCloud(text) {
+  let out;
+  try {
+    out = JSON.parse(String(text).replace(/^```(?:json)?\s*|\s*```$/g, ''));
+  } catch {
+    throw new AiError(502, 'Could not read the cloud answer. Try again.');
+  }
+  const str = (v) => (typeof v === 'string' ? v : '');
+  const clean = {
+    isSky: out.isSky !== false && out.cloudType !== 'not-sky',
+    cloudType: CLOUD_TYPES.includes(out.cloudType) ? out.cloudType : null,
+    confidence: ['low', 'medium', 'high'].includes(out.confidence) ? out.confidence : 'low',
+    title: str(out.title), explanation: str(out.explanation), weatherHint: str(out.weatherHint), funFact: str(out.funFact), lookFor: str(out.lookFor),
+  };
+  if (!clean.cloudType) clean.cloudType = clean.isSky ? 'cumulus' : 'not-sky';
+  if (!clean.title) clean.title = clean.cloudType;
+  return clean;
 }
 
 // ---- routes --------------------------------------------------------------------
 export function registerAi(app, { ai, forecast, alerts, air, settle, loc }) {
-  const off = (reply) => reply.code(404).send({ error: 'The AI helper is turned off on this server. An admin can add an Anthropic API key to turn it on.' });
+  const off = (reply) => reply.code(404).send({ error: 'The AI helper is turned off on this server. An admin can add an Anthropic API key or an Ollama address to turn it on.' });
   const who = (req) => (req.user ? `u:${req.user.id}` : `ip:${req.ip}`);
   const ctxFor = async (body) => {
     if (!Number.isFinite(body.lat) || !Number.isFinite(body.lon)) return 'No location was picked, so no live weather data.';

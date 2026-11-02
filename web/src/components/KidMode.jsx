@@ -13,6 +13,7 @@ import Experiments from './kid/Experiments.jsx';
 import Seasons from './kid/Seasons.jsx';
 import Badges, { BadgeToast } from './kid/Badges.jsx';
 import SpeakButton from './kid/SpeakButton.jsx';
+import VoicePicker from './VoicePicker.jsx';
 import '../kid/kid.css';
 
 const todayKey = () => `weather-scout:checklist:${new Date().toISOString().slice(0, 10)}`;
@@ -52,7 +53,7 @@ const KID_TABS = [
   ['badges', 'Badges', '🏅'],
 ];
 
-export default function KidMode({ weather, user, location }) {
+export default function KidMode({ weather, user, location, voice }) {
   const today = weather.kid.date;
   const kidData = useKidData(user, today);
   const [tab, setTab] = useState('today');
@@ -83,7 +84,7 @@ export default function KidMode({ weather, user, location }) {
         ))}
       </nav>
 
-      {tab === 'today' && <KidToday weather={weather} name={user?.displayName} kid={kidData} today={today} />}
+      {tab === 'today' && <KidToday weather={weather} name={user?.displayName} kid={kidData} today={today} voice={voice} />}
       {tab === 'play' && (
         <div className="kid-grid">
           <WhatToWear raccoon={weather.kid.raccoon} kid={kidData} />
@@ -112,7 +113,7 @@ export default function KidMode({ weather, user, location }) {
   );
 }
 
-function KidToday({ weather, name, kid: kidData, today }) {
+function KidToday({ weather, name, kid: kidData, today, voice }) {
   const { kid, forecast } = weather;
   const c = forecast.current;
   const [done, toggle] = useChecklist();
@@ -128,6 +129,7 @@ function KidToday({ weather, name, kid: kidData, today }) {
           <p className="hello">Hi{name ? ` ${name}` : ''}! I'm Rocky.</p>
           <p className="bubble">{said}</p>
           <SpeakButton text={`${said} It's ${round(c.temp)} degrees, and it feels like ${round(c.feelsLike)}.`} label="Hear Rocky" />
+          {voice && <div><VoicePicker {...voice} /></div>}
           <div className="kid-temp">
             <span className="big-icon" aria-hidden>{icon(c.icon, c.isDay)}</span>
             <span className="temp">{round(c.temp)}°</span>
