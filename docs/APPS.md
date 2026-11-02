@@ -63,7 +63,8 @@ builds the APK for you.
 - **Any time:** *Actions → Android app → Run workflow*. Leave the address blank to use
   `WEATHER_SCOUT_URL`, or type another one. The APK is under the run's *Artifacts*.
 - **With a release:** publish a GitHub release (for example `v0.3.0`) and the workflow
-  attaches `weather-scout-0.3.0.apk` to it.
+  attaches `weather-scout-0.3.0.apk` to it. Until the setup above is done, releases skip the
+  APK with a notice instead of failing.
 
 On the phone, download the APK, open it and allow "Install unknown apps" for your browser or
 Files app when Android asks. Updates install over the old version as long as they are signed
