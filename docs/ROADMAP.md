@@ -23,7 +23,7 @@ Every card from the planning board, grouped into phases. Phase 1 is this first r
 | Pull alerts from NWS by local area | ✅ |
 | Air Quality Index & UV | ✅ US AQI, PM2.5, PM10, ozone, UV |
 | Wind data, temperature tracking | ✅ Current + hourly + daily, and a Wind card with a compass, gusts and a 24-hour wind and gust chart |
-| Pull up Virginia VDOT 511 cam feeds by map / state cameras / cameras on the map where they belong | ✅ Virginia, South Carolina, Maryland and Kentucky built in (public feeds, no keys), North Carolina with a free DriveNC key; other states plug in via cameras.json. WV, TN and DC: no documented public feed found yet |
+| Pull up Virginia VDOT 511 cam feeds by map / state cameras / cameras on the map where they belong | ✅ Virginia, South Carolina, Maryland, Kentucky and Delaware built in (public feeds, no keys); North Carolina, New York, Georgia and Ohio with free keys; other states plug in via cameras.json. WV, TN and DC: no documented public feed found yet; PA needs a PennDOT data-feed request |
 | Kid Mode: gear checklist | ✅ |
 | Kid Mode: playground / recess rating | ✅ |
 | Kid Mode: golden hour / stargazing timers | ✅ Sunset countdown + tonight's cloud cover, plus Moon phase (Phase 2). Planets in Phase 2 |

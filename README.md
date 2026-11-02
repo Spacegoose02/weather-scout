@@ -130,16 +130,41 @@ Nothing secret lives in this repository.
 
 ## Camera feeds
 
-**Virginia, South Carolina, Maryland and Kentucky work out of the box, and North Carolina with a free key.**
-With no config, Weather Scout loads these camera feeds:
+**Virginia, South Carolina, Maryland, Kentucky and Delaware work out of the box. North Carolina, New York,
+Georgia and Ohio switch on with a free key.** With no config, Weather Scout loads these camera feeds:
 
 | State | Source | What you get |
 | --- | --- | --- |
 | Virginia | 511 Virginia (VDOT) | Snapshots + live HLS video |
 | South Carolina | 511 South Carolina (SCDOT) | Snapshots + live HLS video |
 | Maryland | MD iMAP / CHART | Live video player |
-| Kentucky | KYTC GIS | Snapshots |
-| North Carolina | DriveNC | Snapshots, once you set `NC_DRIVENC_API_KEY` (free: sign up at drivenc.gov, then request a developer key on its API documentation page) |
+| Kentucky | KYTC GIS | Snapshots (refresh every 30 s) |
+| Delaware | DelDOT on Delaware FirstMap | Live HLS video |
+| North Carolina | DriveNC | Snapshots, with `NC_DRIVENC_API_KEY` |
+| New York | 511NY | Snapshots (some live video), with `NY511_API_KEY` |
+| Georgia | 511GA | Snapshots, with `GA511_API_KEY` |
+| Ohio | OHGO | Snapshots, with `OHGO_API_KEY` |
+
+### Getting the free camera keys
+
+Each key takes a few minutes and costs nothing. Keys stay on your server; they are never sent to the browser.
+
+| Setting | Steps |
+| --- | --- |
+| `NC_DRIVENC_API_KEY` | Create an account at [drivenc.gov](https://www.drivenc.gov), sign in, then request a key on the [developer page](https://www.drivenc.gov/developers/doc). |
+| `NY511_API_KEY` | Create an account at [511ny.org](https://511ny.org), then request a key on the [developer page](https://511ny.org/developers/doc). |
+| `GA511_API_KEY` | Create an account at [511ga.org](https://511ga.org), then request a key on the [developer page](https://511ga.org/developers/doc). |
+| `OHGO_API_KEY` | [Register with OHGO](https://publicapi.ohgo.com/docs/registration); the key arrives by email. |
+
+**Unraid:** open the Docker tab, click the Weather Scout icon, choose *Edit*, paste the key into
+the matching "API key" field and click *Apply* (the container restarts). **Docker Compose:** put it in
+`.env` and run `docker compose up -d`. *Family & settings* then shows the state with its camera count;
+until then it lists the state as "set NC_DRIVENC_API_KEY" with a link to get one.
+
+Not built in yet: West Virginia (WV511) and Tennessee (SmartWay) have no public camera feed we could
+find (SmartWay's camera list sits behind its own website), and Pennsylvania (511PA) gives feeds only
+after a [data-feed request to PennDOT](https://www.pa.gov/services/penndot/request-access-to-transportation-related-data-feeds.html).
+Once you have access, add them to `cameras.json`.
 
 Set `CAMERAS_DEFAULT_FEEDS` to `false` to turn them off, or to a list such as `va,md,nc` to pick states.
 
@@ -152,6 +177,7 @@ the feeds you want (a cameras.json replaces the built-in list, so copy in the en
 | `ibi511` | States on the IBI/Castle Rock 511 developer API (511NY, 511GA, 511WI, 511AZ, Idaho, Alaska…) | free developer key from that state's 511 site |
 | `geojson` | Any GeoJSON point layer with a snapshot (`image`), HLS (`video`) or player page (`embed`) property, such as 511 Virginia. Map property names with `fields`. |
 | `arcgis` | An ArcGIS MapServer/FeatureServer layer URL (paged automatically), such as Maryland and Kentucky. Same `fields` mapping. | optional, sent as a query param (`keyParam`) or header (`keyHeader`) |
+| `ohgo` | Ohio's OHGO public API | `keyEnv` |
 | `static` | Your own cameras (porch cam, sky cam) | none |
 
 Feed health (camera counts and errors) shows under *Family & settings*.
@@ -219,7 +245,7 @@ directly. If Kokoro is down, read-aloud quietly falls back to the device voice.
 | Severe outlooks | NOAA [Storm Prediction Center](https://www.spc.noaa.gov/) | none |
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
 | Map | OpenStreetMap | none |
-| Cameras | VA, SC, MD and KY public feeds, plus any state 511 feed you add | none for the built-in states |
+| Cameras | VA, SC, MD, KY and DE public feeds; NC, NY, GA and OH with free keys; plus any state 511 feed you add | none for VA, SC, MD, KY, DE |
 | Ask an Expert, cloud photos, web search (optional) | [Claude](https://www.anthropic.com/claude) via the Anthropic API, or your own [Ollama](https://ollama.com/) | `ANTHROPIC_API_KEY`, or `OLLAMA_URL` |
 | Read-aloud voice (optional) | Your own [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) | none |
 

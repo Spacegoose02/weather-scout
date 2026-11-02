@@ -489,7 +489,12 @@ function cameraPopup(c) {
     }
   }
 
-  if (c.video) button('▶ Live video', () => playHls(c, stage, showMessage));
+  if (c.video) {
+    const startVideo = () => playHls(c, stage, showMessage);
+    // No still picture (Delaware): start the live video right inside the popup.
+    if (!c.imageUrl) startVideo();
+    button(c.imageUrl ? '▶ Live video' : '🔄 Reload', startVideo);
+  }
   else if (c.embed) {
     // No still picture (Maryland): start the live player right inside the popup.
     const startLive = () => {
