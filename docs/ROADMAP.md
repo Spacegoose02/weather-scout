@@ -32,13 +32,28 @@ Every card from the planning board, grouped into phases. Phase 1 is this first r
 | Dew point | ✅ With comfort words |
 | Barometric pressure tracking | ✅ 3-hour trend. Migraine alerts in Phase 2 |
 
+## Kid Zone games and learning
+
+Eight kid features added after the MVP. They live in the Kid Zone under Today, Play, Explore and Badges. Signed-in kids keep their progress on the server; guests keep it in the browser.
+
+| Feature | Status |
+| --- | --- |
+| Weather bingo: a daily card of things to spot (puddle, contrail, windy flag…) | ✅ New 3x3 card every day, picked to match the weather (puddles on rainy days, frost on cold ones). Badges for a line and for a full card |
+| Kid forecaster: guess tomorrow's high and rain, earn points when the real weather comes in | ✅ Scored against Open-Meteo's measured weather for that day: up to 3 points for the high, 2 for rain |
+| Rocky's daily fact: one fact or joke each morning, with read-aloud | ✅ 50 facts and jokes, read aloud with the browser's voice. Read-aloud also on Rocky's bubble, storm steps and experiments |
+| Backyard experiments tied to badges (rain gauge, pinecone hygrometer, paper wind vane…) | ✅ Six experiments, each with its own badge, "Good today!" tips from the forecast and live readings to compare |
+| Camera field trips: guided tours of the road cameras | ✅ Seven missions (raining now, snowiest, foggy, sunny, coldest, warmest, windiest) using live weather at up to 30 nearby cameras, with a passport to stamp. Needs camera feeds switched on |
+| Storm-safe mode: calm steps during a warning, "where to go" checklist, no scary wording | ✅ Turns on for warnings and thunder. Tap-off steps, family safe spot, breathing helper, practice drill on calm days |
+| What to wear: dress Rocky, then he says if it fits the forecast | ✅ Stars and tips from the same outfit rules Rocky uses |
+| Seasons tracker: photos of the same tree or yard through the year | ✅ Named spots, side-by-side compare, season chips and a Four Seasons badge. Needs sign-in so photos are saved |
+
 ## Phase 2: Learning, notifications, richer maps
 
 | Board card | Plan |
 | --- | --- |
 | Severe weather push notifications (watches, warnings, lightning, high wind) | Web Push from the server; background poll of NWS per saved place |
 | Daily observation journal | Per-kid entries (icons, high/low, rain gauge), stored per user |
-| Badges & achievements | First frost, thunderstorm spotted, double rainbow, journal streaks |
+| Badges & achievements | 🚧 19 Kid Zone badges are in (bingo, forecaster, experiments, field trips, storm drill, seasons). Still to come: first frost, thunderstorm spotted, double rainbow, journal streaks |
 | Learning section for kids and adults | Lesson library; same lessons at two reading levels |
 | Storm center: tornadoes, wildfires, hurricanes | Explainers + live data where it exists |
 | Learn about clouds, droughts, El Niño, ocean | Lessons; US Drought Monitor and NOAA ENSO status feeds |

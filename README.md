@@ -14,7 +14,9 @@ from free, official data sources.
 - **Kid Zone**: Rocky the raccoon dresses for the weather (raincoat when rain chance is over
   60%, beanie and mittens when it feels below 35°F, shades on sunny high-UV days), a tap-to-pack
   gear checklist, a green/yellow/red recess rating, "Why is this happening?" mini-lessons,
-  and a sunset / stargazing countdown.
+  and a sunset / stargazing countdown. Plus Rocky's daily fact or joke (read aloud), weather
+  bingo, a kid forecaster game, dress-Rocky, backyard experiments, camera field trips, a
+  seasons photo tracker, badges, and a calm storm-safe mode during warnings.
 - **Profiles**: local username sign-in, tinyauth SSO, and admins can link an SSO identity to a
   username. Saved places, units and Kid Mode follow you between devices.
 - Installable as a phone/desktop app (PWA manifest), light and dark themes.

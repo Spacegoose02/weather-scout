@@ -2,6 +2,7 @@
 // morning gear checklist, a playground/recess rating and "Why is this
 // happening?" mini-lessons. Pure functions, so they are easy to test.
 import { isThunder, isSnow, isFreezing, isWet } from './weathercodes.js';
+import { dailyFact, bingoCard, stormSafe, localDate } from './kidfun.js';
 
 // Work internally in °F, mph and inches regardless of display units.
 function imperial(forecast) {
@@ -166,5 +167,9 @@ export function kidReport(forecast, ctx = {}) {
     playground: playgroundRating(forecast, ctx),
     lessons: lessons(forecast, ctx),
     sky: skyTimes(forecast),
+    date: localDate(forecast),
+    fact: dailyFact(localDate(forecast)),
+    bingo: bingoCard(forecast),
+    stormSafe: stormSafe(ctx.alerts, forecast),
   };
 }

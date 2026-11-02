@@ -127,7 +127,7 @@ export default function App() {
               </div>
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} />}
-            {weather && tab === 'kids' && <KidMode weather={weather} name={user?.displayName} />}
+            {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} />}
           </main>
         </>
       )}

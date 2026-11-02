@@ -3,6 +3,7 @@ import path from 'node:path';
 import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
+import { registerKidZone } from './kidzone.js';
 import { loadConfig, loadOrCreateSecret } from './config.js';
 import { TtlCache, UpstreamError } from './cache.js';
 import { openDb, publicUser } from './db.js';
@@ -127,6 +128,9 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
   app.get('/api/alerts', { schema: latLonSchema }, async (req) => alerts(loc(req.query)));
   app.get('/api/air', { schema: latLonSchema }, async (req) => air(loc(req.query)));
   app.get('/api/radar', async () => radarFrames());
+
+  // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----
+  registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });
 
   app.get('/api/geocode', {
     schema: { querystring: { type: 'object', required: ['q'], properties: { q: { type: 'string', minLength: 2, maxLength: 100 } } } },
