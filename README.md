@@ -16,6 +16,9 @@ from free, official data sources.
 
 - **Today**: current conditions, feels-like, dew point, pressure trend, UV, air quality,
   a 2-hour "rain starting in…" nowcast, a scrubbable 48-hour timeline and a 10-day forecast.
+- **Next 2 hours, wind, air & UV**: a 15-minute rain chart for the next 2 hours, a wind compass
+  with a 24-hour wind and gust chart, and an air quality breakdown by pollutant with 48-hour AQI and
+  UV strips and a sunscreen window. The map adds an infrared satellite layer.
 - **Hurricanes & ocean**: active storms from the National Hurricane Center with forecast cones and
   tracks on the map, NOAA buoys (waves, water temperature, wind), and today's tides when you're near
   the coast.
@@ -25,7 +28,9 @@ from free, official data sources.
 - **Health & sky**: pressure-swing warnings for migraine-sensitive folks, wet-bulb globe temperature
   heat stress, moon phase and sunrise/sunset.
 - **NWS alerts** for your exact location, most severe first, with plain-language kid versions.
-- **Radar & Cams map**: a smooth, loopable NEXRAD radar animation, alert polygons, and
+- **Radar & Cams map**: a smooth, loopable NEXRAD radar animation, alert polygons, and a **full-screen
+  radar** (single NEXRAD sites, echo tops, rain totals, HRRR future radar, every active NWS warning
+  nationwide with a warnings list, SPC severe outlooks, dark map), plus
   state DOT 511 road cameras pinned where they really are (clustered, with live snapshots).
 - **Kid Zone**: Rocky the raccoon dresses for the weather (raincoat when rain chance is over
   60%, beanie and mittens when it feels below 35°F, shades on sunny high-UV days), a tap-to-pack
@@ -40,7 +45,7 @@ from free, official data sources.
 - **Severe weather alerts on your phone**: tap 🔔 to get a push notification when the NWS issues a
   warning, watch or advisory for your place, even with the app closed. Needs an https address
   (behind your reverse proxy); on iPhone, add Weather Scout to the Home Screen first.
-- **Ask an Expert / Ask Rocky** (optional, needs an Anthropic API key): a chat that answers weather
+- **Ask an Expert / Ask Rocky** (optional, runs on Claude or your own Ollama): a chat that answers weather
   questions using your live forecast and alerts, in kid language as Rocky when Kid Mode is on.
   Snap a photo of the sky and it names the cloud and what it means. Turn on web search for
   "why" and news questions (kid-safe science sites only in Kid Mode). See [AI helper](#ai-helper).
@@ -137,23 +142,52 @@ Feed health (camera counts and errors) shows under *Family & settings*.
 
 ## AI helper
 
-The **Ask an Expert** tab (called **Ask Rocky** in Kid Mode) appears once the server has an
-Anthropic API key. Without one the tab is simply hidden and everything else works as before.
+The **Ask an Expert** tab (called **Ask Rocky** in Kid Mode) appears once the server has either
+an Anthropic API key (Claude) or the address of an Ollama server (models you run yourself).
+Without either, the tab is simply hidden and everything else works as before.
 
-1. Create a key at [console.anthropic.com](https://console.anthropic.com/) (pay as you go).
-2. Set `ANTHROPIC_API_KEY` in `.env` or the Unraid template (*Anthropic API key*, masked) and restart.
+- **Claude**: create a key at [console.anthropic.com](https://console.anthropic.com/) (pay as you
+  go) and set `ANTHROPIC_API_KEY` (*Anthropic API key* in the Unraid template).
+- **Ollama**: set `OLLAMA_URL`, e.g. `http://192.168.1.20:11434`, and pull a model that can see
+  photos, e.g. `ollama pull gemma3`. Free and private, but answers are slower and less accurate
+  than Claude on most home hardware.
 
 | Setting | Default | What |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | (blank) | Turns the AI helper on. Stays on the server, never sent to the browser |
+| `AI_PROVIDER` | (blank) | `anthropic`, `ollama` or `off`. Blank picks whichever is set up, Claude first |
+| `ANTHROPIC_API_KEY` | (blank) | Claude key. Stays on the server, never sent to the browser |
 | `AI_MODEL` | `claude-opus-5-5` | Any Claude model id, e.g. `claude-sonnet-5-5` or `claude-haiku-5-5` for lower cost |
+| `OLLAMA_URL` | (blank) | Your Ollama server, reachable from the Weather Scout container |
+| `OLLAMA_MODEL` | `gemma3` | Chat model. Must be pulled on the Ollama server |
+| `OLLAMA_VISION_MODEL` | same as `OLLAMA_MODEL` | Model for cloud photos, if your chat model can't see images (e.g. `qwen2.5vl`, `llama3.2-vision`) |
+| `OLLAMA_API_KEY` | (blank) | Free key from [ollama.com](https://ollama.com/settings/keys). Only needed for *Search the web* with Ollama |
 | `AI_WEB_SEARCH` | `true` | Lets people tick *Search the web*. In Kid Mode searches only read NOAA, NWS, NASA, USGS and similar science sites |
 | `AI_DAILY_LIMIT` | `40` | Questions and photos per person (or per device for guests) per day. `0` = no limit |
+
+With Ollama, *Search the web* looks the question up with Ollama's web search first and hands the
+results to your local model, since most local models can't search on their own. Without an
+`OLLAMA_API_KEY` the search box is hidden.
 
 Each question sends the model your place's current conditions, the next 12 hours, the week
 ahead, air quality and active NWS alerts, so answers are about *your* weather. Cloud photos
 are shrunk in the browser to a few hundred KB, are not saved, and only go to the model. Web search
 is billed by Anthropic per search on top of tokens.
+
+## Read-aloud voice (Kokoro)
+
+Rocky reads facts, storm steps, experiments and Ask Rocky answers aloud. By default that uses the
+device's built-in voice, which often sounds robotic. For a natural voice, run
+[Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) (a small open text-to-speech model; on
+Unraid, add the `ghcr.io/remsky/kokoro-fastapi-cpu` container, port 8880) and set:
+
+| Setting | Default | What |
+| --- | --- | --- |
+| `KOKORO_URL` | (blank) | e.g. `http://192.168.1.20:8880`. Blank = device voice |
+| `KOKORO_VOICE` | `af_heart` | Rocky's default voice. Kids can pick another under 🗣️ *Voice* in the Kid Zone or Ask tab |
+| `KOKORO_SPEED` | `1` | 0.5 to 2 |
+
+Speech goes through the Weather Scout server (and is cached), so phones never talk to Kokoro
+directly. If Kokoro is down, read-aloud quietly falls back to the device voice.
 
 ## Data sources
 
@@ -165,10 +199,13 @@ is billed by Anthropic per search on top of tokens.
 | Model comparison and ensembles | Open-Meteo per-model forecasts and [ensemble API](https://open-meteo.com/en/docs/ensemble-api) | none |
 | Air quality (US AQI, PM2.5, PM10, ozone) | Open-Meteo Air Quality (CAMS) | none |
 | Watches, warnings, advisories | [api.weather.gov](https://www.weather.gov/documentation/services-web-api) | none, but set `NWS_USER_AGENT` |
+| Satellite | NASA [GIBS](https://earthdata.nasa.gov/gibs) GOES-East infrared | none |
+| Severe outlooks | NOAA [Storm Prediction Center](https://www.spc.noaa.gov/) | none |
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
 | Map | OpenStreetMap | none |
 | Cameras | VA, SC, MD and KY public feeds, plus any state 511 feed you add | none for the built-in states |
-| Ask an Expert, cloud photos, web search (optional) | [Claude](https://www.anthropic.com/claude) via the Anthropic API | `ANTHROPIC_API_KEY` |
+| Ask an Expert, cloud photos, web search (optional) | [Claude](https://www.anthropic.com/claude) via the Anthropic API, or your own [Ollama](https://ollama.com/) | `ANTHROPIC_API_KEY`, or `OLLAMA_URL` |
+| Read-aloud voice (optional) | Your own [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) | none |
 
 Open-Meteo's free tier is for non-commercial use, which fits a family server. All upstream
 responses are cached on the server (forecast 10 min, alerts 2 min, cameras 15 min) so a house

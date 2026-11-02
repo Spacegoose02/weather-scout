@@ -17,12 +17,12 @@ Every card from the planning board, grouped into phases. Phase 1 is this first r
 | Admin can link SSO and username | ✅ Family & settings |
 | 7 to 10-day extended forecast, weekly forecast | ✅ 10-day |
 | Current / feels like temp | ✅ |
-| Hyperlocal minute-by-minute rain forecast | ✅ 15-minute nowcast for 2 hours (Open-Meteo). True 1-minute needs a paid source, see Phase 3 |
+| Hyperlocal minute-by-minute rain forecast | ✅ 15-minute nowcast for 2 hours (Open-Meteo), with a "Next 2 hours" bar chart (light, moderate or heavy, rain or snow). True 1-minute needs a paid source, see Phase 3 |
 | Scannable hourly timeline (24-48 h) | ✅ 48-hour chart with scrubber |
-| Fast-loading Doppler radar map, loopable | ✅ 55-minute NEXRAD loop. Precipitation type and storm tracks in Phase 2 |
+| Fast-loading Doppler radar map, loopable | ✅ 55-minute NEXRAD loop, plus an infrared satellite layer (NASA GIBS, GOES-East). Precipitation type and storm tracks in Phase 2 |
 | Pull alerts from NWS by local area | ✅ |
 | Air Quality Index & UV | ✅ US AQI, PM2.5, PM10, ozone, UV |
-| Wind data, temperature tracking | ✅ Current + hourly + daily |
+| Wind data, temperature tracking | ✅ Current + hourly + daily, and a Wind card with a compass, gusts and a 24-hour wind and gust chart |
 | Pull up Virginia VDOT 511 cam feeds by map / state cameras / cameras on the map where they belong | ✅ Virginia, South Carolina, Maryland and Kentucky built in (public feeds, no keys), North Carolina with a free DriveNC key; other states plug in via cameras.json. WV, TN and DC: no documented public feed found yet |
 | Kid Mode: gear checklist | ✅ |
 | Kid Mode: playground / recess rating | ✅ |
@@ -60,12 +60,12 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Hurricane tracker | ✅ Active NHC storms with forecast cones, tracks and advisories on the map, and a Hurricane tracker card on Today when a storm is within 2,000 miles |
 | Ocean data | ✅ NOAA NDBC buoys on the map (waves, water temperature, wind) and a Tides card with the next highs and lows from the nearest CO-OPS station within 60 miles |
 | Live lightning | Strike markers with age rings and distance from you (source TBD: Blitzortung community feed or a paid API) |
-| Radar precipitation type and storm cell tracks | Rain/snow/mix layer; NWS storm-track overlays |
+| Radar precipitation type and storm cell tracks | 🚧 Full-screen radar adds single-site NEXRAD (super-res), echo tops, MRMS 1 h / 24 h rain, HRRR future radar, nationwide warning polygons and SPC Day 1-3 outlooks. Rain/snow/mix and storm tracks still to come |
 | Local and national weather news, RSS feeds | ✅ News & Videos tab, admin-managed RSS/Atom list (NWS office, local TV) |
 | YouTube weather gurus | ✅ Admin-curated channels (paste a link or @handle), latest videos play in the app |
 | Admin can edit news and YouTube lists | ✅ Family & settings |
 | Health: barometric pressure warnings | ✅ Health & sky card flags 4+ hPa (watch) and 6+ hPa (big swing) changes within 6 hours. Push alerts come with notifications |
-| Health: pollen & particulates | Pollen needs a US source (Open-Meteo pollen is Europe-only); candidates: Google Pollen API, Tomorrow.io |
+| Health: pollen & particulates | 🚧 Air & UV card on Today: AQI per pollutant (PM2.5, PM10, ozone, NO₂) and the main pollutant, a 48-hour AQI and UV strip and a sunscreen window. Pollen shows where Open-Meteo has it (Europe); a US source still needs a key (Google Pollen API, Tomorrow.io) |
 | Health: wet-bulb globe temperature | ✅ Shade WBGT now and 24-hour peak, with heat-stress flag advice. Full-sun WBGT needs solar radiation, later |
 | Golden hour: planets and Moon | 🚧 Moon phase, % lit and next full/new Moon on the Today card's Health & sky tile and in the Kid Zone's Sky watch (`server/src/sky.js`, also in `/api/connect/summary`). Next: moonrise/moonset and bright planets |
 | Custom dashboards (pin, hide, rearrange widgets) | Drag-and-drop layout saved per user |
@@ -76,14 +76,14 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 
 | Board card | Plan |
 | --- | --- |
-| Weather expert that answers like a kid would understand | ✅ Ask an Expert tab (Ask Rocky in Kid Mode): Claude with the live forecast, alerts and air quality as context. Server-wide `ANTHROPIC_API_KEY`; hidden when no key is set |
+| Weather expert that answers like a kid would understand | ✅ Ask an Expert tab (Ask Rocky in Kid Mode): Claude or a self-hosted Ollama with the live forecast, alerts and air quality as context. Hidden when neither is set up. Optional Kokoro voice for all of Rocky's read-aloud |
 | Take a picture of a cloud, AI tells you about it | ✅ Snap or upload a sky photo in the Ask tab: cloud type, confidence, what it means for the weather, a fun fact. Photos aren't stored |
 | AI-enabled web search | ✅ *Search the web* toggle with cited sources; Kid Mode searches only NOAA/NWS/NASA-style science sites |
 | AI-assisted ensembles (GraphCast, WeatherNext) with confidence intervals | ✅ Models tab shows Google DeepMind GraphCast and ECMWF AIFS next to the physics models, with ensemble confidence bands. WeatherNext has no free source yet |
 | ECMWF, GFS, ICON side-by-side model comparison | ✅ Models tab: ECMWF, GFS, ICON and GEM plotted together (daily highs and next 72 hours), a side-by-side table and a day-by-day agreement rating |
 | HRRR & NAM for short-fuse storms | 🚧 HRRR (3 km, 2 days) is in the Models tab. Next: NAM and a model radar loop |
 | Confidence & spread metrics (10th/50th/90th percentile) | ✅ ECMWF (51 runs) or GFS (31 runs) ensemble: 10th-90th percentile band, median, High/Medium/Low confidence and the share of runs that bring rain, per day |
-| Base velocity / storm-relative velocity | NEXRAD Level 3 products (needs a radar renderer or a tile provider) |
+| Base velocity / storm-relative velocity | NEXRAD Level 3 products. No free tile source today (IEM only renders single-site reflectivity live), so this needs our own Level 3 renderer |
 | Correlation coefficient (debris signatures) | Same |
 | KDP and ZDR (rain vs hail) | Same |
 | Live animated cloud & sky chamber | Animated scene driven by real wind speed, cloud cover, precip type |

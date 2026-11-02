@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { CLOUD_EMOJI, CLOUD_NAMES, speakable, suggestions, toHistory } from '../ai/logic.js';
 import SpeakButton from './kid/SpeakButton.jsx';
 import RockyFace from './RockyFace.jsx';
+import VoicePicker from './VoicePicker.jsx';
 import '../ai/ask.css';
 
 const STORE = 'ws-ask-chat';
@@ -41,7 +42,7 @@ async function shrink(file, max = 1280) {
   }
 }
 
-export default function AskExpert({ ai, weather, location, units, kidMode }) {
+export default function AskExpert({ ai, weather, location, units, kidMode, voice }) {
   const [items, setItems] = useState(load);
   const [text, setText] = useState('');
   const [search, setSearch] = useState(false);
@@ -111,7 +112,7 @@ export default function AskExpert({ ai, weather, location, units, kidMode }) {
 
       <div className="ask-log" aria-live="polite">
         <Bubble who={name} kidMode={kidMode} m={{ role: 'assistant', text: intro }} />
-        {items.map((m, i) => <Bubble key={i} who={name} kidMode={kidMode} m={m} />)}
+        {items.map((m, i) => <Bubble key={i} who={name} kidMode={kidMode} readAloud={kidMode || !!voice?.tts?.enabled} m={m} />)}
         <div ref={endRef} />
       </div>
 
@@ -142,6 +143,7 @@ export default function AskExpert({ ai, weather, location, units, kidMode }) {
             <span aria-hidden>🔎</span> Search the web{kidMode ? ' (kid-safe science sites)' : ''}
           </label>
         )}
+        {voice && <VoicePicker {...voice} />}
       </div>
       <p className="ask-note">
         {kidMode
@@ -152,12 +154,12 @@ export default function AskExpert({ ai, weather, location, units, kidMode }) {
   );
 }
 
-function Bubble({ m, who, kidMode }) {
+function Bubble({ m, who, kidMode, readAloud }) {
   if (m.pending) return <div className="ask-bubble them pending"><span className="dots" aria-label={`${who} is thinking`}><i /><i /><i /></span></div>;
   if (m.kind === 'photo') {
     return <div className="ask-bubble me photo">{m.image ? <img src={m.image} alt="Your sky photo" /> : <span>📷 Sky photo</span>}</div>;
   }
-  if (m.kind === 'cloud') return <CloudCard cloud={m.cloud} kidMode={kidMode} />;
+  if (m.kind === 'cloud') return <CloudCard cloud={m.cloud} kidMode={kidMode} readAloud={readAloud} />;
   const mine = m.role === 'user';
   return (
     <div className={`ask-bubble ${mine ? 'me' : 'them'} ${m.error ? 'error' : ''}`}>
@@ -167,12 +169,12 @@ function Bubble({ m, who, kidMode }) {
           {m.sources.map((s) => <li key={s.url}><a href={s.url} target="_blank" rel="noreferrer noopener">{s.title}</a></li>)}
         </ul>
       )}
-      {!mine && !m.error && kidMode && <SpeakButton text={speakable(m)} label="Read it" className="small" />}
+      {!mine && !m.error && readAloud && <SpeakButton text={speakable(m)} label="Read it" className="small" />}
     </div>
   );
 }
 
-function CloudCard({ cloud, kidMode }) {
+function CloudCard({ cloud, kidMode, readAloud }) {
   return (
     <div className="ask-bubble them cloud-card">
       <div className="cloud-top">
@@ -193,7 +195,7 @@ function CloudCard({ cloud, kidMode }) {
           <dt>{kidMode ? 'Spot it next time' : 'How to spot it'}</dt><dd>{cloud.lookFor}</dd>
         </dl>
       )}
-      {kidMode && <SpeakButton text={speakable({ kind: 'cloud', cloud })} label="Read it" className="small" />}
+      {readAloud && <SpeakButton text={speakable({ kind: 'cloud', cloud })} label="Read it" className="small" />}
     </div>
   );
 }

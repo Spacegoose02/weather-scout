@@ -12,6 +12,7 @@ import { CameraService } from './providers/cameras/index.js';
 import * as openMeteo from './providers/openmeteo.js';
 import * as nws from './providers/nws.js';
 import { radarFrames } from './providers/radar.js';
+import * as severe from './providers/severe.js';
 import * as tropics from './providers/tropics.js';
 import * as ocean from './providers/ocean.js';
 import * as models from './providers/models.js';
@@ -22,6 +23,7 @@ import { moonPhase } from './sky.js';
 import { MediaService } from './media.js';
 import { PushService, LEVELS } from './push.js';
 import { AiService, registerAi } from './ai.js';
+import { registerTts } from './tts.js';
 
 const MIN = 60_000;
 
@@ -120,6 +122,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     },
     user: publicUser(req.user),
     ai: ai.status(),
+    tts: { enabled: !!cfg.tts.url, voice: cfg.tts.url ? cfg.tts.voice : null },
   }));
 
   // ---- weather --------------------------------------------------------------
@@ -144,6 +147,14 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.get('/api/alerts', { schema: latLonSchema }, async (req) => alerts(loc(req.query)));
   app.get('/api/air', { schema: latLonSchema }, async (req) => air(loc(req.query)));
   app.get('/api/radar', async () => radarFrames());
+  app.get('/api/radar/sites', async () => ({ sites: await cache.wrap('nexrad-sites', 10 * MIN, () => severe.getNexradSites(fetchImpl)) }));
+  app.get('/api/alerts/national', async () => cache.wrap('alerts-national', 2 * MIN, () => severe.getNationalAlerts({ userAgent: cfg.nwsUserAgent, fetchImpl })));
+  app.get('/api/outlook', {
+    schema: { querystring: { type: 'object', properties: { day: { type: 'integer', minimum: 1, maximum: 3 } } } },
+  }, async (req) => {
+    const day = req.query.day || 1;
+    return cache.wrap(`spc:${day}`, 15 * MIN, () => severe.getOutlook(day, fetchImpl));
+  });
 
   // ---- tropics & ocean ---------------------------------------------------------
   const boxSchema = {
@@ -197,6 +208,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
 
   // ---- AI weather expert, cloud photos, web search ---------------------------
   registerAi(app, { ai, forecast, alerts, air, settle, loc });
+  registerTts(app, { cfg, fetchImpl });
 
   // ---- severe weather push notifications ------------------------------------
   const subSchema = { type: 'object', required: ['endpoint'], properties: { endpoint: { type: 'string', maxLength: 2000 } } };

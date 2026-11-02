@@ -6,6 +6,7 @@ import WhyNow from './WhyNow.jsx';
 import TopicView from './TopicView.jsx';
 import StormCenter from './StormCenter.jsx';
 import Raccoon from '../Raccoon.jsx';
+import { stopSpeaking } from '../../kid/speak.js';
 import '../../learn/learn.css';
 
 const AUDIENCE_KEY = 'weather-scout:learn-audience';
@@ -37,6 +38,8 @@ export default function Learn({ weather, location, kidMode }) {
     setView(id);
     window.scrollTo?.({ top: 0, behavior: 'smooth' });
   };
+  // Stop reading aloud when switching topics or leaving the tab.
+  useEffect(() => () => stopSpeaking(), [view]);
   const kid = audience === 'kid';
   const live = (weather?.alerts || []).filter((a) => HAZARDS.some((h) => h.alerts.test(a.event || ''))).length;
 

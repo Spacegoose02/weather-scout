@@ -67,7 +67,8 @@ server/src/
   sky.js            moon phase
   media.js          admin news/YouTube lists
   push.js           Web Push: subscriptions, VAPID keys, alert loop
-  ai.js             Ask an Expert / Rocky chat, cloud photos, web search (Claude)
+  ai.js             Ask an Expert / Rocky chat, cloud photos, web search (Claude or Ollama)
+  tts.js            Kokoro read-aloud proxy and voice list
   weathercodes.js   WMO codes with kid descriptions
   providers/        openmeteo, nws, radar, cameras, news (RSS/Atom/YouTube)
 web/src/
@@ -87,6 +88,7 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/radar` | Radar frame list (tile URL templates) |
 | `GET /api/push/key`, `POST /api/push/subscribe`, `/unsubscribe`, `/status`, `/test` | Web Push sign-up per device; a background loop (every `PUSH_POLL_SECONDS`) checks NWS for each subscribed place and sends each new alert once |
 | `GET /api/ai/status`, `POST /api/ai/chat`, `POST /api/ai/cloud` | AI helper (only with `ANTHROPIC_API_KEY`): chat with the live forecast as context, cloud photo identifier, optional web search |
+| `GET /api/tts/voices`, `POST /api/tts` | Kokoro read-aloud (only with `KOKORO_URL`): English voice list, and MP3 speech for a text |
 | `GET /api/news` | Latest weather news and YouTube videos from the admin's lists |
 | `GET /api/cameras?south&west&north&east` | Cameras in the map view |
 | `GET /api/cameras/image/:id` | Snapshot proxy |
@@ -99,4 +101,8 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/tides?lat&lon&units` | Nearest tide station within 60 miles and its next highs and lows (60 min cache) |
 | `GET /api/models?lat&lon&units` | Daily and 72-hour forecasts from each model (ECMWF, GFS, ICON, GEM, HRRR, GraphCast, AIFS) plus day-by-day agreement (30 min cache) |
 | `GET /api/ensemble?lat&lon&units&model=ecmwf_ifs025\|gfs_seamless` | Ensemble 10th/50th/90th percentiles, confidence and rain chance (60 min cache) |
+| `GET /api/radar` | Radar products for the map (composite loop, single site, echo tops, rain totals, future radar) and the satellite layer |
+| `GET /api/radar/sites` | NEXRAD sites and which are reporting (10 min cache) |
+| `GET /api/alerts/national` | Every active NWS alert with a polygon, colored and ranked, plus counts (2 min cache) |
+| `GET /api/outlook?day=1-3` | SPC convective outlook categories (15 min cache) |
 | `GET /api/connect/summary` (Bearer app key) | Kid-safe summary for Den-Duty and other apps, see [CONNECT.md](CONNECT.md) |

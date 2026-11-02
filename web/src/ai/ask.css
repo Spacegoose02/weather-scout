@@ -51,3 +51,7 @@ img.ask-avatar { width: 40px; height: auto; }
 .ask-kid .ask-bubble.them { background: linear-gradient(135deg, #fff7d6, #ffe9f0); color: #1d2433; border-color: #f3dca0; }
 .ask-kid .ask-form input { font-size: 1.1rem; padding: 12px 16px; }
 .ask-kid .ask-chips button { font-size: 1rem; }
+
+/* read-aloud voice picker (Ask tab and Kid Zone) */
+.voice-picker { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 0.9rem; color: var(--muted); }
+.voice-picker select { padding: 4px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); max-width: 220px; }

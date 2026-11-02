@@ -13,12 +13,14 @@ import SignIn from './components/SignIn.jsx';
 import Admin from './components/Admin.jsx';
 import HealthSky from './components/HealthSky.jsx';
 import News from './components/News.jsx';
+import { RainNext, AirUv, Wind } from './components/NowCards.jsx';
 import Coast from './components/Coast.jsx';
 import ModelsView from './components/ModelsView.jsx';
 import PushAlerts from './components/PushAlerts.jsx';
 import RockyFace from './components/RockyFace.jsx';
 import AskExpert from './components/AskExpert.jsx';
 import Learn from './components/learn/Learn.jsx';
+import { configureVoice } from './kid/speak.js';
 
 const TABS = [
   ['today', 'Today', '🌤️'],
@@ -52,6 +54,10 @@ export default function App() {
   const location = prefs.location || config?.defaultLocation;
   const units = prefs.units || config?.units || 'imperial';
   const kidMode = !!prefs.kidMode;
+  const voice = { tts: config?.tts, value: prefs.voice || '', onChange: (v) => setPrefs({ voice: v }) };
+
+  // Read-aloud uses the server's Kokoro voice when there is one.
+  useEffect(() => configureVoice({ enabled: config?.tts?.enabled, voice: prefs.voice }), [config?.tts?.enabled, prefs.voice]);
 
   const load = useCallback(async () => {
     if (!location) return;
@@ -131,6 +137,9 @@ export default function App() {
                 <CurrentConditions weather={weather} kidMode={kidMode} />
                 <DailyForecast daily={weather.forecast.daily} units={weather.forecast.units} />
                 <Details weather={weather} />
+                <RainNext forecast={weather.forecast} />
+                <Wind forecast={weather.forecast} />
+                <AirUv air={weather.air} forecast={weather.forecast} />
                 <HealthSky weather={weather} />
                 {location && <Coast location={location} units={units} onMap={() => setTab('map')} />}
                 <HourlyTimeline hourly={weather.forecast.hourly} units={weather.forecast.units} />
@@ -141,10 +150,10 @@ export default function App() {
               </div>
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} />}
-            {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} />}
+            {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} voice={voice} />}
             {weather && tab === 'learn' && <Learn weather={weather} location={location} kidMode={kidMode} />}
             {tab === 'models' && location && <ModelsView location={location} units={units} />}
-            {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} />}
+            {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} voice={voice} />}
             {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} />}
           </main>
         </>
