@@ -1,0 +1,7 @@
+/* Rocky's morning briefing */
+.briefing { background: linear-gradient(135deg, #ffe9c7, #ffd0a8); color: #1d2433; }
+.briefing .briefing-text { font-size: 1.15rem; font-weight: 600; line-height: 1.5; }
+.briefing .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.briefing .hint, .briefing button.link { color: #1d2433; }
+.briefing.highlight { outline: 3px solid #7b5cd6; outline-offset: 2px; }
+.modal .briefing { margin: 0; }

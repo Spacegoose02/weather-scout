@@ -26,6 +26,7 @@ import { getOfficeProducts } from './providers/news.js';
 import { PushService, LEVELS } from './push.js';
 import { AiService, registerAi } from './ai.js';
 import { registerTts } from './tts.js';
+import { registerBriefing, buildBriefing } from './briefing.js';
 import { registerWindy } from './windy.js';
 import { StationService, registerStations } from './stations.js';
 import { HomeAssistantService } from './homeassistant.js';
@@ -264,6 +265,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   // ---- AI weather expert, cloud photos, web search ---------------------------
   registerAi(app, { ai, forecast, alerts, air, settle, loc });
   registerTts(app, { cfg, fetchImpl });
+  registerBriefing(app, { ai, forecast, alerts, air, settle, loc });
   registerWindy(app, { cfg });
 
   // ---- personal weather stations & Home Assistant ----------------------------
@@ -296,13 +298,23 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.get('/api/push/key', async (req, reply) => (push ? { publicKey: push.publicKey, levels: LEVELS } : pushOff(reply)));
   app.post('/api/push/status', { schema: { body: subSchema } }, async (req, reply) => (push ? push.status(req.body.endpoint) : pushOff(reply)));
   app.post('/api/push/subscribe', {
-    schema: { body: { type: 'object', required: ['subscription', 'place'], properties: { subscription: { type: 'object' }, place: { type: 'object' }, levels: { type: 'array', items: { type: 'string' }, maxItems: 3 } } } },
+    schema: { body: { type: 'object', required: ['subscription', 'place'], properties: { subscription: { type: 'object' }, place: { type: 'object' }, levels: { type: 'array', items: { type: 'string' }, maxItems: 3 }, briefingTime: { type: ['string', 'null'], maxLength: 5 } } } },
   }, async (req, reply) => (push ? reply.code(201).send(push.subscribe(req.body, req.user?.id ?? null)) : pushOff(reply)));
   app.post('/api/push/unsubscribe', { schema: { body: subSchema } }, async (req, reply) => (push ? { ok: push.unsubscribe(req.body.endpoint) } : pushOff(reply)));
   app.post('/api/push/test', {
     schema: { body: subSchema },
   }, async (req, reply) => (push ? push.test(req.body.endpoint) : pushOff(reply)));
+  // Rocky's morning briefing for one place, used by the scheduled push and its test button.
+  const pushBriefing = async ({ lat, lon, place, name }) => {
+    const l = loc({ lat, lon });
+    const [fc, al, aq] = await Promise.all([forecast(l), settle(alerts(l)), settle(air(l))]);
+    return { utcOffsetSeconds: fc.utcOffsetSeconds, briefing: buildBriefing(fc, { alerts: al?.alerts || [], air: aq, place, name }) };
+  };
+  app.post('/api/push/briefing-test', {
+    schema: { body: subSchema },
+  }, async (req, reply) => (push ? push.testBriefing(req.body.endpoint, pushBriefing) : pushOff(reply)));
   app.decorate('push', push);
+  app.decorate('pushBriefing', pushBriefing);
   // NWS alerts for a place, shared with the web app's cache (used by the background push check).
   app.decorate('pushAlerts', (l) => alerts({ ...l, units: '' }));
   app.addHook('onClose', async () => push?.stop());
