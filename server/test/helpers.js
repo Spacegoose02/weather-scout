@@ -72,10 +72,10 @@ export function mockFetch(overrides = {}) {
   return fn;
 }
 
-export async function testApp({ env = {}, fetchImpl = mockFetch() } = {}) {
+export async function testApp({ env = {}, fetchImpl = mockFetch(), pushSend } = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ws-test-'));
   const config = loadConfig({ DATA_DIR: dataDir, WEB_DIST: path.join(dataDir, 'no-web'), ...env });
-  const app = await buildApp({ config, fetchImpl, logger: false });
+  const app = await buildApp({ config, fetchImpl, logger: false, pushSend });
   return { app, fetchImpl, dataDir };
 }
 

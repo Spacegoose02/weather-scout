@@ -17,10 +17,11 @@ import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
 import { moonPhase } from './sky.js';
 import { MediaService } from './media.js';
+import { PushService, LEVELS } from './push.js';
 
 const MIN = 60_000;
 
-export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}) {
+export async function buildApp({ config, fetchImpl = fetch, logger = true, pushSend } = {}) {
   const cfg = config || loadConfig();
   const app = Fastify({ logger, trustProxy: true });
   const cache = new TtlCache();
@@ -29,6 +30,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
   const cameras = new CameraService(cfg, cache, fetchImpl);
   const appKeys = new AppKeys(db);
   const media = new MediaService(db, cache, fetchImpl);
+  const push = cfg.push.enabled ? new PushService(db, cfg, { send: pushSend, log: app.log }) : null;
   await auth.bootstrapAdmin();
 
   await app.register(fastifyCookie, { secret: loadOrCreateSecret(cfg) });
@@ -139,6 +141,23 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
 
   // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----
   registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });
+
+  // ---- severe weather push notifications ------------------------------------
+  const subSchema = { type: 'object', required: ['endpoint'], properties: { endpoint: { type: 'string', maxLength: 2000 } } };
+  const pushOff = (reply) => reply.code(404).send({ error: 'Push notifications are turned off on this server.' });
+  app.get('/api/push/key', async (req, reply) => (push ? { publicKey: push.publicKey, levels: LEVELS } : pushOff(reply)));
+  app.post('/api/push/status', { schema: { body: subSchema } }, async (req, reply) => (push ? push.status(req.body.endpoint) : pushOff(reply)));
+  app.post('/api/push/subscribe', {
+    schema: { body: { type: 'object', required: ['subscription', 'place'], properties: { subscription: { type: 'object' }, place: { type: 'object' }, levels: { type: 'array', items: { type: 'string' }, maxItems: 3 } } } },
+  }, async (req, reply) => (push ? reply.code(201).send(push.subscribe(req.body, req.user?.id ?? null)) : pushOff(reply)));
+  app.post('/api/push/unsubscribe', { schema: { body: subSchema } }, async (req, reply) => (push ? { ok: push.unsubscribe(req.body.endpoint) } : pushOff(reply)));
+  app.post('/api/push/test', {
+    schema: { body: subSchema },
+  }, async (req, reply) => (push ? push.test(req.body.endpoint) : pushOff(reply)));
+  app.decorate('push', push);
+  // NWS alerts for a place, shared with the web app's cache (used by the background push check).
+  app.decorate('pushAlerts', (l) => alerts({ ...l, units: '' }));
+  app.addHook('onClose', async () => push?.stop());
 
   // ---- news & videos -------------------------------------------------------
   app.get('/api/news', async () => {

@@ -51,7 +51,7 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 
 | Board card | Plan |
 | --- | --- |
-| Severe weather push notifications (watches, warnings, lightning, high wind) | Web Push from the server; background poll of NWS per saved place |
+| Severe weather push notifications (watches, warnings, lightning, high wind) | ✅ Web Push per device: pick a place and warnings / watches / advisories (high wind is an NWS warning). Lightning alerts wait on a lightning source |
 | Daily observation journal | Per-kid entries (icons, high/low, rain gauge), stored per user |
 | Badges & achievements | 🚧 19 Kid Zone badges are in (bingo, forecaster, experiments, field trips, storm drill, seasons). Still to come: first frost, thunderstorm spotted, double rainbow, journal streaks |
 | Learning section for kids and adults | Lesson library; same lessons at two reading levels |

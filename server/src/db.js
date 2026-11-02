@@ -29,6 +29,25 @@ CREATE TABLE IF NOT EXISTS app_keys (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   last_used_at TEXT
 );
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  lat REAL NOT NULL,
+  lon REAL NOT NULL,
+  place_name TEXT NOT NULL DEFAULT '',
+  levels TEXT NOT NULL DEFAULT '["warning"]',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  last_sent_at TEXT
+);
+CREATE TABLE IF NOT EXISTS push_sent (
+  subscription_id INTEGER NOT NULL REFERENCES push_subscriptions(id) ON DELETE CASCADE,
+  alert_id TEXT NOT NULL,
+  sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (subscription_id, alert_id)
+);
 CREATE TABLE IF NOT EXISTS media_feeds (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   kind TEXT NOT NULL CHECK (kind IN ('rss', 'youtube')),
