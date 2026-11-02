@@ -67,7 +67,7 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Health: barometric pressure warnings | Alerts on fast pressure swings for migraine/joint sensitivity |
 | Health: pollen & particulates | Pollen needs a US source (Open-Meteo pollen is Europe-only); candidates: Google Pollen API, Tomorrow.io |
 | Health: wet-bulb globe temperature | Compute WBGT from temp, humidity, wind and sun |
-| Golden hour: planets and Moon | 🚧 Moon phase, % lit and days to the next full Moon in Sky watch (also in `/api/connect/summary`). Next: moonrise/moonset and bright planets |
+| Golden hour: planets and Moon | 🚧 Moon phase, % lit and days to the next full Moon in Sky watch (`server/src/sky.js`) (also in `/api/connect/summary`). Next: moonrise/moonset and bright planets |
 | Custom dashboards (pin, hide, rearrange widgets) | Drag-and-drop layout saved per user |
 | Android APK | Wrap the PWA with a Trusted Web Activity (Bubblewrap) once push works |
 | Windows 11 widget | PWA widgets (Windows supports them for installed PWAs) |

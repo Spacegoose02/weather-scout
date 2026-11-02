@@ -1,4 +1,4 @@
-// Moon phase for Sky watch. Low-precision lunar and solar longitudes (good to a
+// Moon phase for the Today card and the Kid Zone's Sky watch. Low-precision lunar and solar longitudes (good to a
 // fraction of a degree, so phase times land within an hour or two), which is
 // plenty for "how much of the Moon is lit tonight" and "when is the next full Moon".
 
@@ -20,11 +20,11 @@ export function moonAngle(ms) {
 }
 
 const PHASES = [
-  { id: 'new', name: 'New Moon', emoji: '🌑', kid: 'The Moon is hiding! Its sunny side faces away from us, so the sky is extra dark for stars.' },
+  { id: 'new', name: 'New moon', emoji: '🌑', kid: 'The Moon is hiding! Its sunny side faces away from us, so the sky is extra dark for stars.' },
   { id: 'waxing-crescent', name: 'Waxing crescent', emoji: '🌒', kid: 'A skinny smile of a Moon. Look low in the west after sunset.' },
   { id: 'first-quarter', name: 'First quarter', emoji: '🌓', kid: 'Half the Moon is lit. It is a quarter of the way around its trip around Earth.' },
   { id: 'waxing-gibbous', name: 'Waxing gibbous', emoji: '🌔', kid: 'Almost full and getting bigger every night!' },
-  { id: 'full', name: 'Full Moon', emoji: '🌕', kid: 'The whole face is lit up. It rises right around sunset and shines all night.' },
+  { id: 'full', name: 'Full moon', emoji: '🌕', kid: 'The whole face is lit up. It rises right around sunset and shines all night.' },
   { id: 'waning-gibbous', name: 'Waning gibbous', emoji: '🌖', kid: 'A little less than full, and shrinking each night. It rises after dark.' },
   { id: 'last-quarter', name: 'Last quarter', emoji: '🌗', kid: 'Half lit again, the other half this time. Early birds can spot it in the morning sky.' },
   { id: 'waning-crescent', name: 'Waning crescent', emoji: '🌘', kid: 'A thin sliver, best seen before sunrise. A new Moon is coming soon.' },
@@ -43,7 +43,7 @@ function nextAngle(target, from) {
   return Math.round((lo + hi) / 2);
 }
 
-export function moonInfo(now = Date.now()) {
+export function moonPhase(now = Date.now()) {
   const angle = moonAngle(now);
   const phase = PHASES[Math.round(angle / 45) % 8];
   const illumination = Math.round(((1 - Math.cos(angle * RAD)) / 2) * 100);
@@ -55,7 +55,7 @@ export function moonInfo(now = Date.now()) {
     emoji: phase.emoji,
     illumination,
     waxing: angle < 180,
-    ageDays: Math.round((angle / 360) * 29.53 * 10) / 10,
+    age: Math.round((angle / 360) * 29.530588853 * 10) / 10, // days since new moon
     nextFull: new Date(nextFull).toISOString(),
     nextNew: new Date(nextNew).toISOString(),
     daysToFull: Math.round((nextFull - now) / DAY),
