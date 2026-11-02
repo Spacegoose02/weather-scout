@@ -146,3 +146,36 @@ test('cannot remove the last admin', async () => {
   assert.equal(res.statusCode, 400);
   await app.close();
 });
+
+test('app keys: admin makes one, Den-Duty reads the summary with it, revoke stops it', async () => {
+  const { app } = await testApp({ env: { ADMIN_USERNAME: 'admin', ADMIN_PASSWORD: 'password123', AUTH_REQUIRED: 'true' } });
+  const login = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { username: 'admin', password: 'password123' } });
+  const headers = { cookie: cookieFrom(login) };
+  const made = (await app.inject({ method: 'POST', url: '/api/admin/app-keys', headers, payload: { name: 'Den-Duty' } })).json();
+  assert.match(made.key, /^wsk_/);
+  const listed = (await app.inject({ url: '/api/admin/app-keys', headers })).json().keys;
+  assert.equal(listed[0].name, 'Den-Duty');
+  assert.ok(!JSON.stringify(listed).includes(made.key));
+
+  assert.equal((await app.inject('/api/connect/summary')).statusCode, 401);
+  assert.equal((await app.inject({ url: '/api/connect/summary', headers: { authorization: 'Bearer wsk_wrongwrongwrongwrongwrong' } })).statusCode, 401);
+  const res = await app.inject({ url: '/api/connect/summary', headers: { authorization: `Bearer ${made.key}` } });
+  assert.equal(res.statusCode, 200);
+  const body = res.json();
+  assert.equal(body.location.name, 'Richmond, VA');
+  assert.equal(body.playground.rating, 'red');
+  assert.equal(body.alerts[0].event, 'Tornado Warning');
+  assert.ok(Array.isArray(body.checklist));
+  assert.ok(!('description' in body.alerts[0]));
+  assert.ok((await app.inject({ url: '/api/admin/app-keys', headers })).json().keys[0].lastUsedAt);
+
+  await app.inject({ method: 'DELETE', url: `/api/admin/app-keys/${made.id}`, headers });
+  assert.equal((await app.inject({ url: '/api/connect/summary', headers: { authorization: `Bearer ${made.key}` } })).statusCode, 401);
+  await app.close();
+});
+
+test('app keys are admin only', async () => {
+  const { app } = await testApp();
+  assert.equal((await app.inject({ method: 'POST', url: '/api/admin/app-keys', payload: { name: 'x' } })).statusCode, 401);
+  await app.close();
+});

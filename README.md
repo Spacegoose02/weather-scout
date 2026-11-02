@@ -17,6 +17,8 @@ from free, official data sources.
   and a sunset / stargazing countdown.
 - **Profiles**: local username sign-in, tinyauth SSO, and admins can link an SSO identity to a
   username. Saved places, units and Kid Mode follow you between devices.
+- **Connected apps**: a keyed, kid-safe weather summary for Den-Duty boards, Home Assistant or
+  scripts ([docs/CONNECT.md](docs/CONNECT.md)).
 - Installable as a phone/desktop app (PWA manifest), light and dark themes.
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for everything else on the board and when it lands,

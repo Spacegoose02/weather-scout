@@ -5,12 +5,16 @@ import Modal from './Modal.jsx';
 export default function Admin({ me, onClose }) {
   const [users, setUsers] = useState([]);
   const [feeds, setFeeds] = useState([]);
+  const [keys, setKeys] = useState([]);
+  const [newKey, setNewKey] = useState(null);
+  const [keyName, setKeyName] = useState('Den-Duty');
   const [error, setError] = useState('');
   const [form, setForm] = useState({ username: '', displayName: '', password: '', ssoSubject: '', isAdmin: false });
 
   const load = async () => {
     try {
       setUsers((await api('/api/admin/users')).users);
+      setKeys((await api('/api/admin/app-keys')).keys);
       setFeeds((await api('/api/admin/cameras')).feeds);
     } catch (e) {
       setError(e.message);
@@ -82,6 +86,33 @@ export default function Admin({ me, onClose }) {
         <input placeholder="SSO identity (optional)" value={form.ssoSubject} onChange={(e) => setForm({ ...form, ssoSubject: e.target.value })} />
         <label><input type="checkbox" checked={form.isAdmin} onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })} /> admin</label>
         <button type="submit">Add</button>
+      </form>
+
+      <h3>Connected apps</h3>
+      <p className="hint">Give Den-Duty (or Home Assistant) a key so it can show the weather card on kid boards and the family wall.</p>
+      {keys.length > 0 && (
+        <ul className="feeds">
+          {keys.map((k) => (
+            <li key={k.id}>
+              🔑 {k.name} <code>…{k.hint}</code> · {k.lastUsedAt ? `last used ${new Date(`${k.lastUsedAt}Z`).toLocaleString()}` : 'not used yet'}{' '}
+              <button className="link danger" onClick={() => confirm(`Remove the key for ${k.name}? It stops working right away.`) && act(() => api(`/api/admin/app-keys/${k.id}`, { method: 'DELETE' }))}>remove</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {newKey && (
+        <div className="newkey" role="status">
+          <p><strong>Copy this key now.</strong> It won't be shown again. In Den-Duty, paste it with this server's address: <code>{window.location.origin}</code></p>
+          <code className="keytext">{newKey}</code>{' '}
+          <button className="ghost" onClick={() => navigator.clipboard?.writeText(newKey)}>Copy</button>
+        </div>
+      )}
+      <form className="form inline" onSubmit={(e) => {
+        e.preventDefault();
+        act(async () => setNewKey((await api('/api/admin/app-keys', { method: 'POST', body: { name: keyName } })).key));
+      }}>
+        <input placeholder="App name" value={keyName} onChange={(e) => setKeyName(e.target.value)} required maxLength={60} />
+        <button type="submit">Make a key</button>
       </form>
 
       <h3>Camera feeds</h3>

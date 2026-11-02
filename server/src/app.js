@@ -12,6 +12,7 @@ import * as openMeteo from './providers/openmeteo.js';
 import * as nws from './providers/nws.js';
 import { radarFrames } from './providers/radar.js';
 import { kidReport } from './kid.js';
+import { AppKeys } from './appkeys.js';
 
 const MIN = 60_000;
 
@@ -22,6 +23,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
   const db = openDb(cfg.dataDir);
   const auth = new AuthService(db, cfg);
   const cameras = new CameraService(cfg, cache, fetchImpl);
+  const appKeys = new AppKeys(db);
   await auth.bootstrapAdmin();
 
   await app.register(fastifyCookie, { secret: loadOrCreateSecret(cfg) });
@@ -41,7 +43,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
   const OPEN = new Set(['/api/health', '/api/config', '/api/auth/login', '/api/auth/logout', '/api/auth/me', '/api/auth/setup']);
   app.addHook('preHandler', async (req, reply) => {
     if (!cfg.auth.required || !req.url.startsWith('/api/')) return;
-    if (OPEN.has(req.url.split('?')[0]) || req.user) return;
+    if (OPEN.has(req.url.split('?')[0]) || req.user || req.url.startsWith('/api/connect/')) return;
     reply.code(401).send({ error: 'Please sign in.' });
   });
 
@@ -231,6 +233,55 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
     return { ok: true };
   });
   app.get('/api/admin/cameras', { preHandler: requireAdmin }, async () => ({ feeds: (await cameras.all()).feeds }));
+  app.get('/api/admin/app-keys', { preHandler: requireAdmin }, async () => ({ keys: appKeys.list() }));
+  app.post('/api/admin/app-keys', {
+    preHandler: requireAdmin,
+    schema: { body: { type: 'object', required: ['name'], properties: { name: { type: 'string', minLength: 1, maxLength: 60 } } } },
+  }, async (req) => appKeys.create(req.body.name));
+  app.delete('/api/admin/app-keys/:id', { preHandler: requireAdmin }, async (req, reply) =>
+    (appKeys.revoke(Number(req.params.id)) ? { ok: true } : reply.code(404).send({ error: 'No such key.' })));
+
+  // ---- other family apps ------------------------------------------------------
+  // A compact, kid-safe summary for Den-Duty's boards and family wall (and Home
+  // Assistant or scripts). Needs an app key from Family & settings. Location
+  // defaults to the server's home location.
+  app.get('/api/connect/summary', {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          lat: { type: 'number', minimum: -90, maximum: 90 },
+          lon: { type: 'number', minimum: -180, maximum: 180 },
+          units: { type: 'string', enum: ['imperial', 'metric'] },
+        },
+      },
+    },
+  }, async (req, reply) => {
+    if (!appKeys.check(req.headers.authorization)) {
+      return reply.code(401).header('www-authenticate', 'Bearer').send({ error: 'A Weather Scout app key is needed (Family & settings, Connected apps).' });
+    }
+    const home = cfg.defaultLocation;
+    const l = loc({ lat: req.query.lat ?? home.lat, lon: req.query.lon ?? home.lon, units: req.query.units });
+    const [fc, al, aq] = await Promise.all([forecast(l), settle(alerts(l)), settle(air(l))]);
+    const alertList = al?.alerts || [];
+    const kid = kidReport(fc, { alerts: alertList, air: aq });
+    const c = fc.current;
+    const today = fc.daily[0] || {};
+    return {
+      location: { name: req.query.lat == null ? home.name : null, lat: l.lat, lon: l.lon },
+      units: fc.units,
+      current: { temp: c.temp, feelsLike: c.feelsLike, icon: c.icon, label: c.label, kidLabel: c.kidLabel, isDay: c.isDay, windSpeed: c.windSpeed, uv: c.uv },
+      today: { high: today.high ?? null, low: today.low ?? null, precipChance: today.precipChance ?? null, icon: today.icon ?? null, kidLabel: today.kidLabel ?? null },
+      raccoon: kid.raccoon,
+      checklist: kid.checklist,
+      playground: kid.playground,
+      sky: kid.sky,
+      airQuality: aq?.aqi != null ? { aqi: aq.aqi, label: aq.category?.label, color: aq.category?.color, kid: aq.category?.kid } : null,
+      alerts: alertList.map((a) => ({ id: a.id, event: a.event, severity: a.severity, headline: a.headline, kid: a.kid, ends: a.ends })),
+      alertsAvailable: !!al,
+      updatedAt: new Date().toISOString(),
+    };
+  });
 
   // ---- web app ---------------------------------------------------------------
   if (fs.existsSync(cfg.webDist)) {

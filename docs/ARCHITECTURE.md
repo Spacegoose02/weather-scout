@@ -83,4 +83,5 @@ web/src/
 | `GET /api/geocode?q`, `/api/reverse-geocode?lat&lon` | Place search |
 | `POST /api/auth/login`, `/logout`, `/setup`; `GET /api/auth/me` | Sign-in |
 | `GET/PUT /api/me/preferences` | Per-user settings |
-| `/api/admin/users` (GET, POST, PATCH `:id`, DELETE `:id`), `/api/admin/cameras` | Admin |
+| `/api/admin/users` (GET, POST, PATCH `:id`, DELETE `:id`), `/api/admin/cameras`, `/api/admin/app-keys` | Admin |
+| `GET /api/connect/summary` (Bearer app key) | Kid-safe summary for Den-Duty and other apps, see [CONNECT.md](CONNECT.md) |
