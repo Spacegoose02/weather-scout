@@ -21,6 +21,7 @@ import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
 import { moonPhase } from './sky.js';
 import { MediaService } from './media.js';
+import { getOfficeProducts } from './providers/news.js';
 import { PushService, LEVELS } from './push.js';
 import { AiService, registerAi } from './ai.js';
 import { registerTts } from './tts.js';
@@ -255,9 +256,30 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.addHook('onClose', async () => push?.stop());
 
   // ---- news & videos -------------------------------------------------------
-  app.get('/api/news', async () => {
-    const [news, videos] = await Promise.all([media.items('rss'), media.items('youtube', 24)]);
-    return { news: news.items, videos: videos.items, feeds: [...news.feeds, ...videos.feeds] };
+  // Optional lat/lon adds the local NWS office's outlook, discussion and statements.
+  // kid=1 keeps only kid-safe feeds and stories (see providers/news.js).
+  app.get('/api/news', {
+    schema: { querystring: { type: 'object', properties: { lat: { type: 'number', minimum: -90, maximum: 90 }, lon: { type: 'number', minimum: -180, maximum: 180 }, kid: { type: 'boolean' } } } },
+  }, async (req) => {
+    const kid = !!req.query.kid;
+    const office = async () => {
+      if (req.query.lat == null || req.query.lon == null) return null;
+      const l = loc(req.query);
+      const place = await cache.wrap(`rgeo:${l.lat},${l.lon}`, 24 * 60 * MIN, () => nws.reverseGeocode(l, { userAgent: cfg.nwsUserAgent, fetchImpl }));
+      if (!place?.office) return null;
+      const products = await cache.wrap(`nws-products:${place.office}`, 15 * MIN, () => getOfficeProducts(place.office, { userAgent: cfg.nwsUserAgent, fetchImpl }));
+      return { id: place.office, place: place.name, link: `https://www.weather.gov/${place.office.toLowerCase()}`, products: kid ? products.filter((p) => p.kidSafe) : products };
+    };
+    const [news, videos, local] = await Promise.all([media.items('rss', 40, { kid }), media.items('youtube', 24, { kid }), settle(office())]);
+    return {
+      news: news.items,
+      local: news.items.filter((n) => n.scope === 'local'),
+      national: news.items.filter((n) => n.scope !== 'local'),
+      videos: videos.items,
+      office: local,
+      kid,
+      feeds: [...news.feeds, ...videos.feeds],
+    };
   });
 
   app.get('/api/geocode', {
@@ -387,7 +409,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.get('/api/admin/media', { preHandler: requireAdmin }, async () => ({ feeds: media.list() }));
   app.post('/api/admin/media', {
     preHandler: requireAdmin,
-    schema: { body: { type: 'object', required: ['kind', 'url'], properties: { kind: { type: 'string', enum: ['rss', 'youtube'] }, url: { type: 'string', minLength: 3, maxLength: 500 }, title: { type: 'string', maxLength: 80 } } } },
+    schema: { body: { type: 'object', required: ['kind', 'url'], properties: { kind: { type: 'string', enum: ['rss', 'youtube'] }, url: { type: 'string', minLength: 3, maxLength: 500 }, title: { type: 'string', maxLength: 80 }, scope: { type: 'string', enum: ['local', 'national'] }, kidSafe: { type: 'boolean' } } } },
   }, async (req, reply) => {
     try {
       return reply.code(201).send({ feed: await media.add(req.body) });
@@ -397,8 +419,23 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       throw err;
     }
   });
+  app.patch('/api/admin/media/:id', {
+    preHandler: requireAdmin,
+    schema: { body: { type: 'object', additionalProperties: false, properties: { title: { type: 'string', maxLength: 80 }, scope: { type: 'string', enum: ['local', 'national'] }, kidSafe: { type: 'boolean' }, enabled: { type: 'boolean' }, move: { type: 'string', enum: ['up', 'down'] } } } },
+  }, async (req, reply) => {
+    const feed = media.update(Number(req.params.id), req.body || {});
+    return feed ? { feed } : reply.code(404).send({ error: 'Not found' });
+  });
   app.delete('/api/admin/media/:id', { preHandler: requireAdmin }, async (req, reply) =>
     media.remove(Number(req.params.id)) ? { ok: true } : reply.code(404).send({ error: 'Not found' }));
+  app.get('/api/admin/media-suggestions', { preHandler: requireAdmin }, async () => ({ suggestions: media.suggestions() }));
+  app.get('/api/admin/media-hidden', { preHandler: requireAdmin }, async () => ({ hidden: media.hiddenList() }));
+  app.post('/api/admin/media-hidden', {
+    preHandler: requireAdmin,
+    schema: { body: { type: 'object', required: ['link'], properties: { link: { type: 'string', maxLength: 1000 }, title: { type: 'string', maxLength: 300 } } } },
+  }, async (req, reply) => reply.code(201).send({ hidden: media.hide(req.body) }));
+  app.delete('/api/admin/media-hidden/:id', { preHandler: requireAdmin }, async (req, reply) =>
+    media.unhide(Number(req.params.id)) ? { ok: true } : reply.code(404).send({ error: 'Not found' }));
   app.get('/api/admin/app-keys', { preHandler: requireAdmin }, async () => ({ keys: appKeys.list() }));
   app.post('/api/admin/app-keys', {
     preHandler: requireAdmin,
