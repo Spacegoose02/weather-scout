@@ -37,6 +37,10 @@ from free, official data sources.
 - **Severe weather alerts on your phone**: tap 🔔 to get a push notification when the NWS issues a
   warning, watch or advisory for your place, even with the app closed. Needs an https address
   (behind your reverse proxy); on iPhone, add Weather Scout to the Home Screen first.
+- **Ask an Expert / Ask Rocky** (optional, needs an Anthropic API key): a chat that answers weather
+  questions using your live forecast and alerts, in kid language as Rocky when Kid Mode is on.
+  Snap a photo of the sky and it names the cloud and what it means. Turn on web search for
+  "why" and news questions (kid-safe science sites only in Kid Mode). See [AI helper](#ai-helper).
 - **Connected apps**: a keyed, kid-safe weather summary for Den-Duty boards, Home Assistant or
   scripts ([docs/CONNECT.md](docs/CONNECT.md)).
 - Installable as a phone/desktop app (PWA manifest with Rocky app icons), light and dark themes.
@@ -128,6 +132,26 @@ the feeds you want (a cameras.json replaces the built-in list, so copy in the en
 
 Feed health (camera counts and errors) shows under *Family & settings*.
 
+## AI helper
+
+The **Ask an Expert** tab (called **Ask Rocky** in Kid Mode) appears once the server has an
+Anthropic API key. Without one the tab is simply hidden and everything else works as before.
+
+1. Create a key at [console.anthropic.com](https://console.anthropic.com/) (pay as you go).
+2. Set `ANTHROPIC_API_KEY` in `.env` or the Unraid template (*Anthropic API key*, masked) and restart.
+
+| Setting | Default | What |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | (blank) | Turns the AI helper on. Stays on the server, never sent to the browser |
+| `AI_MODEL` | `claude-opus-5-5` | Any Claude model id, e.g. `claude-sonnet-5-5` or `claude-haiku-5-5` for lower cost |
+| `AI_WEB_SEARCH` | `true` | Lets people tick *Search the web*. In Kid Mode searches only read NOAA, NWS, NASA, USGS and similar science sites |
+| `AI_DAILY_LIMIT` | `40` | Questions and photos per person (or per device for guests) per day. `0` = no limit |
+
+Each question sends the model your place's current conditions, the next 12 hours, the week
+ahead, air quality and active NWS alerts, so answers are about *your* weather. Cloud photos
+are shrunk in the browser to a few hundred KB, are not saved, and only go to the model. Web search
+is billed by Anthropic per search on top of tokens.
+
 ## Data sources
 
 | Data | Source | Key |
@@ -140,6 +164,7 @@ Feed health (camera counts and errors) shows under *Family & settings*.
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
 | Map | OpenStreetMap | none |
 | Cameras | VA, SC, MD and KY public feeds, plus any state 511 feed you add | none for the built-in states |
+| Ask an Expert, cloud photos, web search (optional) | [Claude](https://www.anthropic.com/claude) via the Anthropic API | `ANTHROPIC_API_KEY` |
 
 Open-Meteo's free tier is for non-commercial use, which fits a family server. All upstream
 responses are cached on the server (forecast 10 min, alerts 2 min, cameras 15 min) so a house

@@ -76,9 +76,9 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 
 | Board card | Plan |
 | --- | --- |
-| Weather expert that answers like a kid would understand | Chat backed by an LLM with the current forecast as context; needs one server-wide API key |
-| Take a picture of a cloud, AI tells you about it | Vision model; pairs with the Interactive Cloud Identifier |
-| AI-enabled web search | Same assistant, with search for "why" questions |
+| Weather expert that answers like a kid would understand | ✅ Ask an Expert tab (Ask Rocky in Kid Mode): Claude with the live forecast, alerts and air quality as context. Server-wide `ANTHROPIC_API_KEY`; hidden when no key is set |
+| Take a picture of a cloud, AI tells you about it | ✅ Snap or upload a sky photo in the Ask tab: cloud type, confidence, what it means for the weather, a fun fact. Photos aren't stored |
+| AI-enabled web search | ✅ *Search the web* toggle with cited sources; Kid Mode searches only NOAA/NWS/NASA-style science sites |
 | AI-assisted ensembles (GraphCast, WeatherNext) with confidence intervals | Show AI model runs next to physics models, if a free source exists |
 | ECMWF, GFS, ICON side-by-side model comparison | Open-Meteo per-model endpoints, plotted together |
 | HRRR & NAM for short-fuse storms | Open-Meteo HRRR/NAM endpoints + model loop |
