@@ -184,17 +184,19 @@ function cameraPopup(c) {
     img.onerror = () => showMessage('This camera is not sending pictures right now.');
     refresh();
     button('🔄 Refresh', refresh);
-  } else {
-    showMessage('Live camera. Tap "Watch live" to start it.');
   }
 
   if (c.video) button('▶ Live video', () => playHls(c, stage, showMessage));
   else if (c.embed) {
-    button('▶ Watch live', () => {
+    // No still picture (Maryland): start the live player right inside the popup.
+    const startLive = () => {
       const frame = Object.assign(document.createElement('iframe'), { src: c.embed, title: `Live camera: ${c.name}`, allowFullscreen: true });
       frame.setAttribute('referrerpolicy', 'no-referrer');
+      frame.setAttribute('allow', 'autoplay; fullscreen');
       stage.replaceChildren(frame);
-    });
+    };
+    if (!c.imageUrl) startLive();
+    button(c.imageUrl ? '▶ Watch live' : '🔄 Reload', startLive);
     actions.append(Object.assign(document.createElement('a'), { href: c.embed, target: '_blank', rel: 'noopener noreferrer', textContent: 'Open in new tab' }));
   }
   return div;
