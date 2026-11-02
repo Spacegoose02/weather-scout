@@ -8,6 +8,8 @@ from free, official data sources.
 
 - **Today**: current conditions, feels-like, dew point, pressure trend, UV, air quality,
   a 2-hour "rain starting in…" nowcast, a scrubbable 48-hour timeline and a 10-day forecast.
+- **Health & sky**: pressure-swing warnings for migraine-sensitive folks, wet-bulb globe temperature
+  heat stress, moon phase and sunrise/sunset.
 - **NWS alerts** for your exact location, most severe first, with plain-language kid versions.
 - **Radar & Cams map**: a smooth, loopable NEXRAD radar animation, alert polygons, and
   state DOT 511 road cameras pinned where they really are (clustered, with live snapshots).
@@ -17,6 +19,8 @@ from free, official data sources.
   and a sunset / stargazing countdown.
 - **Profiles**: local username sign-in, tinyauth SSO, and admins can link an SSO identity to a
   username. Saved places, units and Kid Mode follow you between devices.
+- **News & Videos**: weather news from RSS feeds and the latest videos from YouTube channels the
+  admin picks (paste a channel link or @handle in *Family & settings*).
 - **Connected apps**: a keyed, kid-safe weather summary for Den-Duty boards, Home Assistant or
   scripts ([docs/CONNECT.md](docs/CONNECT.md)).
 - Installable as a phone/desktop app (PWA manifest), light and dark themes.

@@ -11,11 +11,14 @@ import WeatherMap from './components/WeatherMap.jsx';
 import KidMode from './components/KidMode.jsx';
 import SignIn from './components/SignIn.jsx';
 import Admin from './components/Admin.jsx';
+import HealthSky from './components/HealthSky.jsx';
+import News from './components/News.jsx';
 
 const TABS = [
   ['today', 'Today', '🌤️'],
   ['map', 'Radar & Cams', '🗺️'],
   ['kids', 'Kid Zone', '🦝'],
+  ['news', 'News & Videos', '📰'],
 ];
 
 export default function App() {
@@ -113,12 +116,13 @@ export default function App() {
           {weather && <AlertsBanner alerts={weather.alerts} kidMode={kidMode} />}
 
           <main>
-            {!weather && !error && <div className="card skeleton">Fetching the sky…</div>}
+            {!weather && !error && tab !== 'news' && <div className="card skeleton">Fetching the sky…</div>}
             {weather && tab === 'today' && (
               <div className="grid">
                 <CurrentConditions weather={weather} kidMode={kidMode} />
                 <DailyForecast daily={weather.forecast.daily} units={weather.forecast.units} />
                 <Details weather={weather} />
+                <HealthSky weather={weather} />
                 <HourlyTimeline hourly={weather.forecast.hourly} units={weather.forecast.units} />
                 <p className="source">
                   Forecast: {weather.forecast.source}. Alerts: National Weather Service.
@@ -128,6 +132,7 @@ export default function App() {
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} />}
             {weather && tab === 'kids' && <KidMode weather={weather} name={user?.displayName} />}
+            {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} />}
           </main>
         </>
       )}

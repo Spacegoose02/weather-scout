@@ -13,6 +13,9 @@ import * as nws from './providers/nws.js';
 import { radarFrames } from './providers/radar.js';
 import { kidReport } from './kid.js';
 import { AppKeys } from './appkeys.js';
+import { healthReport } from './health.js';
+import { moonPhase } from './sky.js';
+import { MediaService } from './media.js';
 
 const MIN = 60_000;
 
@@ -24,6 +27,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
   const auth = new AuthService(db, cfg);
   const cameras = new CameraService(cfg, cache, fetchImpl);
   const appKeys = new AppKeys(db);
+  const media = new MediaService(db, cache, fetchImpl);
   await auth.bootstrapAdmin();
 
   await app.register(fastifyCookie, { secret: loadOrCreateSecret(cfg) });
@@ -121,6 +125,8 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
       alertsAvailable: !!al,
       air: aq,
       kid: kidReport(fc, { alerts: alertList, air: aq }),
+      health: healthReport(fc),
+      moon: moonPhase(),
       fetchedAt: new Date().toISOString(),
     };
   });
@@ -129,6 +135,12 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
   app.get('/api/alerts', { schema: latLonSchema }, async (req) => alerts(loc(req.query)));
   app.get('/api/air', { schema: latLonSchema }, async (req) => air(loc(req.query)));
   app.get('/api/radar', async () => radarFrames());
+
+  // ---- news & videos -------------------------------------------------------
+  app.get('/api/news', async () => {
+    const [news, videos] = await Promise.all([media.items('rss'), media.items('youtube', 24)]);
+    return { news: news.items, videos: videos.items, feeds: [...news.feeds, ...videos.feeds] };
+  });
 
   app.get('/api/geocode', {
     schema: { querystring: { type: 'object', required: ['q'], properties: { q: { type: 'string', minLength: 2, maxLength: 100 } } } },
@@ -233,6 +245,21 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true } = {}
     return { ok: true };
   });
   app.get('/api/admin/cameras', { preHandler: requireAdmin }, async () => ({ feeds: (await cameras.all()).feeds }));
+  app.get('/api/admin/media', { preHandler: requireAdmin }, async () => ({ feeds: media.list() }));
+  app.post('/api/admin/media', {
+    preHandler: requireAdmin,
+    schema: { body: { type: 'object', required: ['kind', 'url'], properties: { kind: { type: 'string', enum: ['rss', 'youtube'] }, url: { type: 'string', minLength: 3, maxLength: 500 }, title: { type: 'string', maxLength: 80 } } } },
+  }, async (req, reply) => {
+    try {
+      return reply.code(201).send({ feed: await media.add(req.body) });
+    } catch (err) {
+      if (err instanceof UpstreamError) return reply.code(400).send({ error: `Could not reach that address (${err.status}).` });
+      if (!err.statusCode && !err.cause) return reply.code(400).send({ error: err.message });
+      throw err;
+    }
+  });
+  app.delete('/api/admin/media/:id', { preHandler: requireAdmin }, async (req, reply) =>
+    media.remove(Number(req.params.id)) ? { ok: true } : reply.code(404).send({ error: 'Not found' }));
   app.get('/api/admin/app-keys', { preHandler: requireAdmin }, async () => ({ keys: appKeys.list() }));
   app.post('/api/admin/app-keys', {
     preHandler: requireAdmin,
