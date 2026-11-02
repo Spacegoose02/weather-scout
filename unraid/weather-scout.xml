@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>weather-scout</Name>
+  <Repository>ghcr.io/spacegoose02/weather-scout:latest</Repository>
+  <Registry>https://github.com/spacegoose02/weather-scout/pkgs/container/weather-scout</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/spacegoose02/weather-scout/issues</Support>
+  <Project>https://github.com/spacegoose02/weather-scout</Project>
+  <Overview>Weather Scout: a kid-friendly family weather station with a radar loop, NWS alerts, state 511 road cameras on a map, and a Kid Zone with Rocky the raccoon. API keys stay on your server.</Overview>
+  <Category>HomeAutomation: Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <Icon>https://raw.githubusercontent.com/spacegoose02/weather-scout/main/web/public/icon.svg</Icon>
+  <ExtraParams>--user 99:100</ExtraParams>
+  <Config Name="Web UI port" Target="8080" Default="8080" Mode="tcp" Description="Port for the web app" Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="App data" Target="/data" Default="/mnt/user/appdata/weather-scout" Mode="rw" Description="Database, settings and cameras.json" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/weather-scout</Config>
+  <Config Name="Home name" Target="DEFAULT_LOCATION_NAME" Default="Richmond, VA" Description="Shown before anyone picks a location" Type="Variable" Display="always" Required="false" Mask="false">Richmond, VA</Config>
+  <Config Name="Home latitude" Target="DEFAULT_LAT" Default="37.5407" Type="Variable" Display="always" Required="true" Mask="false">37.5407</Config>
+  <Config Name="Home longitude" Target="DEFAULT_LON" Default="-77.4360" Type="Variable" Display="always" Required="true" Mask="false">-77.4360</Config>
+  <Config Name="NWS contact" Target="NWS_USER_AGENT" Default="WeatherScout (you@example.com)" Description="The National Weather Service asks for an app name and contact email" Type="Variable" Display="always" Required="true" Mask="false">WeatherScout (you@example.com)</Config>
+  <Config Name="Require sign-in" Target="AUTH_REQUIRED" Default="false" Description="true = must sign in to see anything" Type="Variable" Display="always" Required="false" Mask="false">false</Config>
+  <Config Name="Admin username" Target="ADMIN_USERNAME" Default="" Description="Optional. Leave blank to create the admin on first visit." Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Admin password" Target="ADMIN_PASSWORD" Default="" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Trust tinyauth headers" Target="AUTH_TRUST_PROXY_HEADERS" Default="false" Description="Only true when the app is reachable ONLY through tinyauth/your reverse proxy" Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="SSO logout URL" Target="SSO_LOGOUT_URL" Default="" Description="e.g. https://auth.example.com/logout" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Secure cookies" Target="SECURE_COOKIES" Default="false" Description="true when served over https" Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="VDOT SmarterRoads token" Target="VDOT_SMARTERROADS_TOKEN" Default="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="511NY API key" Target="NY511_API_KEY" Default="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+</Container>

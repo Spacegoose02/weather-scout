@@ -1,0 +1,14 @@
+{
+  "name": "weather-scout",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kid-friendly, self-hosted weather app with radar, NWS alerts and live road cameras.",
+  "workspaces": ["server", "web"],
+  "scripts": {
+    "dev": "npm run dev --workspace server & npm run dev --workspace web",
+    "build": "npm run build --workspace web",
+    "start": "npm start --workspace server",
+    "test": "npm test --workspace server && npm test --workspace web"
+  },
+  "engines": { "node": ">=22.13" }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Weather Scout",
+  "short_name": "Weather Scout",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eef4ff",
+  "theme_color": "#2f6fde",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
