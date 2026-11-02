@@ -16,6 +16,9 @@ from free, official data sources.
 
 - **Today**: current conditions, feels-like, dew point, pressure trend, UV, air quality,
   a 2-hour "rain starting in…" nowcast, a scrubbable 48-hour timeline and a 10-day forecast.
+- **Models**: what ECMWF, GFS, ICON, GEM, HRRR and the AI models GraphCast and AIFS each predict,
+  plotted together, with an ensemble confidence band (10th to 90th percentile), a High/Medium/Low
+  confidence rating per day and a side-by-side table.
 - **Health & sky**: pressure-swing warnings for migraine-sensitive folks, wet-bulb globe temperature
   heat stress, moon phase and sunrise/sunset.
 - **NWS alerts** for your exact location, most severe first, with plain-language kid versions.
@@ -130,6 +133,7 @@ Feed health (camera counts and errors) shows under *Family & settings*.
 | Data | Source | Key |
 | --- | --- | --- |
 | Forecast, current, hourly, 10-day, nowcast | [Open-Meteo](https://open-meteo.com/) best-match blend (HRRR, GFS, ECMWF, ICON, …) | none |
+| Model comparison and ensembles | Open-Meteo per-model forecasts and [ensemble API](https://open-meteo.com/en/docs/ensemble-api) | none |
 | Air quality (US AQI, PM2.5, PM10, ozone) | Open-Meteo Air Quality (CAMS) | none |
 | Watches, warnings, advisories | [api.weather.gov](https://www.weather.gov/documentation/services-web-api) | none, but set `NWS_USER_AGENT` |
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |

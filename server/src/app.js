@@ -12,6 +12,7 @@ import { CameraService } from './providers/cameras/index.js';
 import * as openMeteo from './providers/openmeteo.js';
 import * as nws from './providers/nws.js';
 import { radarFrames } from './providers/radar.js';
+import * as models from './providers/models.js';
 import { kidReport } from './kid.js';
 import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
@@ -138,6 +139,19 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.get('/api/alerts', { schema: latLonSchema }, async (req) => alerts(loc(req.query)));
   app.get('/api/air', { schema: latLonSchema }, async (req) => air(loc(req.query)));
   app.get('/api/radar', async () => radarFrames());
+
+  // ---- model comparison & ensemble confidence ---------------------------------
+  app.get('/api/models', { schema: latLonSchema }, async (req) => {
+    const l = loc(req.query);
+    return cache.wrap(key('models', l), 30 * MIN, () => models.getModels(l, fetchImpl));
+  });
+  app.get('/api/ensemble', {
+    schema: { querystring: { ...latLonSchema.querystring, properties: { ...latLonSchema.querystring.properties, model: { type: 'string', enum: models.ENSEMBLES.map((e) => e.id) } } } },
+  }, async (req) => {
+    const l = loc(req.query);
+    const id = req.query.model || models.ENSEMBLES[0].id;
+    return cache.wrap(key(`ens:${id}`, l), 60 * MIN, () => models.getEnsemble(l, id, fetchImpl));
+  });
 
   // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----
   registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });

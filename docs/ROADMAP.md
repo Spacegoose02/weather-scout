@@ -79,10 +79,10 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Weather expert that answers like a kid would understand | Chat backed by an LLM with the current forecast as context; needs one server-wide API key |
 | Take a picture of a cloud, AI tells you about it | Vision model; pairs with the Interactive Cloud Identifier |
 | AI-enabled web search | Same assistant, with search for "why" questions |
-| AI-assisted ensembles (GraphCast, WeatherNext) with confidence intervals | Show AI model runs next to physics models, if a free source exists |
-| ECMWF, GFS, ICON side-by-side model comparison | Open-Meteo per-model endpoints, plotted together |
-| HRRR & NAM for short-fuse storms | Open-Meteo HRRR/NAM endpoints + model loop |
-| Confidence & spread metrics (10th/50th/90th percentile) | Open-Meteo ensemble API |
+| AI-assisted ensembles (GraphCast, WeatherNext) with confidence intervals | ✅ Models tab shows Google DeepMind GraphCast and ECMWF AIFS next to the physics models, with ensemble confidence bands. WeatherNext has no free source yet |
+| ECMWF, GFS, ICON side-by-side model comparison | ✅ Models tab: ECMWF, GFS, ICON and GEM plotted together (daily highs and next 72 hours), a side-by-side table and a day-by-day agreement rating |
+| HRRR & NAM for short-fuse storms | 🚧 HRRR (3 km, 2 days) is in the Models tab. Next: NAM and a model radar loop |
+| Confidence & spread metrics (10th/50th/90th percentile) | ✅ ECMWF (51 runs) or GFS (31 runs) ensemble: 10th-90th percentile band, median, High/Medium/Low confidence and the share of runs that bring rain, per day |
 | Base velocity / storm-relative velocity | NEXRAD Level 3 products (needs a radar renderer or a tile provider) |
 | Correlation coefficient (debris signatures) | Same |
 | KDP and ZDR (rain vs hail) | Same |
