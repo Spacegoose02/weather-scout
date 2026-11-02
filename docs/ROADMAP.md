@@ -90,5 +90,5 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Interactive cloud identifier | Field guide + camera match |
 | Integrate with local weather stations | ✅ Ecowitt and Ambient local push, Ambient cloud, Tempest cloud and local UDP, Weather Underground protocol; shown under current conditions ([HOME-ASSISTANT.md](HOME-ASSISTANT.md)). Next: station history charts, reading a station from MQTT |
 | Webhooks & smart home (Home Assistant, MQTT) | 🚧 Home Assistant MQTT sensors with discovery (forecast, alerts, severe warning, recess check, every station) and a REST option. Next: outbound webhooks and threshold triggers (frost, high wind) |
-| Windy for maps | Windy Map Forecast API layer (needs a Windy key) |
+| Windy for maps | ✅ 🌬️ Windy button on the Radar & Cams map (normal and full screen): wind, gusts, rain, temperature, clouds, pressure, CAPE, waves, new snow; ECMWF/GFS/ICON; four heights; kid explanation per layer. Free embed by default, Map Forecast API with `WINDY_MAP_KEY` |
 | Integrate with Den-Duty | 🚧 Step 1: weather card on Den-Duty kid boards and the family wall (Weather Scout app keys + `/api/connect/summary`). Rocky in today's outfit on that card (`/api/connect/rocky.svg`). Next: weather steps in the morning routine, severe alerts through Den-Duty push |
