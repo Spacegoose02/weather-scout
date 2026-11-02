@@ -1,6 +1,7 @@
 // Kid Mode brain: turns raw numbers into an outfit for the raccoon mascot, a
 // morning gear checklist, a playground/recess rating and "Why is this
 // happening?" mini-lessons. Pure functions, so they are easy to test.
+import { moonInfo } from './moon.js';
 import { isThunder, isSnow, isFreezing, isWet } from './weathercodes.js';
 import { dailyFact, bingoCard, stormSafe, localDate } from './kidfun.js';
 
@@ -157,6 +158,7 @@ export function skyTimes(forecast, now = Date.now()) {
     stargazing: clouds == null ? null : clouds < 30
       ? { good: true, text: 'Clear skies tonight. Great for spotting stars, planets and the Moon!' }
       : { good: false, text: 'Clouds will probably hide the stars tonight.' },
+    moon: moonInfo(now),
   };
 }
 

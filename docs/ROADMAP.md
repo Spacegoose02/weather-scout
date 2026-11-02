@@ -26,8 +26,8 @@ Every card from the planning board, grouped into phases. Phase 1 is this first r
 | Pull up Virginia VDOT 511 cam feeds by map / state cameras / cameras on the map where they belong | ✅ Virginia, South Carolina, Maryland and Kentucky built in (public feeds, no keys), North Carolina with a free DriveNC key; other states plug in via cameras.json. WV, TN and DC: no documented public feed found yet |
 | Kid Mode: gear checklist | ✅ |
 | Kid Mode: playground / recess rating | ✅ |
-| Kid Mode: golden hour / stargazing timers | ✅ Sunset countdown + tonight's cloud cover. Planet/Moon visibility in Phase 2 |
-| Interactive raccoon avatar that dresses for the weather | ✅ Rule-based outfits. AI personality in Phase 3 |
+| Kid Mode: golden hour / stargazing timers | ✅ Sunset countdown + tonight's cloud cover, plus Moon phase (Phase 2). Planets in Phase 2 |
+| Interactive raccoon avatar that dresses for the weather | ✅ Rocky (new brand art, also the app icon) with rule-based outfits drawn on top. AI personality in Phase 3 |
 | "Why is this happening?" micro-lessons | ✅ Rule-based cards for fog, thunder, rain, snow, pressure, humidity, wind, UV, wind chill, alerts |
 | Dew point | ✅ With comfort words |
 | Barometric pressure tracking | ✅ 3-hour trend. Migraine alerts in Phase 2 |
@@ -67,7 +67,7 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Health: barometric pressure warnings | Alerts on fast pressure swings for migraine/joint sensitivity |
 | Health: pollen & particulates | Pollen needs a US source (Open-Meteo pollen is Europe-only); candidates: Google Pollen API, Tomorrow.io |
 | Health: wet-bulb globe temperature | Compute WBGT from temp, humidity, wind and sun |
-| Golden hour: planets and Moon | Moon phase/rise and bright planets from an astronomy library |
+| Golden hour: planets and Moon | 🚧 Moon phase, % lit and days to the next full Moon in Sky watch (also in `/api/connect/summary`). Next: moonrise/moonset and bright planets |
 | Custom dashboards (pin, hide, rearrange widgets) | Drag-and-drop layout saved per user |
 | Android APK | Wrap the PWA with a Trusted Web Activity (Bubblewrap) once push works |
 | Windows 11 widget | PWA widgets (Windows supports them for installed PWAs) |

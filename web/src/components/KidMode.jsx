@@ -178,6 +178,7 @@ function KidToday({ weather, name, kid: kidData, today }) {
             <p>🌙 The sun set at {clockLabel(kid.sky.sunset)}.</p>
           )}
           {kid.sky.stargazing && <p>{kid.sky.stargazing.good ? '✨' : '☁️'} {kid.sky.stargazing.text}</p>}
+          {kid.sky.moon && <MoonWatch moon={kid.sky.moon} />}
         </section>
       )}
 
@@ -207,6 +208,30 @@ function KidToday({ weather, name, kid: kidData, today }) {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function MoonWatch({ moon }) {
+  const [why, setWhy] = useState(false);
+  const full = moon.phase === 'full' ? 'Tonight is the full Moon!'
+    : moon.daysToFull <= 1 ? 'Full Moon tomorrow!'
+    : `Full Moon in ${moon.daysToFull} days.`;
+  return (
+    <div className="moon-watch">
+      <span className="moon-emoji" aria-hidden>{moon.emoji}</span>
+      <div>
+        <p><strong>{moon.name}</strong>, {moon.illumination}% lit. {full}</p>
+        <p className="moon-kid">{moon.kid}</p>
+        <button className="link" onClick={() => setWhy(!why)} aria-expanded={why}>Why does the Moon change shape?</button>
+        {why && (
+          <p className="moon-why">
+            The Sun always lights half of the Moon. As the Moon travels around Earth (about 29 and a half days),
+            we see different amounts of that sunny half. Rocky likes to say: the Moon isn't changing, we're just
+            peeking at it from a new spot!
+          </p>
+        )}
+      </div>
     </div>
   );
 }
