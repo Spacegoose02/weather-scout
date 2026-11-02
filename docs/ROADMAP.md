@@ -69,8 +69,8 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Health: wet-bulb globe temperature | ✅ Shade WBGT now and 24-hour peak, with heat-stress flag advice. Full-sun WBGT needs solar radiation, later |
 | Golden hour: planets and Moon | 🚧 Moon phase, % lit and next full/new Moon on the Today card's Health & sky tile and in the Kid Zone's Sky watch (`server/src/sky.js`, also in `/api/connect/summary`). Next: moonrise/moonset and bright planets |
 | Custom dashboards (pin, hide, rearrange widgets) | Drag-and-drop layout saved per user |
-| Android APK | Wrap the PWA with a Trusted Web Activity (Bubblewrap) once push works |
-| Windows 11 widget | PWA widgets (Windows supports them for installed PWAs) |
+| Android APK | ✅ Trusted Web Activity in `android/`, built by the *Android app* GitHub Actions workflow (run it or publish a release). Full screen once `ANDROID_CERT_SHA256` is set. See docs/APPS.md |
+| Windows 11 widget | ✅ "Weather Scout today" Widgets board card (manifest `widgets`, Adaptive Card in `web/public/widgets/`, data from `/api/widget/summary`). Needs the PWABuilder Windows package. See docs/APPS.md |
 
 ## Phase 3: Pro and AI features
 

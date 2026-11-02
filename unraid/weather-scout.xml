@@ -26,6 +26,7 @@
   <Config Name="SSO logout URL" Target="SSO_LOGOUT_URL" Default="" Description="e.g. https://auth.example.com/logout" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="Secure cookies" Target="SECURE_COOKIES" Default="false" Description="true when served over https" Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
   <Config Name="Push alerts" Target="PUSH_ENABLED" Default="true" Description="Phone and desktop notifications for NWS alerts. Needs an https address (reverse proxy)." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="Android app fingerprint" Target="ANDROID_CERT_SHA256" Default="" Description="Signing fingerprint of your Weather Scout Android app, so it opens full screen (docs/APPS.md)" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="Road cameras" Target="CAMERAS_DEFAULT_FEEDS" Default="true" Description="Built-in camera feeds: true (VA, SC, MD, KY, plus NC with its key), false, or a list like va,md,nc" Type="Variable" Display="always" Required="false" Mask="false">true</Config>
   <Config Name="DriveNC API key" Target="NC_DRIVENC_API_KEY" Default="" Description="Free key from drivenc.gov to show North Carolina cameras" Type="Variable" Display="always" Required="false" Mask="true"></Config>
   <Config Name="511NY API key" Target="NY511_API_KEY" Default="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>

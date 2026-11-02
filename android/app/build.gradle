@@ -1,0 +1,73 @@
+// Weather Scout Android app (Trusted Web Activity). Build settings come from
+// Gradle properties so one project works for every family's server:
+//
+//   ./gradlew assembleRelease -PwsUrl=https://weather.example.com
+//
+//   wsUrl          your Weather Scout address (https, required)
+//   wsAppName      launcher name (default "Weather Scout")
+//   wsPackageName  Android package id (default app.weatherscout.android;
+//                  must match ANDROID_PACKAGE_NAME on the server)
+//   wsVersionCode / wsVersionName
+//
+// Release signing reads WS_KEYSTORE_FILE, WS_KEYSTORE_PASSWORD, WS_KEY_ALIAS and
+// WS_KEY_PASSWORD from the environment. Keys never go in the repository.
+plugins {
+    id 'com.android.application'
+}
+
+def prop = { String name, String fallback -> project.findProperty(name)?.toString()?.trim() ?: fallback }
+
+def wsUrl = new URI(prop('wsUrl', 'https://weather-scout.example.com').replaceAll('/+$', ''))
+if (wsUrl.scheme != 'https') throw new GradleException("wsUrl must start with https:// (got ${wsUrl}). GPS and alerts need https.")
+def origin = "https://${wsUrl.host}${wsUrl.port > 0 && wsUrl.port != 443 ? ":${wsUrl.port}" : ''}"
+def launchUrl = "${origin}${wsUrl.path ?: ''}/"
+def packageId = prop('wsPackageName', 'app.weatherscout.android')
+def signing = System.getenv('WS_KEYSTORE_FILE')
+
+android {
+    namespace 'app.weatherscout.android'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId packageId
+        minSdk 23
+        targetSdk 35
+        versionCode prop('wsVersionCode', '1').toInteger()
+        versionName prop('wsVersionName', '0.1.0')
+
+        manifestPlaceholders = [hostName: wsUrl.host]
+        resValue 'string', 'appName', prop('wsAppName', 'Weather Scout')
+        resValue 'string', 'launchUrl', launchUrl
+        // Tells Android this app and the server trust each other. The server
+        // answers back from /.well-known/assetlinks.json.
+        resValue 'string', 'assetStatements',
+            "[{ \\\"relation\\\": [\\\"delegate_permission/common.handle_all_urls\\\"], \\\"target\\\": {\\\"namespace\\\": \\\"web\\\", \\\"site\\\": \\\"${origin}\\\"}}]"
+    }
+
+    signingConfigs {
+        if (signing) {
+            release {
+                storeFile file(signing)
+                storePassword System.getenv('WS_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('WS_KEY_ALIAS')
+                keyPassword System.getenv('WS_KEY_PASSWORD') ?: System.getenv('WS_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (signing) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}

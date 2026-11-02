@@ -101,6 +101,12 @@ To get https on Unraid, put Weather Scout behind a reverse proxy, for example:
 
 Behind https, also set `SECURE_COOKIES=true`.
 
+### Android app and Windows 11 widget
+
+Once you have https, GitHub Actions can build an **Android app** (APK) that opens your server
+full screen, and Windows 11 can show a **Weather Scout today** card on the Widgets board.
+Setup, signing keys and install steps are in [docs/APPS.md](docs/APPS.md).
+
 ## Keys and private data
 
 Nothing secret lives in this repository.

@@ -1,0 +1,37 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "ColumnSet",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "auto",
+          "verticalContentAlignment": "Center",
+          "items": [{ "type": "Image", "url": "${rockyUrl}", "size": "Medium", "altText": "Rocky the raccoon" }]
+        },
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            { "type": "TextBlock", "text": "${place}", "size": "Small", "isSubtle": true, "wrap": true },
+            { "type": "TextBlock", "text": "${temp}", "size": "ExtraLarge", "weight": "Bolder", "spacing": "None" },
+            { "type": "TextBlock", "text": "${label}", "weight": "Bolder", "spacing": "None", "wrap": true }
+          ]
+        }
+      ]
+    },
+    { "type": "TextBlock", "text": "${hiLo}", "wrap": true, "spacing": "Small" },
+    { "type": "TextBlock", "text": "${rain}", "wrap": true, "spacing": "None", "isSubtle": true, "$when": "${rain != ''}" },
+    { "type": "TextBlock", "text": "${alert}", "wrap": true, "color": "Attention", "weight": "Bolder", "$when": "${hasAlert}" },
+    { "type": "TextBlock", "text": "${playground}", "wrap": true, "spacing": "Small", "$when": "${playground != ''}" },
+    { "type": "TextBlock", "text": "${tip}", "wrap": true, "spacing": "None", "$when": "${tip != ''}" },
+    { "type": "TextBlock", "text": "Updated {{TIME(${updatedAt})}}", "size": "Small", "isSubtle": true, "spacing": "Small" }
+  ],
+  "actions": [
+    { "type": "Action.Execute", "title": "Open Weather Scout", "verb": "open" },
+    { "type": "Action.Execute", "title": "Refresh", "verb": "refresh" }
+  ]
+}
