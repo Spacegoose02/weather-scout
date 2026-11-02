@@ -19,12 +19,14 @@ import ModelsView from './components/ModelsView.jsx';
 import PushAlerts from './components/PushAlerts.jsx';
 import RockyFace from './components/RockyFace.jsx';
 import AskExpert from './components/AskExpert.jsx';
+import Learn from './components/learn/Learn.jsx';
 import { configureVoice } from './kid/speak.js';
 
 const TABS = [
   ['today', 'Today', '🌤️'],
   ['map', 'Radar & Cams', '🗺️'],
   ['kids', 'Kid Zone', <RockyFace key="rocky" />],
+  ['learn', 'Learn', '🎓'],
   ['models', 'Models', '📊'],
   ['news', 'News & Videos', '📰'],
 ];
@@ -149,6 +151,7 @@ export default function App() {
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} />}
             {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} voice={voice} />}
+            {weather && tab === 'learn' && <Learn weather={weather} location={location} kidMode={kidMode} />}
             {tab === 'models' && location && <ModelsView location={location} units={units} />}
             {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} voice={voice} />}
             {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} />}
