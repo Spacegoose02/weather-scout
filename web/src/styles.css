@@ -325,3 +325,47 @@ h3 { font-size: 1rem; margin: 18px 0 8px; }
 .legend-row .key.speed { background: #2a78d6; } .legend-row .key.gust { background: #eb6834; }
 @media (prefers-color-scheme: dark) { .wind-chart .speed, .legend-row .key.speed { stroke: #3987e5; background: #3987e5; } .wind-chart .gust { stroke: #d95926; } .legend-row .key.gust { background: #d95926; } }
 @media (max-width: 600px) { .strip-row { grid-template-columns: 56px 1fr; } .strip-read { margin-left: 64px; } }
+/* Models tab (categorical slots validated in both themes; see dataviz palette) */
+:root { --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100; --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948; }
+@media (prefers-color-scheme: dark) {
+  :root { --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767; }
+}
+.models { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+.models > .card { min-width: 0; }
+.models h2 { margin: 0 0 8px; font-size: 1.1rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card); color: var(--ink); border: 1px solid var(--line); padding: 6px 10px; font-weight: 700; }
+.chip i { width: 14px; height: 4px; border-radius: 2px; }
+.chip.off { opacity: 0.45; text-decoration: line-through; }
+.ens-pick { margin-left: auto; font-weight: 700; font-size: 0.9rem; }
+.ens-pick select { padding: 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+.lb-chart { position: relative; width: 100%; }
+.lb-chart svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.lb-chart .grid { stroke: var(--line); stroke-width: 1; }
+.lb-chart .axis { font-size: 11px; fill: var(--muted); }
+.lb-chart .series { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.lb-chart .band { fill: var(--muted); opacity: 0.18; }
+.lb-chart .band-mid { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.lb-chart .cross { stroke: var(--muted); stroke-width: 1; }
+.lb-chart .hover-dot { stroke: var(--card); stroke-width: 2; }
+.chart-tip { position: absolute; top: 6px; transform: translateX(-50%); pointer-events: none; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); padding: 8px 10px; font-size: 0.82rem; min-width: 150px; z-index: 5; }
+.tip-row { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tip-row i { width: 10px; height: 3px; border-radius: 2px; display: inline-block; }
+.tip-row b { margin-left: auto; padding-left: 8px; }
+.band-key { background: var(--muted); opacity: 0.4; height: 8px !important; }
+.agree-row { display: grid; gap: 4px; margin: 6px 0 0 36px; }
+.agree-cell { display: grid; justify-items: center; gap: 2px; font-size: 0.78rem; }
+.agree { font-weight: 800; padding: 2px 6px; border-radius: 8px; }
+.agree.hi { background: color-mix(in srgb, var(--good) 18%, transparent); }
+.agree.mid { background: color-mix(in srgb, var(--warn) 22%, transparent); }
+.agree.lo { background: color-mix(in srgb, var(--bad) 18%, transparent); }
+.agree-rain { color: var(--muted); }
+.table-scroll { overflow-x: auto; }
+.model-table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+.model-table th, .model-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.model-table thead th { font-size: 0.8rem; color: var(--muted); }
+.model-table .key { display: inline-block; width: 12px; height: 4px; border-radius: 2px; vertical-align: middle; }
+.model-notes { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: 0.88rem; display: grid; gap: 2px; }
+@media (max-width: 600px) { .agree-row { margin-left: 0; } .agree-cell .agree { font-size: 0.72rem; padding: 1px 5px; } .agree-cell { font-size: 0.66rem; } .ens-pick { margin-left: 0; } }
+.agree .short { display: none; }
+@media (max-width: 600px) { .agree .long, .agree-rain .long { display: none; } .agree .short { display: inline; } }
