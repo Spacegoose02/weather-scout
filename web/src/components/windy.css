@@ -1,0 +1,21 @@
+/* Windy full-screen map (WindyView.jsx). Sits above the full-screen radar. */
+.windy-btn { margin-left: auto; }
+.windy-btn + .full-btn { margin-left: 0; }
+.windy-sheet { position: fixed; inset: 0; z-index: 3500; display: flex; flex-direction: column; background: #0f1420; color: #fff; }
+.windy-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 12px; background: #161d2c; }
+.windy-bar button { background: #2a3550; color: #fff; border: 0; border-radius: 999px; padding: 6px 12px; font-weight: 600; }
+.windy-bar button.on { background: #2a78d6; }
+.windy-bar .radar-exit { margin-left: auto; }
+.windy-bar select { background: #2a3550; color: #fff; border: 0; border-radius: 8px; padding: 4px 6px; }
+.windy-layers { display: flex; gap: 6px; overflow-x: auto; max-width: 100%; scrollbar-width: thin; }
+.windy-layers button { white-space: nowrap; }
+.windy-kid { margin: 0; padding: 6px 14px; font-size: 0.92rem; background: #1b2438; }
+.windy-frame { flex: 1; width: 100%; border: 0; display: block; }
+.windy-loading { margin: auto; }
+.windy-credit { margin: 0; padding: 4px 12px; font-size: 0.75rem; opacity: 0.75; }
+.windy-credit a { color: #9cc7ff; }
+@media (max-width: 600px) {
+  .windy-bar { padding: 6px 8px; }
+  .windy-layers { order: 3; flex-basis: 100%; }
+  .windy-kid { font-size: 0.85rem; }
+}
