@@ -61,9 +61,9 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Ocean data | ✅ NOAA NDBC buoys on the map (waves, water temperature, wind) and a Tides card with the next highs and lows from the nearest CO-OPS station within 60 miles |
 | Live lightning | Strike markers with age rings and distance from you (source TBD: Blitzortung community feed or a paid API) |
 | Radar precipitation type and storm cell tracks | 🚧 Full-screen radar adds single-site NEXRAD (super-res), echo tops, MRMS 1 h / 24 h rain, HRRR future radar, nationwide warning polygons and SPC Day 1-3 outlooks. Rain/snow/mix and storm tracks still to come |
-| Local and national weather news, RSS feeds | ✅ News & Videos tab, admin-managed RSS/Atom list (NWS office, local TV) |
-| YouTube weather gurus | ✅ Admin-curated channels (paste a link or @handle), latest videos play in the app |
-| Admin can edit news and YouTube lists | ✅ Family & settings |
+| Local and national weather news, RSS feeds | ✅ News & Videos tab with Local / National / Videos filters. Your NWS office's Hazardous Weather Outlook, forecast discussion and public statements appear automatically; admin-managed RSS/Atom feeds are marked local or national, with one-click free NOAA and NASA sources. Kid Mode shows only kid-safe feeds and skips stories about deaths or injuries |
+| YouTube weather gurus | ✅ Admin-curated channels, playlists and pinned single videos (paste a link or @handle); they play in the app via youtube-nocookie |
+| Admin can edit news and YouTube lists | ✅ Family & settings: rename, local/national, kid-safe, pause, reorder, remove, and hide single stories or videos for everyone |
 | Health: barometric pressure warnings | ✅ Health & sky card flags 4+ hPa (watch) and 6+ hPa (big swing) changes within 6 hours. Push alerts come with notifications |
 | Health: pollen & particulates | 🚧 Air & UV card on Today: AQI per pollutant (PM2.5, PM10, ozone, NO₂) and the main pollutant, a 48-hour AQI and UV strip and a sunscreen window. Pollen shows where Open-Meteo has it (Europe); a US source still needs a key (Google Pollen API, Tomorrow.io) |
 | Health: wet-bulb globe temperature | ✅ Shade WBGT now and 24-hour peak, with heat-stress flag advice. Full-sun WBGT needs solar radiation, later |
@@ -71,6 +71,10 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Custom dashboards (pin, hide, rearrange widgets) | ✅ Today is now a dashboard of 17 cards (forecast, radar, cameras, alerts, tides, why-lessons, Rocky, Den-Duty board, journal, stargazing…). Signed-in people add, hide, drag to reorder and resize (S/M/L) cards, saved per user on the server. Guests see a sensible default, and an admin can make their layout the guest default |
 | Android APK | Wrap the PWA with a Trusted Web Activity (Bubblewrap) once push works |
 | Windows 11 widget | PWA widgets (Windows supports them for installed PWAs) |
+| Golden hour: planets and Moon | 🚧 Moon phase, % lit and next full/new Moon on the Today card's Health & sky tile and in the Kid Zone's Sky watch (`server/src/sky.js`, also in `/api/connect/summary`). Next: moonrise/moonset and bright planets |
+| Custom dashboards (pin, hide, rearrange widgets) | Drag-and-drop layout saved per user |
+| Android APK | ✅ Trusted Web Activity in `android/`, built by the *Android app* GitHub Actions workflow (run it or publish a release). Full screen once `ANDROID_CERT_SHA256` is set. See docs/APPS.md |
+| Windows 11 widget | ✅ "Weather Scout today" Widgets board card (manifest `widgets`, Adaptive Card in `web/public/widgets/`, data from `/api/widget/summary`). Needs the PWABuilder Windows package. See docs/APPS.md |
 
 ## Phase 3: Pro and AI features
 

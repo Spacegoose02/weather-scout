@@ -61,6 +61,12 @@ export function loadConfig(env = process.env) {
       voice: env.KOKORO_VOICE || 'af_heart',
       speed: Math.min(2, Math.max(0.5, num(env.KOKORO_SPEED, 1))),
     },
+    // Android app (Trusted Web Activity) link. Fingerprints come from the APK's
+    // signing key; see docs/APPS.md. Comma-separated if you sign with more than one.
+    android: {
+      packageName: env.ANDROID_PACKAGE_NAME || 'app.weatherscout.android',
+      certFingerprints: String(env.ANDROID_CERT_SHA256 || '').split(/[\s,]+/).map((f) => f.trim().toUpperCase()).filter(Boolean),
+    },
     camerasFile: env.CAMERAS_FILE || path.join(dataDir, 'cameras.json'),
     env,
   };

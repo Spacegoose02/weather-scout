@@ -44,8 +44,11 @@ from free, official data sources.
   seasons photo tracker, badges, and a calm storm-safe mode during warnings.
 - **Profiles**: local username sign-in, tinyauth SSO, and admins can link an SSO identity to a
   username. Saved places, units and Kid Mode follow you between devices.
-- **News & Videos**: weather news from RSS feeds and the latest videos from YouTube channels the
-  admin picks (paste a channel link or @handle in *Family & settings*).
+- **News & Videos**: local and national weather news. Your NWS office's outlook, forecast
+  discussion and public statements show up on their own; admins add RSS feeds (local TV, NOAA,
+  NASA, with one-click suggestions) and YouTube channels, playlists or single videos in
+  *Family & settings*, mark each local or national and kid-safe, reorder, pause, and hide single
+  stories. Kid Mode shows only kid-safe sources and skips stories about deaths or injuries.
 - **Severe weather alerts on your phone**: tap 🔔 to get a push notification when the NWS issues a
   warning, watch or advisory for your place, even with the app closed. Needs an https address
   (behind your reverse proxy); on iPhone, add Weather Scout to the Home Screen first.
@@ -104,6 +107,12 @@ To get https on Unraid, put Weather Scout behind a reverse proxy, for example:
 - **Cloudflare Tunnel** (`cloudflared`): a public https hostname without opening ports.
 
 Behind https, also set `SECURE_COOKIES=true`.
+
+### Android app and Windows 11 widget
+
+Once you have https, GitHub Actions can build an **Android app** (APK) that opens your server
+full screen, and Windows 11 can show a **Weather Scout today** card on the Widgets board.
+Setup, signing keys and install steps are in [docs/APPS.md](docs/APPS.md).
 
 ## Keys and private data
 

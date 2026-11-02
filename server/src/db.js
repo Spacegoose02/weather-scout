@@ -57,7 +57,30 @@ CREATE TABLE IF NOT EXISTS media_feeds (
   position INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS media_hidden (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  link TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL DEFAULT '',
+  hidden_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;
+
+// Columns added after the first release. SQLite has no ADD COLUMN IF NOT EXISTS.
+const ADDED_COLUMNS = {
+  media_feeds: [
+    ['scope', "TEXT NOT NULL DEFAULT 'national'"], // local | national
+    ['kid_safe', 'INTEGER NOT NULL DEFAULT 1'], // shown in Kid Mode
+    ['enabled', 'INTEGER NOT NULL DEFAULT 1'],
+    ['yt_type', "TEXT NOT NULL DEFAULT 'channel'"], // channel | playlist | video (YouTube only)
+  ],
+};
+
+function migrate(db) {
+  for (const [table, cols] of Object.entries(ADDED_COLUMNS)) {
+    const have = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name));
+    for (const [name, def] of cols) if (!have.has(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${def}`);
+  }
+}
 
 export function openDb(dataDir) {
   let file = ':memory:';
@@ -69,6 +92,7 @@ export function openDb(dataDir) {
   db.exec('PRAGMA foreign_keys = ON;');
   if (file !== ':memory:') db.exec('PRAGMA journal_mode = WAL;');
   db.exec(SCHEMA);
+  migrate(db);
   return db;
 }
 

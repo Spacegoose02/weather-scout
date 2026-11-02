@@ -9,7 +9,9 @@ export default function Admin({ me, onClose }) {
   const [newKey, setNewKey] = useState(null);
   const [keyName, setKeyName] = useState('Den-Duty');
   const [media, setMedia] = useState([]);
-  const [mediaForm, setMediaForm] = useState({ kind: 'youtube', url: '', title: '' });
+  const [mediaForm, setMediaForm] = useState({ kind: 'youtube', url: '', title: '', scope: 'national', kidSafe: true });
+  const [suggestions, setSuggestions] = useState([]);
+  const [hidden, setHidden] = useState([]);
   const [error, setError] = useState('');
   const [form, setForm] = useState({ username: '', displayName: '', password: '', ssoSubject: '', isAdmin: false });
 
@@ -18,6 +20,8 @@ export default function Admin({ me, onClose }) {
       setUsers((await api('/api/admin/users')).users);
       setKeys((await api('/api/admin/app-keys')).keys);
       setMedia((await api('/api/admin/media')).feeds);
+      setSuggestions((await api('/api/admin/media-suggestions')).suggestions);
+      setHidden((await api('/api/admin/media-hidden')).hidden);
       setFeeds((await api('/api/admin/cameras')).feeds);
     } catch (e) {
       setError(e.message);
@@ -119,20 +123,51 @@ export default function Admin({ me, onClose }) {
       </form>
 
       <h3>News & videos</h3>
-      <p className="hint">Weather news feeds (RSS or Atom, such as your NWS office or local TV station) and YouTube channels for the News & Videos tab. For YouTube, paste the channel link or its @handle.</p>
+      <p className="hint">
+        Your local NWS office shows up on its own. Add more: RSS or Atom news feeds (local TV, NOAA, NASA) and YouTube channels,
+        playlists or single videos (paste the link or @handle). Mark each one local or national, and untick <em>kids</em> to keep
+        it out of Kid Mode. Kid Mode also skips any story about deaths or injuries.
+      </p>
       {media.length > 0 && (
-        <ul className="feeds">
-          {media.map((m) => (
-            <li key={m.id}>
-              {m.kind === 'youtube' ? '▶️' : '📰'} {m.title} <a href={m.url} target="_blank" rel="noopener noreferrer" className="hint">{m.kind === 'youtube' ? 'channel' : 'feed'}</a>{' '}
-              <button className="link danger" onClick={() => confirm(`Remove ${m.title}?`) && act(() => api(`/api/admin/media/${m.id}`, { method: 'DELETE' }))}>remove</button>
-            </li>
-          ))}
-        </ul>
+        <table className="users media-admin">
+          <thead><tr><th /><th>Name</th><th>Section</th><th>Kids</th><th>On</th><th /></tr></thead>
+          <tbody>
+            {media.map((m, i) => {
+              const patch = (body) => act(() => api(`/api/admin/media/${m.id}`, { method: 'PATCH', body }));
+              const sameKind = (j) => media[j]?.kind === m.kind;
+              return (
+                <tr key={m.id}>
+                  <td title={m.kind === 'youtube' ? `YouTube ${m.ytType}` : 'News feed'}>
+                    <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                      {m.kind === 'rss' ? '📰' : m.ytType === 'video' ? '🎬' : m.ytType === 'playlist' ? '📼' : '▶️'}
+                    </a>
+                  </td>
+                  <td>
+                    <input type="text" defaultValue={m.title} maxLength={80} aria-label="Name" style={m.enabled ? undefined : { opacity: 0.55 }}
+                      onBlur={(e) => e.target.value.trim() && e.target.value !== m.title && patch({ title: e.target.value })} />
+                  </td>
+                  <td>
+                    <select value={m.scope} onChange={(e) => patch({ scope: e.target.value })} aria-label="Section">
+                      <option value="local">Local</option>
+                      <option value="national">National</option>
+                    </select>
+                  </td>
+                  <td><input type="checkbox" checked={m.kidSafe} onChange={(e) => patch({ kidSafe: e.target.checked })} aria-label="Show in Kid Mode" /></td>
+                  <td><input type="checkbox" checked={m.enabled} onChange={(e) => patch({ enabled: e.target.checked })} aria-label="Turned on" /></td>
+                  <td className="row-actions">
+                    <button className="link" disabled={!sameKind(i - 1)} onClick={() => patch({ move: 'up' })} aria-label="Move up">▲</button>
+                    <button className="link" disabled={!sameKind(i + 1)} onClick={() => patch({ move: 'down' })} aria-label="Move down">▼</button>
+                    <button className="link danger" onClick={() => confirm(`Remove ${m.title}?`) && act(() => api(`/api/admin/media/${m.id}`, { method: 'DELETE' }))}>remove</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       )}
       <form className="form inline" onSubmit={(e) => {
         e.preventDefault();
-        const body = { kind: mediaForm.kind, url: mediaForm.url };
+        const body = { kind: mediaForm.kind, url: mediaForm.url, scope: mediaForm.scope, kidSafe: mediaForm.kidSafe };
         if (mediaForm.title) body.title = mediaForm.title;
         act(async () => {
           await api('/api/admin/media', { method: 'POST', body });
@@ -140,13 +175,44 @@ export default function Admin({ me, onClose }) {
         });
       }}>
         <select value={mediaForm.kind} onChange={(e) => setMediaForm({ ...mediaForm, kind: e.target.value })} aria-label="Type">
-          <option value="youtube">YouTube channel</option>
+          <option value="youtube">YouTube channel, playlist or video</option>
           <option value="rss">News feed (RSS)</option>
         </select>
-        <input placeholder={mediaForm.kind === 'youtube' ? 'youtube.com/@channel' : 'https://…/rss'} value={mediaForm.url} onChange={(e) => setMediaForm({ ...mediaForm, url: e.target.value })} required />
+        <input placeholder={mediaForm.kind === 'youtube' ? 'youtube.com/@channel or a video link' : 'https://…/rss'} value={mediaForm.url} onChange={(e) => setMediaForm({ ...mediaForm, url: e.target.value })} required />
         <input placeholder="Name (optional)" value={mediaForm.title} onChange={(e) => setMediaForm({ ...mediaForm, title: e.target.value })} maxLength={80} />
+        <select value={mediaForm.scope} onChange={(e) => setMediaForm({ ...mediaForm, scope: e.target.value })} aria-label="Section">
+          <option value="local">Local</option>
+          <option value="national">National</option>
+        </select>
+        <label><input type="checkbox" checked={mediaForm.kidSafe} onChange={(e) => setMediaForm({ ...mediaForm, kidSafe: e.target.checked })} /> kids</label>
         <button type="submit">Add</button>
       </form>
+      {suggestions.some((s) => !s.added) && (
+        <>
+          <p className="hint"><strong>Free sources to try:</strong></p>
+          <ul className="feeds">
+            {suggestions.filter((s) => !s.added).map((s) => (
+              <li key={s.url}>
+                📰 {s.title} <span className="hint">({s.note}{s.kidSafe ? '' : ', grown-ups only'})</span>{' '}
+                <button className="link" onClick={() => act(() => api('/api/admin/media', { method: 'POST', body: { kind: s.kind, url: s.url, title: s.title, scope: s.scope, kidSafe: s.kidSafe } }))}>add</button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {hidden.length > 0 && (
+        <>
+          <p className="hint"><strong>Hidden stories and videos</strong> (hidden for everyone):</p>
+          <ul className="feeds">
+            {hidden.map((h) => (
+              <li key={h.id}>
+                🙈 <a href={h.link} target="_blank" rel="noopener noreferrer">{h.title || h.link}</a>{' '}
+                <button className="link" onClick={() => act(() => api(`/api/admin/media-hidden/${h.id}`, { method: 'DELETE' }))}>bring back</button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <h3>Camera feeds</h3>
       {feeds.length === 0 ? (

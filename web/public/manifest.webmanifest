@@ -1,14 +1,59 @@
 {
+  "id": "/",
   "name": "Weather Scout",
   "short_name": "Weather Scout",
   "description": "Rocky the raccoon's kid-friendly weather station for the whole family.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#eef4ff",
   "theme_color": "#2f6fde",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "widgets": [
+    {
+      "name": "Weather Scout today",
+      "short_name": "Today",
+      "description": "Rocky's weather for today: temperature, rain chance, alerts and what to wear.",
+      "tag": "today",
+      "template": "today",
+      "ms_ac_template": "/widgets/today.json",
+      "data": "/api/widget/summary",
+      "type": "application/json",
+      "screenshots": [
+        {
+          "src": "/widgets/today-screenshot.png",
+          "sizes": "600x400",
+          "label": "The Weather Scout today widget"
+        }
+      ],
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ],
+      "auth": false,
+      "update": 900,
+      "multiple": false
+    }
   ]
 }
