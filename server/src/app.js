@@ -12,6 +12,9 @@ import { CameraService } from './providers/cameras/index.js';
 import * as openMeteo from './providers/openmeteo.js';
 import * as nws from './providers/nws.js';
 import { radarFrames } from './providers/radar.js';
+import * as tropics from './providers/tropics.js';
+import * as ocean from './providers/ocean.js';
+import * as models from './providers/models.js';
 import { kidReport } from './kid.js';
 import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
@@ -143,6 +146,53 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.get('/api/alerts', { schema: latLonSchema }, async (req) => alerts(loc(req.query)));
   app.get('/api/air', { schema: latLonSchema }, async (req) => air(loc(req.query)));
   app.get('/api/radar', async () => radarFrames());
+
+  // ---- tropics & ocean ---------------------------------------------------------
+  const boxSchema = {
+    querystring: {
+      type: 'object',
+      required: ['south', 'west', 'north', 'east'],
+      properties: {
+        south: { type: 'number', minimum: -90, maximum: 90 }, north: { type: 'number', minimum: -90, maximum: 90 },
+        west: { type: 'number', minimum: -540, maximum: 540 }, east: { type: 'number', minimum: -540, maximum: 540 },
+        units: { type: 'string', enum: ['imperial', 'metric'] },
+      },
+    },
+  };
+  const wrapLon = (x) => ((((x + 180) % 360) + 360) % 360) - 180;
+  app.get('/api/tropics', async () => cache.wrap('tropics', 15 * MIN, () => tropics.getStorms(fetchImpl, { log: app.log })));
+  app.get('/api/buoys', { schema: boxSchema }, async (req) => {
+    const q = req.query;
+    const units = q.units || cfg.units;
+    const all = await cache.wrap(`buoys:${units}`, 15 * MIN, () => ocean.getBuoys(units, fetchImpl));
+    const wide = q.east - q.west >= 360;
+    const box = { south: q.south, north: q.north, west: wide ? -180 : wrapLon(q.west), east: wide ? 180 : wrapLon(q.east) };
+    const r = ocean.inBox(all, box);
+    return { buoys: r.items, total: r.total, truncated: r.truncated, units, source: 'NOAA National Data Buoy Center' };
+  });
+  app.get('/api/tides', { schema: latLonSchema }, async (req) => {
+    const l = loc(req.query);
+    const stations = await cache.wrap('tide-stations', 24 * 60 * MIN, () => ocean.getTideStations(fetchImpl));
+    const near = ocean.nearestStation(stations, l);
+    if (!near) return { station: null };
+    const fc = await settle(forecast(l));
+    const nowLocal = new Date(Date.now() + (fc?.utcOffsetSeconds || 0) * 1000).toISOString().slice(0, 16);
+    const { events, ...t } = await cache.wrap(`tide:${near.id}:${l.units}`, 60 * MIN, () => ocean.getTides(l, stations, fetchImpl));
+    return { ...t, station: near, ...ocean.upcomingTides(events, nowLocal), source: 'NOAA Tides & Currents' };
+  });
+
+  // ---- model comparison & ensemble confidence ---------------------------------
+  app.get('/api/models', { schema: latLonSchema }, async (req) => {
+    const l = loc(req.query);
+    return cache.wrap(key('models', l), 30 * MIN, () => models.getModels(l, fetchImpl));
+  });
+  app.get('/api/ensemble', {
+    schema: { querystring: { ...latLonSchema.querystring, properties: { ...latLonSchema.querystring.properties, model: { type: 'string', enum: models.ENSEMBLES.map((e) => e.id) } } } },
+  }, async (req) => {
+    const l = loc(req.query);
+    const id = req.query.model || models.ENSEMBLES[0].id;
+    return cache.wrap(key(`ens:${id}`, l), 60 * MIN, () => models.getEnsemble(l, id, fetchImpl));
+  });
 
   // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----
   registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });

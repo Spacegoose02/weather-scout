@@ -21,6 +21,7 @@ export default function Raccoon({ items = [], mood = 'happy', size = 220 }) {
   const shirt = has('t-shirt') && !coat;
   const hat = has('beanie') ? 'beanie' : has('sun-hat') ? 'sun-hat' : has('raincoat') ? 'rain-hat' : null;
   const boots = has('snow-boots') ? 'snow' : has('boots') ? 'rain' : null;
+  const bottoms = ['pants', 'shorts', 'swim-trunks'].find(has);
   const label = `Rocky the raccoon wearing ${items.length ? items.join(', ') : 'nothing special'}`;
 
   return (
@@ -35,6 +36,7 @@ export default function Raccoon({ items = [], mood = 'happy', size = 220 }) {
       <g className="rocky">
         <image href="/rocky/rocky.webp" x={BODY.x} y={BODY.y} width={BODY.w} height={BODY.h} />
 
+        {bottoms && <Bottoms kind={bottoms} />}
         {shirt && <Shirt />}
         {coat && <Coat {...coat} kind={coatKey} />}
         {has('winter-coat') && <Scarf />}
@@ -89,6 +91,41 @@ function Shirt() {
         {...line}
       />
       <path d="M472 540 l40 -26 l40 26 l-40 40z" fill="#ffd23f" stroke={INK} strokeWidth="4" strokeLinejoin="round" />
+    </g>
+  );
+}
+
+// Drawn under the shirt and coat so their hems cover the waistband.
+const PANTS = 'M378 636 L354 770 L358 890 L498 890 L512 742 L526 890 L666 890 L670 770 L646 636 Q512 652 378 636 Z';
+const SHORTS = 'M378 636 L358 786 L500 792 L512 736 L524 792 L666 786 L646 636 Q512 652 378 636 Z';
+
+function Bottoms({ kind }) {
+  if (kind === 'pants') {
+    return (
+      <g className="pants">
+        <path d={PANTS} fill="#3d5a99" {...line} />
+        <path d="M430 700 L428 880 M594 700 L596 880" stroke="#2c437a" strokeWidth="5" />
+        <path d="M378 636 Q512 652 646 636" stroke="#2c437a" strokeWidth="14" fill="none" />
+      </g>
+    );
+  }
+  const swim = kind === 'swim-trunks';
+  return (
+    <g className={swim ? 'swim-trunks' : 'shorts'}>
+      <path d={SHORTS} fill={swim ? '#19b5a5' : '#c8a06a'} {...line} />
+      {swim ? (
+        <>
+          {[[420, 700], [600, 690], [460, 760], [580, 765], [512, 690]].map(([x, y]) => (
+            <g key={`${x}${y}`} transform={`translate(${x} ${y})`}>
+              {[0, 72, 144, 216, 288].map((a) => <ellipse key={a} cx="0" cy="-11" rx="7" ry="11" fill="#ffd23f" transform={`rotate(${a})`} />)}
+              <circle r="6" fill="#ff7a59" />
+            </g>
+          ))}
+          <path d="M500 652 q-10 30 -22 40 M524 652 q10 30 22 40" stroke="#f1faee" strokeWidth="6" fill="none" strokeLinecap="round" />
+        </>
+      ) : (
+        <path d="M410 700 h50 M564 700 h50" stroke="#a07c48" strokeWidth="6" strokeLinecap="round" />
+      )}
     </g>
   );
 }
