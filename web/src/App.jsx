@@ -13,6 +13,7 @@ import PushAlerts from './components/PushAlerts.jsx';
 import RockyFace from './components/RockyFace.jsx';
 import AskExpert from './components/AskExpert.jsx';
 import Learn from './components/learn/Learn.jsx';
+import Ocean from './components/ocean/Ocean.jsx';
 import Dashboard from './components/dashboard/Dashboard.jsx';
 import SafetyCenter from './components/safety/SafetyCenter.jsx';
 import { BadgeCelebration } from './components/kid/Badges.jsx';
@@ -28,6 +29,7 @@ const TABS = [
   ['map', 'Radar & Cams', '🗺️'],
   ['kids', 'Kid Zone', <RockyFace key="rocky" />],
   ['learn', 'Learn', '🎓'],
+  ['ocean', 'Ocean', '🌊'],
   ['models', 'Models', '📊'],
   ['news', 'News & Videos', '📰'],
 ];
@@ -136,7 +138,7 @@ export default function App() {
           {weather && <AlertsBanner alerts={weather.alerts} kidMode={kidMode} />}
 
           <main>
-            {!weather && !error && tab !== 'news' && tab !== 'ask' && tab !== 'models' && <div className="card skeleton">Fetching the sky…</div>}
+            {!weather && !error && tab !== 'news' && tab !== 'ask' && tab !== 'models' && tab !== 'ocean' && <div className="card skeleton">Fetching the sky…</div>}
             {weather && tab === 'today' && (
               <Dashboard
                 weather={weather}
@@ -153,7 +155,8 @@ export default function App() {
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} layers={prefs.mapLayers} onLayers={(l) => setPrefs({ mapLayers: l })} signedIn={!!user} />}
             {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} voice={voice} onAlerts={() => setModal('alerts')} />}
-            {weather && tab === 'learn' && <Learn weather={weather} location={location} kidMode={kidMode} chasers={chasers} />}
+            {weather && tab === 'learn' && <Learn weather={weather} location={location} kidMode={kidMode} chasers={chasers} onOcean={() => setTab('ocean')} />}
+            {tab === 'ocean' && location && <Ocean location={location} units={units} kidMode={kidMode} ai={config.ai} />}
             {tab === 'models' && location && <ModelsView location={location} units={units} />}
             {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} voice={voice} />}
             {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} kidMode={kidMode} location={location} />}

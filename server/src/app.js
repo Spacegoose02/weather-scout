@@ -19,6 +19,7 @@ import { radarFrames } from './providers/radar.js';
 import * as severe from './providers/severe.js';
 import * as tropics from './providers/tropics.js';
 import * as ocean from './providers/ocean.js';
+import * as discoveries from './providers/discoveries.js';
 import * as models from './providers/models.js';
 import * as modelMaps from './providers/modelmaps.js';
 import { MAP_AREAS, MAP_MODELS, gridFor } from '../../shared/modelmap.js';
@@ -266,6 +267,23 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     const nowLocal = new Date(Date.now() + (fc?.utcOffsetSeconds || 0) * 1000).toISOString().slice(0, 16);
     const { events, ...t } = await cache.wrap(`tide:${near.id}:${l.units}`, 60 * MIN, () => ocean.getTides(l, stations, fetchImpl));
     return { ...t, station: near, ...ocean.upcomingTides(events, nowLocal), source: 'NOAA Tides & Currents' };
+  });
+
+  // ---- ocean section -------------------------------------------------------------
+  // kid=1 drops stories that mention grim things (see kidSafeText in providers/news.js).
+  const oceanFeeds = discoveries.feedsFromEnv(cfg.oceanFeeds);
+  app.get('/api/ocean/discoveries', {
+    schema: { querystring: { type: 'object', properties: { kid: { type: 'string', enum: ['0', '1', 'true', 'false'] } } } },
+  }, async (req) => {
+    const kid = req.query.kid === '1' || req.query.kid === 'true';
+    const all = await cache.wrap('ocean-discoveries', 60 * MIN, () => discoveries.getDiscoveries(oceanFeeds, { fetchImpl }));
+    return { ...all, items: kid ? all.items.filter((i) => i.kidSafe) : all.items };
+  });
+  // The closest ocean buoys (waves and water temperature) to a place, even far inland.
+  app.get('/api/ocean/buoys', { schema: latLonSchema }, async (req) => {
+    const l = loc(req.query);
+    const all = await cache.wrap(`buoys:${l.units}`, 15 * MIN, () => ocean.getBuoys(l.units, fetchImpl));
+    return { buoys: discoveries.nearestBuoys(all, l, tropics.milesBetween), units: l.units, source: 'NOAA National Data Buoy Center' };
   });
 
   // ---- model comparison & ensemble confidence ---------------------------------

@@ -32,6 +32,12 @@ from free, official data sources.
 - **Hurricanes & ocean**: active storms from the National Hurricane Center with forecast cones and
   tracks on the map, NOAA buoys (waves, water temperature, wind), and today's tides when you're near
   the coast.
+- **Ocean** (🌊 tab, made for kids with a grown-up view too): the latest ocean discoveries from NOAA Ocean
+  Exploration, Schmidt Ocean Institute, MBARI and ScienceDaily, with kid-sized summaries, topic tags, "wow
+  word" meanings and read-aloud (and "Rocky, explain it!" when the AI helper is on); a creature of the week
+  from 26 sea animals; a depth explorer that dives from the waves to Challenger Deep through every zone;
+  the nearest live NOAA buoys (waves, water temperature) and tides; and an ocean quiz. Five Ocean explorer
+  badges. Change the news sources with `OCEAN_FEEDS`.
 - **Models**: what ECMWF, GFS, ICON, GEM, HRRR and the AI models GraphCast and AIFS each predict,
   plotted together, with an ensemble confidence band (10th to 90th percentile), a High/Medium/Low
   confidence rating per day and a side-by-side table. Forecast maps show any one model (or two
