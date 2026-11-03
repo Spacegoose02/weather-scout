@@ -58,4 +58,12 @@ describe('speak', () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(synthSpoken.at(-1)).toBe('Device');
   });
+
+  it('stays quiet when Kokoro fails and the admin turned the fallback off', async () => {
+    configureVoice({ enabled: true, fallback: 'off' });
+    globalThis.fetch = vi.fn(async () => ({ ok: false, status: 502 }));
+    speak('Storm steps');
+    await flush(); await flush();
+    expect(synthSpoken).toEqual([]);
+  });
 });

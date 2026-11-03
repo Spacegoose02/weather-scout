@@ -154,14 +154,20 @@ export function pickProvider(ai) {
 
 export class AiService {
   constructor(cfg, { fetchImpl, log } = {}) {
-    this.cfg = cfg.ai;
+    this.fetchImpl = fetchImpl;
     this.log = log;
-    this.provider = pickProvider(this.cfg);
-    this.client = this.provider === 'anthropic'
-      ? new Anthropic({ apiKey: this.cfg.apiKey, fetch: fetchImpl, maxRetries: 1, timeout: 120_000 })
-      : null;
-    this.ollama = this.provider === 'ollama' ? new OllamaClient(this.cfg.ollama, fetchImpl) : null;
     this.usage = new Map(); // who -> { day, n }
+    this.configure(cfg.ai);
+  }
+
+  // Called again when an admin saves new AI settings, so they apply without a restart.
+  configure(ai) {
+    this.cfg = ai;
+    this.provider = pickProvider(ai);
+    this.client = this.provider === 'anthropic'
+      ? new Anthropic({ apiKey: ai.apiKey, fetch: this.fetchImpl, maxRetries: 1, timeout: 120_000 })
+      : null;
+    this.ollama = this.provider === 'ollama' ? new OllamaClient(ai.ollama, this.fetchImpl) : null;
   }
 
   get enabled() {

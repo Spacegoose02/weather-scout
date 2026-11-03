@@ -74,4 +74,7 @@ export function registerTts(app, { cfg, fetchImpl }) {
     }
     return reply.header('content-type', 'audio/mpeg').header('cache-control', 'private, max-age=3600').send(audio);
   });
+
+  // After an admin changes the Kokoro address, forget the old server's voices.
+  return { reset: () => { voiceCache.map.clear(); audioCache.map.clear(); } };
 }

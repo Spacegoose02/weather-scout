@@ -60,6 +60,8 @@ export function loadConfig(env = process.env) {
       url: (env.KOKORO_URL || '').replace(/\/+$/, ''),
       voice: env.KOKORO_VOICE || 'af_heart',
       speed: Math.min(2, Math.max(0.5, num(env.KOKORO_SPEED, 1))),
+      // When Kokoro can't answer: read with the device's own voice, or stay quiet.
+      fallback: env.KOKORO_FALLBACK === 'off' ? 'off' : 'browser',
     },
     // Personal weather stations (Ecowitt, Ambient Weather, Tempest, Weather Underground protocol).
     stations: {

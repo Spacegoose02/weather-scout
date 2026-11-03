@@ -58,7 +58,7 @@ export default function App() {
   const voice = { tts: config?.tts, value: prefs.voice || '', onChange: (v) => setPrefs({ voice: v }) };
 
   // Read-aloud uses the server's Kokoro voice when there is one.
-  useEffect(() => configureVoice({ enabled: config?.tts?.enabled, voice: prefs.voice }), [config?.tts?.enabled, prefs.voice]);
+  useEffect(() => configureVoice({ enabled: config?.tts?.enabled, voice: prefs.voice, fallback: config?.tts?.fallback }), [config?.tts?.enabled, config?.tts?.fallback, prefs.voice]);
 
   const load = useCallback(async () => {
     if (!location) return;
