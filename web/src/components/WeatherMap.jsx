@@ -9,6 +9,8 @@ import { AGE_STEPS, SOURCES, milesToKm } from '../../../shared/lightning.js';
 import '../lightning/lightning.css';
 import LayerPanel from './map/LayerPanel.jsx';
 import { normalizeLayers, alertVisible, anyAlerts, layerCount } from './map/layers.js';
+import { webcamIcon, webcamPopup, WEBCAM_MIN_ZOOM, WEBCAM_REFRESH_MS } from './map/webcams.js';
+import NearbyWebcams from './map/NearbyWebcams.jsx';
 
 window.L = L; // leaflet.markercluster is a classic plugin that extends the global L
 
@@ -57,6 +59,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   const radar = useRef([]);
   const radarMeta = useRef(null);
   const camLayer = useRef(null);
+  const webcamLayer = useRef(null);
   const satLayer = useRef(null);
   const alertLayer = useRef(null);
   const stormLayer = useRef(null);
@@ -81,6 +84,12 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   const [layersOpen, setLayersOpen] = useState(false);
   const [boltInfo, setBoltInfo] = useState('');
   const [camInfo, setCamInfo] = useState('');
+  // Windy webcams: { enabled, attribution } from the server; hidden without a key.
+  const [webcams, setWebcams] = useState(null);
+  const webcamsOn = useRef(false);
+  webcamsOn.current = !!webcams?.enabled && show.webcams;
+  const [webcamInfo, setWebcamInfo] = useState('');
+  const [nearby, setNearby] = useState(false);
   const [windy, setWindy] = useState(null); // { lat, lon, zoom } while the Windy map is open
 
   // Map + radar setup
@@ -108,13 +117,67 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
     const natTimer = setInterval(loadNational, 120_000);
     api('/api/radar/sites').then((r) => !cancelled && setSites(r.sites || [])).catch(() => {});
     api('/api/cameras/feeds').then((r) => !cancelled && setFeeds(r.feeds || [])).catch(() => !cancelled && setFeeds([]));
+    api('/api/webcams/info').then((r) => !cancelled && setWebcams(r)).catch(() => !cancelled && setWebcams({ enabled: false }));
 
     import('leaflet.markercluster').then(() => {
       if (cancelled) return;
       camLayer.current = L.markerClusterGroup({ maxClusterRadius: 45, showCoverageOnHover: false });
       m.addLayer(camLayer.current);
       loadCams();
+      webcamLayer.current = L.markerClusterGroup({ maxClusterRadius: 45, showCoverageOnHover: false, attribution: '<a href="https://www.windy.com/webcams" target="_blank" rel="noopener noreferrer">Webcams provided by Windy.com</a>', iconCreateFunction: (cl) => L.divIcon({ className: 'webcam-cluster', html: `<span>🌄 ${cl.getChildCount()}</span>`, iconSize: [46, 26] }) });
+      loadWebcams();
     });
+
+    // Windy webcams in view. Markers keep the newest copy of each webcam, because
+    // Windy's picture links expire; the list reloads every few minutes while on.
+    let webcamTimer;
+    let webcamRefresh;
+    const webcamMarkers = new Map();
+    const loadWebcams = () => {
+      clearTimeout(webcamTimer);
+      clearTimeout(webcamRefresh);
+      webcamTimer = setTimeout(async () => {
+        const layer = webcamLayer.current;
+        if (!layer) return;
+        if (!webcamsOn.current) { m.removeLayer(layer); setWebcamInfo(''); return; }
+        m.addLayer(layer);
+        if (m.getZoom() < WEBCAM_MIN_ZOOM) {
+          layer.clearLayers();
+          webcamMarkers.clear();
+          setWebcamInfo('Zoom in to see Windy webcams.');
+          return;
+        }
+        const b = m.getBounds();
+        try {
+          const r = await api(`/api/webcams?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}`);
+          if (cancelled || !webcamLayer.current) return;
+          const keep = new Set(r.webcams.map((c) => c.id));
+          for (const [id, entry] of webcamMarkers) {
+            if (!keep.has(id) && !entry.marker.isPopupOpen()) {
+              layer.removeLayer(entry.marker);
+              webcamMarkers.delete(id);
+            }
+          }
+          const added = [];
+          for (const c of r.webcams) {
+            const entry = webcamMarkers.get(c.id);
+            if (entry) { entry.cam = c; continue; }
+            const next = { cam: c };
+            next.marker = L.marker([c.lat, c.lon], { icon: webcamIcon, title: c.title }).bindPopup(() => webcamPopup(() => next.cam), { maxWidth: 380, minWidth: 280 });
+            webcamMarkers.set(c.id, next);
+            added.push(next.marker);
+          }
+          layer.addLayers(added);
+          if (r.zoomIn) setWebcamInfo('Zoom in to see Windy webcams.');
+          else setWebcamInfo(r.total ? `${r.total} Windy webcam${r.total === 1 ? '' : 's'}${r.truncated ? ' (zoom in for more)' : ''}` : 'No Windy webcams in this view.');
+        } catch (e) {
+          setWebcamInfo(`Windy webcams unavailable: ${e.message}`);
+        }
+        webcamRefresh = setTimeout(loadWebcams, WEBCAM_REFRESH_MS);
+      }, 350);
+    };
+    m.on('moveend', loadWebcams);
+    reload.current.webcams = loadWebcams;
 
     let camTimer;
     const markers = new Map();
@@ -240,6 +303,8 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
     return () => {
       cancelled = true;
       clearTimeout(camTimer);
+      clearTimeout(webcamTimer);
+      clearTimeout(webcamRefresh);
       clearTimeout(buoyTimer);
       clearTimeout(tideTimer);
       clearInterval(natTimer);
@@ -253,6 +318,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
       radar.current = [];
       satLayer.current = null;
       camLayer.current = null;
+      webcamLayer.current = null;
     };
   }, [center.lat, center.lon, units]);
 
@@ -375,6 +441,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   const camsOffKey = show.camsOff.join(',');
   useEffect(() => { reload.current.cams?.(); }, [show.cams, camsOffKey]);
   useEffect(() => { reload.current.buoys?.(); }, [show.buoys]);
+  useEffect(() => { reload.current.webcams?.(); }, [show.webcams, webcams?.enabled]);
   useEffect(() => { reload.current.tides?.(); }, [show.tides]);
 
   useEffect(() => {
@@ -528,9 +595,9 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
         <span className="radar-time">{timeText}</span>
         <div className="layer-anchor">
           <button className={`layers-btn ${layersOpen ? 'on' : ''}`} onClick={() => setLayersOpen(!layersOpen)} aria-expanded={layersOpen} aria-haspopup="dialog">
-            🗂️ Layers <span className="layer-count">{layerCount(show)}</span>
+            🗂️ Layers <span className="layer-count">{layerCount(show, { webcams: !!webcams?.enabled })}</span>
           </button>
-          {layersOpen && <LayerPanel layers={show} feeds={feeds} signedIn={signedIn} onChange={setShow} onClose={() => setLayersOpen(false)} />}
+          {layersOpen && <LayerPanel layers={show} feeds={feeds} webcams={webcams?.enabled ? webcams.attribution : null} signedIn={signedIn} onChange={setShow} onClose={() => setLayersOpen(false)} />}
         </div>
         {!full && products.length > 1 && (
           <label className="radar-select">Show{' '}
@@ -540,6 +607,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
           </label>
         )}
         <label className="opacity">Opacity <input type="range" min={0.2} max={1} step={0.1} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} /></label>
+        {webcams?.enabled && <button className="webcams-btn" onClick={() => setNearby(true)} title="Live pictures from Windy webcams near you">🌄 Webcams near me</button>}
         {!full && <button className="windy-btn" onClick={openWindy} title="Animated wind, gusts and forecast models">🌬️ Windy wind map</button>}
         {!full && <button className="full-btn" onClick={() => setFull(true)} aria-label="Full screen radar">⛶ Full screen</button>}
         {full && (
@@ -563,8 +631,13 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
           {show.buoys && buoyInfo && ` · ${buoyInfo}`}
           {show.tides && tideInfo && ` · ${tideInfo}`}
           {show.cams && camInfo && ` · ${camInfo}`}
+          {webcamsOn.current && webcamInfo && ` · ${webcamInfo}`}
         </span>
+        {webcamsOn.current && webcams.attribution && (
+          <a className="webcam-attrib" href={webcams.attribution.url} target="_blank" rel="noopener noreferrer">{webcams.attribution.text}</a>
+        )}
       </div>
+      {nearby && <NearbyWebcams center={center} units={units} attribution={webcams?.attribution} onClose={() => setNearby(false)} />}
       {windy && <WindyView center={windy} units={units} onClose={() => setWindy(null)} />}
     </section>
   );

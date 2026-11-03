@@ -56,6 +56,7 @@ export const SETTINGS = [
 
   // ---- maps ----
   { key: 'WINDY_MAP_KEY', group: 'maps', label: 'Windy Map Forecast key', secret: true, signup: 'https://api.windy.com/keys', help: 'Optional. Blank uses the free Windy embed.' },
+  { key: 'WINDY_WEBCAMS_KEY', group: 'maps', label: 'Windy Webcams key', secret: true, test: 'webcams', signup: 'https://api.windy.com/keys', help: 'Optional, and a different key from the map one (pick Webcams API when you make it). Adds public webcams from around the world to the Radar & Cams map. Stays on the server.' },
 
   // ---- live lightning ----
   { key: 'LIGHTNING_GLM', group: 'lightning', label: 'NOAA GOES satellite lightning', options: ['true', 'false'], choices: ['On (free, no key)', 'Off'], help: 'Strikes across the Americas about a minute after they happen. Only downloaded (about 1 MB a minute) while someone is watching or a device has lightning alerts on.' },

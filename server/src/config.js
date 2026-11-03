@@ -108,7 +108,8 @@ export function loadConfig(env = process.env) {
       // Blitzortung.org ground network: private, non-commercial use only, so opt in.
       blitzortung: bool(env.BLITZORTUNG_ENABLED, false),
     },
-    windy: { mapKey: env.WINDY_MAP_KEY || '' },
+    // webcamsKey: Windy Webcams API (a server key, separate from the map key).
+    windy: { mapKey: env.WINDY_MAP_KEY || '', webcamsKey: env.WINDY_WEBCAMS_KEY || '' },
     // Live storm chaser streams. Works without a key (a trusted channel list);
     // a YouTube Data API key adds viewer counts and a search for more chasers.
     youtube: {

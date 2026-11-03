@@ -9,13 +9,13 @@ import { Source, Secret, Result } from './SettingsFields.jsx';
 const GROUPS = [
   { id: 'home', title: '🏠 Home place & units', intro: 'Where the app opens for people who have not picked a place, and the units it starts in.' },
   { id: 'cameras', title: '📷 Road cameras', intro: 'VA, SC, MD, KY and DE work with no key. NC, NY, GA and OH switch on with a free developer key from each state.' },
-  { id: 'maps', title: '🗺️ Windy maps', intro: '' },
+  { id: 'maps', title: '🗺️ Windy maps & webcams', intro: 'Windy has two different keys. The Map Forecast key is for the 🌬️ Windy wind map; the Webcams key adds 🌄 Windy webcams to the Radar & Cams map. Make each one at api.windy.com/keys.' },
   { id: 'lightning', title: '⚡ Live lightning', intro: 'Lightning on the Radar & Cams map and the "lightning within X miles" alerts. Each person picks their own alert distance under 🔔 Alerts.' },
   { id: 'stations', title: '🌡️ Weather stations', intro: 'Ecowitt and Ambient stations can upload straight to Weather Scout. Cloud accounts (Ambient, Tempest) are checked on a timer.' },
   { id: 'homeassistant', title: '🏡 Home Assistant', intro: 'Send the weather to Home Assistant over MQTT (sensors appear on their own) and/or straight to its REST API.' },
   { id: 'apps', title: '🔔 Alerts, sign-out & Android app', intro: '' },
 ];
-const TEST_LABEL = { ambient: 'Test Ambient', tempest: 'Test Tempest', mqtt: 'Test MQTT', homeassistant: 'Test Home Assistant' };
+const TEST_LABEL = { ambient: 'Test Ambient', tempest: 'Test Tempest', mqtt: 'Test MQTT', homeassistant: 'Test Home Assistant', webcams: 'Test Webcams key' };
 const testLabel = (t) => TEST_LABEL[t] || (t.startsWith('camera:') ? `Test ${t.slice(7).toUpperCase()} key` : 'Test');
 
 function Field({ ctx, r }) {

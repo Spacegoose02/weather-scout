@@ -327,6 +327,22 @@ and paste it under *Family & settings → App settings → Windy maps* (or set `
 is sent to the browser inside the Windy map page; it is never in the repository or `/api/config`, and
 the page needs sign-in when `AUTH_REQUIRED=true`. Which models and layers show depends on your key's plan.
 
+### Windy webcams
+
+Windy also runs a big library of public webcams (beaches, mountains, towns, airports). To show them on the
+Radar & Cams map, make a **Webcams API** key at [api.windy.com/keys](https://api.windy.com/keys) (a different
+key from the Map Forecast one; the free plan is fine), paste it under *Family & settings → App settings →
+Windy maps & webcams*, and press *Test Webcams key*. Then:
+
+- *Layers → Cameras → Windy webcams* switches the 🌄 pins on or off (next to the state road cameras).
+- *🌄 Webcams near me* on the map opens the closest webcams to the place you're looking at, with a big
+  picture and today's timelapse.
+
+Without a key the layer and the button stay hidden. The key stays on the server: it is never sent to the
+browser, put in the repository or the Unraid template. Windy's picture links expire (10 minutes on the free
+plan), so Weather Scout only keeps the webcam list for 5 minutes, lets the browser load pictures straight from
+Windy (it never downloads or stores them), and credits every webcam to Windy.com with a link to its page.
+
 ### Live storm chasers
 
 *Learn → Storm Center* shows storm chasers who are streaming live on YouTube, and a small pop-up
@@ -375,6 +391,7 @@ names also work as environment variables (`LIGHTNING_GLM`, `LIGHTNING_GLM_SATELL
 | Map | OpenStreetMap | none |
 | Wind and model maps | [Windy](https://www.windy.com) embed, or the Map Forecast API | none for the embed, optional `WINDY_MAP_KEY` |
 | Cameras | VA, SC, MD, KY and DE public feeds; NC, NY, GA and OH with free keys; plus any state 511 feed you add | none for VA, SC, MD, KY, DE |
+| Webcams (optional) | [Windy Webcams API](https://api.windy.com/webcams) | a free Windy Webcams key, set in Family & settings |
 | Ask an Expert, cloud photos, web search (optional) | [Claude](https://www.anthropic.com/claude) via the Anthropic API, or your own [Ollama](https://ollama.com/) | `ANTHROPIC_API_KEY`, or `OLLAMA_URL` |
 | Live storm chasers | YouTube live streams from a trusted chaser list, plus YouTube search with a key | none; optional `YOUTUBE_API_KEY` (set it in Family & settings) |
 | Read-aloud voice (optional) | Your own [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) | none |
