@@ -5,6 +5,7 @@ import { icon, round, duration, clockLabel } from '../format.js';
 import { useKidData } from '../kid/useKidData.js';
 import { SHELF_EVENT, takeShelfRequest } from '../kid/badges.js';
 import DailyFact from './kid/DailyFact.jsx';
+import StormPhoto from './kid/StormPhoto.jsx';
 import StormSafe from './kid/StormSafe.jsx';
 import Bingo from './kid/Bingo.jsx';
 import WhatToWear from './kid/WhatToWear.jsx';
@@ -96,7 +97,7 @@ export default function KidMode({ weather, user, location, voice, onAlerts }) {
         ))}
       </nav>
 
-      {tab === 'today' && <KidToday weather={weather} name={user?.displayName} kid={kidData} today={today} voice={voice} location={location} onAlerts={onAlerts} />}
+      {tab === 'today' && <KidToday weather={weather} name={user?.displayName} kid={kidData} today={today} voice={voice} location={location} onAlerts={onAlerts} isAdmin={!!user?.isAdmin} />}
       {tab === 'play' && (
         <div className="kid-grid">
           <WhatToWear raccoon={weather.kid.raccoon} kid={kidData} />
@@ -126,7 +127,7 @@ export default function KidMode({ weather, user, location, voice, onAlerts }) {
   );
 }
 
-function KidToday({ weather, name, kid: kidData, today, voice, location, onAlerts }) {
+function KidToday({ weather, name, kid: kidData, today, voice, location, onAlerts, isAdmin }) {
   const { kid, forecast } = weather;
   const c = forecast.current;
   const [done, toggle] = useChecklist();
@@ -154,6 +155,8 @@ function KidToday({ weather, name, kid: kidData, today, voice, location, onAlert
       {location && <Briefing location={location} units={weather.location.units} name={name} onAlerts={onAlerts} />}
 
       <DailyFact fact={kid.fact} today={today} kid={kidData} />
+
+      <StormPhoto date={today} kid={kidData} isAdmin={isAdmin} />
 
       <section className={`card playground ${kid.playground.rating}`}>
         <h2>Recess check</h2>

@@ -61,6 +61,14 @@ from free, official data sources.
   and a sunset / stargazing countdown. Plus Rocky's daily fact or joke (read aloud), weather
   bingo, a kid forecaster game, dress-Rocky, backyard experiments, camera field trips, a
   seasons photo tracker, badges, and a calm storm-safe mode during warnings.
+- **Storm picture of the day**: a real tornado or lightning photo every day in the Kid Zone (and as a
+  dashboard card), with a kid caption, a fun fact and a 🔊 button so Rocky reads it aloud. Photos
+  come from Wikimedia Commons (mostly NOAA / NSSL public domain shots of the sky, never damage or
+  people); the photographer and license are pulled live from Commons and shown under every picture,
+  and anything not freely licensed is skipped. Kids can flip through the last three weeks in an
+  album and earn the *Storm Gazer* badge. Admins can hide any picture for everyone (right on the
+  card, or in *Family & settings*) and add their own from Commons. Needs outbound access to
+  `commons.wikimedia.org` and `upload.wikimedia.org`.
 - **Profiles**: local username sign-in, tinyauth SSO, and admins can link an SSO identity to a
   username. Saved places, units and Kid Mode follow you between devices.
 - **News & Videos**: local and national weather news. Your NWS office's outlook, forecast
