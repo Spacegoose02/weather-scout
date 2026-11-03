@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  chaseDay, convectiveDay, parseReports, parseSpcText, scoreTarget, stormCards, warningSummary, liveVideoFrom,
+  chaseDay, convectiveDay, parseReports, parseSpcText, scoreTarget, stormCards, warningSummary,
   inGeometry, statesIn, reportsUrl, hailLike, probSummary,
 } from '../src/chaser.js';
-import { mockFetch, testApp, cookieFrom } from './helpers.js';
+import { mockFetch, testApp } from './helpers.js';
 
 // A box over central Oklahoma and southern Kansas.
 const box = (w, s, e, n) => ({ type: 'Polygon', coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] });
@@ -69,7 +69,7 @@ test('chase day: rating, where, tomorrow and a calm note at home', () => {
   assert.equal(d.category, 'ENH');
   assert.deepEqual(d.where.sort(), ['Kansas', 'Oklahoma']);
   assert.match(d.say, /chase day/);
-  assert.match(d.why.join(' '), /tornado chance tops out at 10%/);
+  assert.match(d.why.join(' '), /tornado near any one spot is as high as 10 out of 100/);
   assert.equal(d.home.category, 'ENH');
   assert.match(d.home.text, /safe spot/);
   assert.match(d.tomorrow.text, /Marginal/);
@@ -142,9 +142,10 @@ test('storm cards: one per storm kind per county, rarest first', () => {
   assert.match(hail.stat, /baseball/);
   assert.equal(new Set(deck.cards.map((c) => c.id)).size, deck.cards.length);
   assert.equal(hailLike(1.75), 'a golf ball');
+  assert.equal(deck.cards[0].name, 'Norman Tornado');
 });
 
-test('warnings and live YouTube detection', () => {
+test('warnings that turn the live chase feed on', () => {
   const w = warningSummary({ features: [
     { properties: { event: 'Tornado Warning', area: 'Cleveland, OK; McClain, OK' } },
     { properties: { event: 'Severe Thunderstorm Warning', area: 'Sedgwick, KS' } },
@@ -154,11 +155,8 @@ test('warnings and live YouTube detection', () => {
   assert.equal(w.severe, 1);
   assert.equal(w.active, true);
   assert.deepEqual(w.states.sort(), ['Kansas', 'Oklahoma']);
-  assert.equal(liveVideoFrom('<link rel="canonical" href="https://www.youtube.com/watch?v=abcdefghijk">"isLiveNow":true'), 'abcdefghijk');
-  assert.equal(liveVideoFrom('<link rel="canonical" href="https://www.youtube.com/channel/UCxxxxxxxxxxxxxxxxxxxxxx">'), null);
 });
 
-const CHANNEL = 'UCabcdefghijklmnopqrstuv';
 function chaserFetch({ live = true, warnings = true } = {}) {
   const json = (b) => new Response(JSON.stringify(b), { headers: { 'content-type': 'application/json' } });
   return mockFetch({
@@ -170,8 +168,9 @@ function chaserFetch({ live = true, warnings = true } = {}) {
     'SWODY1': () => new Response(TEXT),
     '_filtered.csv': () => new Response(CSV),
     'alerts/active': () => json({ features: warnings ? [{ properties: { id: 'w', event: 'Tornado Warning', areaDesc: 'Cleveland, OK' }, geometry: OK_BOX }] : [] }),
-    [`channel/${CHANNEL}/live`]: () => new Response(live ? '<link rel="canonical" href="https://www.youtube.com/watch?v=LIVEvideo01">"isLiveNow":true' : '<html>offline</html>'),
-    '@stormkid': () => new Response(`<link rel="canonical" href="https://www.youtube.com/channel/${CHANNEL}">`),
+    // The Storm Center's trusted chaser list: one channel is live.
+    '@PecosHank/live': () => new Response(live ? '<link rel="canonical" href="https://www.youtube.com/watch?v=LIVEvideo01"><meta name="title" content="Chasing supercells in Oklahoma">"isLiveNow":true' : '<html>offline</html>'),
+    'youtube.com/@': () => new Response('<link rel="canonical" href="https://www.youtube.com/channel/UCxxxxxxxxxxxxxxxxxxxxxx">'),
   });
 }
 
@@ -195,46 +194,19 @@ test('chaser API: day, reports, score and cards', async () => {
   await app.close();
 });
 
-async function admin(app) {
-  const res = await app.inject({ method: 'POST', url: '/api/auth/setup', payload: { username: 'mom', password: 'password123' } });
-  return cookieFrom(res);
-}
-
-test('live chase streams: admin-only, shown when live during warnings', async () => {
-  const fetchImpl = chaserFetch();
-  const { app } = await testApp({ fetchImpl });
-  assert.equal((await app.inject({ method: 'POST', url: '/api/admin/chase-streams', payload: { url: '@stormkid' } })).statusCode, 401);
-  const cookie = await admin(app);
-  const add = await app.inject({ method: 'POST', url: '/api/admin/chase-streams', headers: { cookie }, payload: { url: 'https://www.youtube.com/@stormkid', title: 'Storm Kid' } });
-  assert.equal(add.statusCode, 200, add.body);
-  assert.equal(add.json().stream.kind, 'channel');
-  const bad = await app.inject({ method: 'POST', url: '/api/admin/chase-streams', headers: { cookie }, payload: { url: 'https://www.youtube.com/playlist?list=PLabcdefghijklmnop' } });
-  assert.equal(bad.statusCode, 400);
-
+test('live chase: trusted chasers, only while warnings are up', async () => {
+  const { app } = await testApp({ fetchImpl: chaserFetch() });
   const live = (await app.inject({ url: '/api/chaser/live' })).json();
   assert.equal(live.warnings.tornado, 1);
   assert.equal(live.streams.length, 1);
   assert.equal(live.streams[0].videoId, 'LIVEvideo01');
-
-  const id = add.json().stream.id;
-  await app.inject({ method: 'PATCH', url: `/api/admin/chase-streams/${id}`, headers: { cookie }, payload: { enabled: false } });
-  assert.equal((await app.inject({ url: '/api/chaser/live' })).json().streams.length, 0);
-  assert.equal((await app.inject({ method: 'DELETE', url: `/api/admin/chase-streams/${id}`, headers: { cookie } })).statusCode, 200);
-  assert.equal((await app.inject({ url: '/api/admin/chase-streams', headers: { cookie } })).json().streams.length, 0);
+  assert.ok(live.channels.length >= 1);
   await app.close();
-});
 
-test('live chase streams stay hidden without warnings unless marked anytime', async () => {
-  const { app } = await testApp({ fetchImpl: chaserFetch({ warnings: false }) });
-  const cookie = await admin(app);
-  const add = await app.inject({ method: 'POST', url: '/api/admin/chase-streams', headers: { cookie }, payload: { url: '@stormkid' } });
-  assert.equal(add.statusCode, 200, add.body);
-  let live = (await app.inject({ url: '/api/chaser/live' })).json();
-  assert.equal(live.warnings.active, false);
-  assert.equal(live.streams.length, 0);
-  assert.equal(live.configured, 1);
-  await app.inject({ method: 'PATCH', url: `/api/admin/chase-streams/${add.json().stream.id}`, headers: { cookie }, payload: { anytime: true } });
-  live = (await app.inject({ url: '/api/chaser/live' })).json();
-  assert.equal(live.streams.length, 1);
-  await app.close();
+  const quiet = await testApp({ fetchImpl: chaserFetch({ warnings: false }) });
+  const q = (await quiet.app.inject({ url: '/api/chaser/live' })).json();
+  assert.equal(q.warnings.active, false);
+  assert.equal(q.streams.length, 0);
+  assert.equal(q.liveCount, 1);
+  await quiet.app.close();
 });

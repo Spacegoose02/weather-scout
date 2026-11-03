@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Modal from './Modal.jsx';
 import IntegrationsPanel from './stations/IntegrationsPanel.jsx';
-import ChaseStreamsAdmin from './kid/chaser/ChaseStreamsAdmin.jsx';
 import StormPhotoAdmin from './kid/StormPhotoAdmin.jsx';
 import AiSettingsPanel from './AiSettingsPanel.jsx';
 import AppSettingsPanel from './AppSettingsPanel.jsx';
@@ -230,8 +229,6 @@ export default function Admin({ me, onClose }) {
       <StormPhotoAdmin />
 
       <IntegrationsPanel />
-
-      <ChaseStreamsAdmin />
 
       <h3>Camera feeds</h3>
       {feeds.length === 0 ? (

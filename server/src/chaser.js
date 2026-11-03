@@ -1,11 +1,10 @@
 // Junior Storm Chaser (Kid Zone): the live parts.
 // - Chase Day: today's Storm Prediction Center outlook, explained for kids
 // - Pick your target: storm reports to score a kid's target against
-// - Live chase: admin-picked YouTube chaser streams, shown while warnings are up
+// - Live chase: the trusted chaser list from chasers.js (Storm Center), shown while warnings are up
 // - Storm cards: collectible cards made from today's real storm reports
 // All public NOAA data. Kept in its own file and table, like kidzone.js.
 import { UpstreamError, fetchJson } from './cache.js';
-import { parseYoutubeRef, resolveYoutubeChannel, loadYoutubeVideo } from './providers/news.js';
 import * as severe from './providers/severe.js';
 import { STATES } from '../../shared/chase-states.js';
 
@@ -13,20 +12,6 @@ const MIN = 60_000;
 const SPC = 'https://www.spc.noaa.gov';
 export const SPC_PROB = (kind, day = 1) => `${SPC}/products/outlook/day${day}otlk_${kind}.lyr.geojson`;
 export const SPC_TEXT = 'https://mesonet.agron.iastate.edu/cgi-bin/afos/retrieve.py?pil=SWODY1&fmt=text&limit=1';
-const MAX_STREAMS = 30;
-
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS chase_streams (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  kind TEXT NOT NULL CHECK (kind IN ('channel', 'video')),
-  yt_id TEXT NOT NULL,
-  anytime INTEGER NOT NULL DEFAULT 0,
-  enabled INTEGER NOT NULL DEFAULT 1,
-  position INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-`;
 
 // ---- geometry ---------------------------------------------------------------------
 const R_MILES = 3958.8;
@@ -220,7 +205,8 @@ export function chaseDay({ cat, torn, hail, wind, text, day2, home, day, now = D
   const why = [];
   if (rating === 'down') why.push(top === 'TSTM' ? 'There may be some thunderstorms, but the ingredients for big storms are not lined up. Chasers call this a down day: time to fix the car and study radar!' : 'The sky is calm for chasers today. Chasers call this a down day: time to fix the car and study radar!');
   else why.push(`The Storm Prediction Center gave today a ${info.word} risk. ${info.kid}`);
-  if (t.max >= 2) why.push(`The tornado chance tops out at ${t.max}% within 25 miles of any spot${tornWhere.length ? `, near ${listWords(tornWhere)}` : ''}.${t.sig ? ' Forecasters even drew a striped area where strong tornadoes could happen.' : ''}`);
+  const sameWhere = tornWhere.join() === where.join();
+  if (t.max >= 2) why.push(`The chance of a tornado near any one spot is as high as ${t.max} out of 100${tornWhere.length && !sameWhere ? `, around ${listWords(tornWhere)}` : ''}.${t.sig ? ' Forecasters even drew a striped area where strong tornadoes could happen.' : ''}`);
   if (h.max >= 15) why.push(`Hail chance up to ${h.max}%.${h.sig ? ' Some hail could be bigger than golf balls!' : ''}`);
   if (w.max >= 15) why.push(`Damaging wind chance up to ${w.max}%.${w.sig ? ' Some gusts could top 75 mph!' : ''}`);
 
@@ -385,6 +371,9 @@ export function statLine(r) {
   return r.magnitude != null ? `${r.magnitude} mph gust` : 'Damaging wind';
 }
 
+// "4 SW Chickasha" -> "Chickasha"
+export const townOf = (location) => String(location || '').replace(/^\d+(\.\d+)?\s+[NSEW]{1,3}\s+/, '');
+
 export function stormCards(reports, day, { max = 9 } = {}) {
   const score = (r) => RARITY.indexOf(rarityOf(r)) * 1000 + powerOf(r);
   const picked = [];
@@ -407,7 +396,7 @@ export function stormCards(reports, day, { max = 9 } = {}) {
       day,
       type: r.type,
       emoji: TYPE_INFO[r.type].emoji,
-      name: `${r.location || r.county} ${TYPE_INFO[r.type].name}`,
+      name: `${townOf(r.location) || r.county} ${TYPE_INFO[r.type].name}`,
       place: [r.location, r.county && `${r.county} County`, STATE_NAME[r.state] || r.state].filter(Boolean).join(', '),
       state: r.state,
       lat: r.lat,
@@ -440,23 +429,7 @@ export function warningSummary(national) {
   return { tornado: tornado.length, severe: severe_.length, active: tornado.length + severe_.length > 0, states: [...states].slice(0, 6) };
 }
 
-// Is this YouTube page live right now? Returns the live video id, or null.
-export function liveVideoFrom(html) {
-  const s = String(html || '');
-  if (!/"isLiveNow":true|"isLive":true/.test(s)) return null;
-  return s.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})"/)?.[1]
-    || s.match(/"videoId":"([\w-]{11})"/)?.[1]
-    || null;
-}
-
-async function fetchPage(url, fetchImpl) {
-  const res = await fetchImpl(url, { headers: { 'accept-language': 'en', 'user-agent': 'Mozilla/5.0 (WeatherScout)' }, signal: AbortSignal.timeout(10000) });
-  if (!res.ok) throw new UpstreamError('YouTube', res.status);
-  return res.text();
-}
-
-export function registerChaser(app, { db, cache, fetchImpl, requireAdmin, latLonSchema, loc, nwsUserAgent }) {
-  db.exec(SCHEMA);
+export function registerChaser(app, { cache, fetchImpl, latLonSchema, loc, chasers, nwsUserAgent }) {
   const spcJson = (url) => fetchJson(url, { source: 'Storm Prediction Center', fetchImpl, timeoutMs: 15000 });
   const spcText = async (url) => {
     const res = await fetchImpl(url, { signal: AbortSignal.timeout(15000) });
@@ -539,78 +512,23 @@ export function registerChaser(app, { db, cache, fetchImpl, requireAdmin, latLon
   });
 
   // ---- live chase streams -----------------------------------------------------------
-  const list = db.prepare('SELECT id, title, kind, yt_id AS ytId, anytime, enabled, position FROM chase_streams ORDER BY position, id');
-  const count = db.prepare('SELECT COUNT(*) AS n FROM chase_streams');
-  const insert = db.prepare('INSERT INTO chase_streams (title, kind, yt_id, anytime, position) VALUES (?, ?, ?, ?, ?)');
-  const patch = db.prepare('UPDATE chase_streams SET title = COALESCE(?, title), anytime = COALESCE(?, anytime), enabled = COALESCE(?, enabled), position = COALESCE(?, position) WHERE id = ?');
-  const remove = db.prepare('DELETE FROM chase_streams WHERE id = ?');
-  const rows = () => list.all().map((r) => ({ ...r, anytime: !!r.anytime, enabled: !!r.enabled }));
-
-  const liveCheck = (s) => cache.wrap(`chaser:live:${s.kind}:${s.ytId}`, 3 * MIN, async () => {
-    try {
-      const url = s.kind === 'channel' ? `https://www.youtube.com/channel/${s.ytId}/live` : `https://www.youtube.com/watch?v=${s.ytId}`;
-      const vid = liveVideoFrom(await fetchPage(url, fetchImpl));
-      return { live: !!vid, videoId: vid || (s.kind === 'video' ? s.ytId : null) };
-    } catch {
-      return { live: null, videoId: s.kind === 'video' ? s.ytId : null };
-    }
-  });
-
+  // The kid-safe trusted chaser list from the Storm Center (chasers.js, set in
+  // Family & settings). In the Kid Zone the streams only show while tornado or
+  // severe thunderstorm warnings are up somewhere in the US.
   app.get('/api/chaser/live', async () => {
-    const national = await soft(cache.wrap('alerts-national', 2 * MIN, () => severe.getNationalAlerts({ userAgent: nwsUserAgent, fetchImpl })));
+    const [national, found] = await Promise.all([
+      soft(cache.wrap('alerts-national', 2 * MIN, () => severe.getNationalAlerts({ userAgent: nwsUserAgent, fetchImpl }))),
+      soft(chasers.live({ kid: true })),
+    ]);
     const warnings = national ? warningSummary(national) : { tornado: 0, severe: 0, active: false, states: [], unavailable: true };
-    const enabled = rows().filter((s) => s.enabled);
-    const show = enabled.filter((s) => warnings.active || s.anytime);
-    const checked = await Promise.all(show.map(async (s) => ({ s, ...(await liveCheck(s)) })));
-    const streams = checked
-      .filter((x) => x.live === true || (x.live === null && x.videoId))
-      .map(({ s, videoId, live }) => ({ id: s.id, title: s.title, videoId, confirmedLive: live === true }));
-    return { warnings, streams, configured: enabled.length, checkedAt: new Date().toISOString() };
-  });
-
-  app.get('/api/admin/chase-streams', { preHandler: requireAdmin }, async () => ({ streams: rows() }));
-
-  app.post('/api/admin/chase-streams', {
-    preHandler: requireAdmin,
-    schema: { body: { type: 'object', required: ['url'], properties: { url: { type: 'string', minLength: 3, maxLength: 300 }, title: { type: 'string', maxLength: 80 }, anytime: { type: 'boolean' } }, additionalProperties: false } },
-  }, async (req, reply) => {
-    if (count.get().n >= MAX_STREAMS) return reply.code(409).send({ error: `That's ${MAX_STREAMS} streams already. Remove one first.` });
-    const { url, anytime = false } = req.body;
-    let title = (req.body.title || '').trim();
-    let kind;
-    let ytId;
-    try {
-      const ref = parseYoutubeRef(url);
-      if (ref?.type === 'video') {
-        kind = 'video';
-        ytId = ref.id;
-        if (!title) title = (await loadYoutubeVideo(ref.id, fetchImpl).catch(() => null))?.author || 'Live chase';
-      } else if (ref?.type === 'playlist') {
-        return reply.code(400).send({ error: 'Use a channel or a single live video, not a playlist.' });
-      } else {
-        kind = 'channel';
-        ytId = await resolveYoutubeChannel(url, fetchImpl);
-        if (!title) title = String(url).match(/@[\w.-]+/)?.[0] || 'Storm chaser';
-      }
-    } catch (e) {
-      return reply.code(400).send({ error: e.message || 'Could not find that YouTube channel or video.' });
-    }
-    const r = insert.run(title.slice(0, 80), kind, ytId, anytime ? 1 : 0, count.get().n);
-    return { stream: rows().find((s) => s.id === Number(r.lastInsertRowid)) };
-  });
-
-  app.patch('/api/admin/chase-streams/:id', {
-    preHandler: requireAdmin,
-    schema: { body: { type: 'object', properties: { title: { type: 'string', minLength: 1, maxLength: 80 }, anytime: { type: 'boolean' }, enabled: { type: 'boolean' }, position: { type: 'integer', minimum: 0, maximum: 1000 } }, additionalProperties: false } },
-  }, async (req, reply) => {
-    const b = req.body;
-    const bool = (v) => (v === undefined ? null : v ? 1 : 0);
-    const r = patch.run(b.title ?? null, bool(b.anytime), bool(b.enabled), b.position ?? null, Number(req.params.id));
-    return r.changes ? { ok: true } : reply.code(404).send({ error: 'No such stream.' });
-  });
-
-  app.delete('/api/admin/chase-streams/:id', { preHandler: requireAdmin }, async (req, reply) => {
-    const r = remove.run(Number(req.params.id));
-    return r.changes ? { ok: true } : reply.code(404).send({ error: 'No such stream.' });
+    const streams = found?.streams || [];
+    return {
+      warnings,
+      streams: warnings.active ? streams : [],
+      liveCount: streams.length,
+      channels: (found?.channels || []).map(({ handle, name, url, live }) => ({ handle, name, url, live })),
+      available: !!found,
+      checkedAt: new Date().toISOString(),
+    };
   });
 }

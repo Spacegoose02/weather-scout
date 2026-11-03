@@ -330,7 +330,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   if (push) push.shelterFor = safety.shelterFor;
   const shelterFor = safety.shelterFor;
   registerHistory(app, { cache, fetchImpl, latLonSchema, loc, forecast, settle });
-  registerChaser(app, { db, cache, fetchImpl, requireAdmin, latLonSchema, loc, nwsUserAgent: cfg.nwsUserAgent });
+  registerChaser(app, { cache, fetchImpl, latLonSchema, loc, chasers, nwsUserAgent: cfg.nwsUserAgent });
 
   // ---- AI weather expert, cloud photos, web search ---------------------------
   registerAi(app, { ai, forecast, alerts, air, settle, loc });
