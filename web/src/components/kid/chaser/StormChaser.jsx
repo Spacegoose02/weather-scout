@@ -12,6 +12,7 @@ const remembered = () => {
 };
 
 // Junior Storm Chaser: a sub-nav over every part listed in sections.js.
+// Each part also gets go(id), to jump to another part.
 export default function StormChaser(props) {
   const [id, setId] = useState(() => (CHASER_SECTIONS.some((s) => s.id === remembered()) ? remembered() : CHASER_SECTIONS[0].id));
   const pick = (next) => {
@@ -52,7 +53,7 @@ export default function StormChaser(props) {
         })}
       </nav>
       <div className="kid-grid chaser-body">
-        <Component {...props} />
+        <Component {...props} go={pick} />
       </div>
     </div>
   );

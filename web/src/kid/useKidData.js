@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { BADGE_EVENT, SUPER_SCOUT_AT, announce, kidKey, mergeProgress } from './badges.js';
+import { mergeChase } from './chaser/live.js';
 
 // Kid Zone progress (bingo marks, forecaster guesses, badges, stamps...).
 // Signed-in kids keep it on the server so it follows them between devices;
@@ -108,5 +109,6 @@ export function mergeKid(local, server) {
   }
   out.guesses = [...guesses.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-60);
   out.factDays = [...new Set([...(local.factDays || []), ...(server.factDays || [])])].sort().slice(-30);
+  if (local.chase || server.chase) out.chase = mergeChase(local.chase, server.chase);
   return out;
 }

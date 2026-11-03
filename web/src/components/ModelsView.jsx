@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { round, dayLabel, hourLabel } from '../format.js';
+import ModelMap from './ModelMap.jsx';
 
 // Fixed slot per model (color follows the model, never its rank or what's toggled).
 const SLOT = {
@@ -77,6 +78,8 @@ export default function ModelsView({ location, units }) {
         </div>
         {data.missing.length > 0 && <p className="hint">Not available here: {data.missing.map((m) => m.name).join(', ')}.</p>}
       </section>
+
+      <ModelMap location={location} units={units} />
 
       <section className="card">
         <h2 className="card-title">Daily highs, next 10 days</h2>

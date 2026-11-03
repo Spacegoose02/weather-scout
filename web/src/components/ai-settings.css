@@ -1,0 +1,20 @@
+/* Family & settings: AI helper and read-aloud voice. */
+.ai-settings { display: grid; gap: 12px; }
+.ai-settings fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px 12px; margin: 0; display: grid; gap: 10px; min-width: 0; }
+.ai-settings legend { font-weight: 800; padding: 0 6px; }
+.ai-settings label { display: grid; gap: 4px; font-weight: 700; min-width: 0; }
+.ai-settings label > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.ai-settings input[type='text'], .ai-settings input[type='password'], .ai-settings input[type='number'], .ai-settings select {
+  padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-weight: 400; min-width: 0; width: 100%; box-sizing: border-box;
+}
+.ai-settings input[type='range'] { width: 100%; }
+.ai-settings small.hint { font-weight: 400; }
+.ai-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.ai-src { font-size: 0.78rem; font-weight: 600; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+.ai-src.saved { color: var(--brand); border-color: var(--brand); }
+.ai-src .link { font-size: 0.78rem; padding: 0 0 0 6px; }
+.ai-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ai-test { margin: 0; font-weight: 600; }
+.ai-test.good { color: var(--good); }
+.ai-test.bad { color: var(--bad); }
+.ai-save { position: sticky; bottom: 0; background: var(--card); padding: 8px 0; }
