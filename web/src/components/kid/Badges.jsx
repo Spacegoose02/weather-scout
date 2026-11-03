@@ -12,6 +12,7 @@ const GROUPS = [
   ['play', '🎲 Games'],
   ['science', '🧪 Backyard science'],
   ['explore', '🔭 Explorer'],
+  ['chaser', '🌪️ Storm chaser'],
   ['star', '⭐ Super star'],
 ];
 
