@@ -69,6 +69,18 @@ test('cameras are filtered to the map view and keys stay server side', async () 
   await app.close();
 });
 
+test('camera feeds are listed for the layer panel and can be hidden from the map', async () => {
+  const { app } = await testApp({ env: camEnv });
+  const feeds = (await app.inject('/api/cameras/feeds')).json().feeds;
+  assert.deepEqual(feeds.map((f) => [f.id, f.name, f.count]), [['va', 'Test 511', 2]]);
+  assert.ok(!JSON.stringify(feeds).includes('sekret'));
+  const hidden = (await app.inject('/api/cameras?south=37&west=-78&north=38&east=-77&hide=va,ny')).json();
+  assert.equal(hidden.cameras.length, 0);
+  assert.equal(hidden.total, 0);
+  assert.equal((await app.inject('/api/cameras?south=37&west=-78&north=38&east=-77&hide=ny')).json().cameras.length, 1);
+  await app.close();
+});
+
 test('first-run setup creates an admin, then local login works', async () => {
   const { app } = await testApp();
   let cfg = (await app.inject('/api/config')).json();

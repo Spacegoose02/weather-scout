@@ -62,6 +62,8 @@ export function loadConfig(env = process.env) {
       url: (env.KOKORO_URL || '').replace(/\/+$/, ''),
       voice: env.KOKORO_VOICE || 'af_heart',
       speed: Math.min(2, Math.max(0.5, num(env.KOKORO_SPEED, 1))),
+      // When Kokoro can't answer: read with the device's own voice, or stay quiet.
+      fallback: env.KOKORO_FALLBACK === 'off' ? 'off' : 'browser',
     },
     // Personal weather stations (Ecowitt, Ambient Weather, Tempest, Weather Underground protocol).
     stations: {
@@ -99,6 +101,14 @@ export function loadConfig(env = process.env) {
     },
     // Windy maps. Blank = the free Windy embed; a key turns on the Map Forecast API.
     windy: { mapKey: env.WINDY_MAP_KEY || '' },
+    // Live storm chaser streams. Works without a key (a trusted channel list);
+    // a YouTube Data API key adds viewer counts and a search for more chasers.
+    youtube: {
+      apiKey: env.YOUTUBE_API_KEY || '',
+      // Comma-separated @handles or channel ids. Blank = the built-in list.
+      chasers: env.STORM_CHASER_CHANNELS || '',
+      search: bool(env.STORM_CHASER_SEARCH, true),
+    },
     camerasFile: env.CAMERAS_FILE || path.join(dataDir, 'cameras.json'),
     env,
   };

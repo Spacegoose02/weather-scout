@@ -128,7 +128,7 @@ function kokoro() {
 
 test('Kokoro is off without a URL', async () => {
   const { app } = await testApp();
-  assert.deepEqual((await app.inject('/api/config')).json().tts, { enabled: false, voice: null });
+  assert.deepEqual((await app.inject('/api/config')).json().tts, { enabled: false, voice: null, fallback: 'browser' });
   assert.equal((await app.inject({ method: 'POST', url: '/api/tts', payload: { text: 'hi' } })).statusCode, 404);
   await app.close();
 });
@@ -136,7 +136,7 @@ test('Kokoro is off without a URL', async () => {
 test('Kokoro voices and speech go through the server, cached', async () => {
   const fetchImpl = kokoro();
   const { app } = await testApp({ env: { KOKORO_URL: 'http://kokoro.lan:8880/', KOKORO_VOICE: 'af_bella', KOKORO_SPEED: '0.9' }, fetchImpl });
-  assert.deepEqual((await app.inject('/api/config')).json().tts, { enabled: true, voice: 'af_bella' });
+  assert.deepEqual((await app.inject('/api/config')).json().tts, { enabled: true, voice: 'af_bella', fallback: 'browser' });
   const voices = (await app.inject('/api/tts/voices')).json();
   assert.equal(voices.default, 'af_bella');
   assert.deepEqual(voices.voices.map((v) => v.id), ['af_bella', 'af_heart', 'bm_george']);

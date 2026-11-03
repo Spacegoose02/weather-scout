@@ -63,17 +63,19 @@ windyInit({ key: boot.key, lat: boot.lat, lon: boot.lon, zoom: boot.zoom, verbos
 }
 
 export function registerWindy(app, { cfg }) {
-  const key = cfg.windy?.mapKey || '';
+  // Read on every request: an admin can change the key in Family & settings.
+  const keyOf = () => cfg.windy?.mapKey || '';
 
   app.get('/api/windy', async () => ({
-    mode: key ? 'api' : 'embed',
+    mode: keyOf() ? 'api' : 'embed',
     overlays: WINDY_OVERLAYS,
     models: WINDY_MODELS,
     levels: WINDY_LEVELS,
   }));
 
   app.get('/api/windy/map', { schema: viewSchema }, async (req, reply) => {
-    if (!key) return reply.code(404).send({ error: 'Set WINDY_MAP_KEY to use the Windy Map Forecast API. The free embed works without it.' });
+    const key = keyOf();
+    if (!key) return reply.code(404).send({ error: 'Add a Windy Map Forecast key in Family & settings (or WINDY_MAP_KEY) to use the Windy Map Forecast API. The free embed works without it.' });
     return reply
       .type('text/html; charset=utf-8')
       .header('cache-control', 'private, no-store')

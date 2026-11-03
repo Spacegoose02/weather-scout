@@ -11,7 +11,7 @@ import { stopSpeaking } from '../../kid/speak.js';
 import '../../learn/learn.css';
 
 // The Learn tab: a live sky, today's "why" lessons, the topic library and the Storm Center.
-export default function Learn({ weather, location, kidMode, onOcean }) {
+export default function Learn({ weather, location, kidMode, chasers, onOcean }) {
   const [audience, setAudience] = useAudience(kidMode);
   const [view, setView] = useState(null); // null | topic id | 'storms' | 'storms:<hazard>'
   const open = (id) => {
@@ -34,7 +34,7 @@ export default function Learn({ weather, location, kidMode, onOcean }) {
     return (
       <div className="learn">
         {toggle}
-        <StormCenter audience={audience} weather={weather} location={location} onBack={() => open(null)} initial={view.split(':')[1] || 'tornado'} />
+        <StormCenter audience={audience} weather={weather} location={location} onBack={() => open(null)} initial={view.split(':')[1] || 'tornado'} chasers={chasers} />
       </div>
     );
   }
