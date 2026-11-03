@@ -209,8 +209,15 @@ The **Ask an Expert** tab (called **Ask Rocky** in Kid Mode) appears once the se
 an Anthropic API key (Claude) or the address of an Ollama server (models you run yourself).
 Without either, the tab is simply hidden and everything else works as before.
 
+**Easiest:** sign in as an admin, open 👤 → *Family & settings* → *AI helper & Rocky's voice*, fill in
+a Claude key or an Ollama address, press *Test connection*, then *Save*. It takes effect right away,
+no restart. Values saved there are kept in the data folder (`/data`), win over the environment
+variables below, and keys are never shown again (only their last 4 characters). *Use template
+value* next to a field goes back to the environment variable.
+
 - **Claude**: create a key at [console.anthropic.com](https://console.anthropic.com/) (pay as you
-  go) and set `ANTHROPIC_API_KEY` (*Anthropic API key* in the Unraid template).
+  go) and set `ANTHROPIC_API_KEY` (*Anthropic API key* in the Unraid template), or paste it in
+  *Family & settings*.
 - **Ollama**: set `OLLAMA_URL`, e.g. `http://192.168.1.20:11434`, and pull a model that can see
   photos, e.g. `ollama pull gemma3`. Free and private, but answers are slower and less accurate
   than Claude on most home hardware.
@@ -241,16 +248,20 @@ is billed by Anthropic per search on top of tokens.
 Rocky reads facts, storm steps, experiments and Ask Rocky answers aloud. By default that uses the
 device's built-in voice, which often sounds robotic. For a natural voice, run
 [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) (a small open text-to-speech model; on
-Unraid, add the `ghcr.io/remsky/kokoro-fastapi-cpu` container, port 8880) and set:
+Unraid, add the `ghcr.io/remsky/kokoro-fastapi-cpu` container, port 8880) and either fill in
+*Family & settings* → *Rocky's read-aloud voice* (pick the voice, speed and press *Preview voice*)
+or set:
 
 | Setting | Default | What |
 | --- | --- | --- |
 | `KOKORO_URL` | (blank) | e.g. `http://192.168.1.20:8880`. Blank = device voice |
 | `KOKORO_VOICE` | `af_heart` | Rocky's default voice. Kids can pick another under 🗣️ *Voice* in the Kid Zone or Ask tab |
 | `KOKORO_SPEED` | `1` | 0.5 to 2 |
+| `KOKORO_FALLBACK` | `browser` | When Kokoro can't answer: `browser` reads with the device's own voice, `off` stays quiet |
 
 Speech goes through the Weather Scout server (and is cached), so phones never talk to Kokoro
-directly. If Kokoro is down, read-aloud quietly falls back to the device voice.
+directly. If Kokoro is down, read-aloud quietly falls back to the device voice (unless
+`KOKORO_FALLBACK=off`).
 
 ## Windy maps
 

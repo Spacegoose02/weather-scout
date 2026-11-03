@@ -17,12 +17,13 @@ function silentWav(samples = 800) {
 }
 let SILENT = null;
 
-let tts = { enabled: false, voice: '' }; // voice: '' = server default, 'browser', or a Kokoro voice id
+// voice: '' = server default, 'browser', or a Kokoro voice id. fallback: what to do when Kokoro fails.
+let tts = { enabled: false, voice: '', fallback: 'browser' };
 let audio = null;
 let turn = 0;
 
-export function configureVoice({ enabled, voice } = {}) {
-  tts = { enabled: !!enabled, voice: voice || '' };
+export function configureVoice({ enabled, voice, fallback } = {}) {
+  tts = { enabled: !!enabled, voice: voice || '', fallback: fallback === 'off' ? 'off' : 'browser' };
 }
 
 export const usesKokoro = () => tts.enabled && tts.voice !== 'browser';
@@ -74,7 +75,7 @@ export function speak(text, { voice = tts.voice } = {}) {
   const mine = turn;
   if (tts.enabled && voice !== 'browser') {
     kokoroSpeak(text, voice, mine).catch(() => {
-      if (mine === turn) browserSpeak(text);
+      if (mine === turn && tts.fallback !== 'off') browserSpeak(text);
     });
     return true;
   }
