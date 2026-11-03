@@ -19,7 +19,6 @@ import ThunderCounter from './kid/ThunderCounter.jsx';
 import SpeakButton from './kid/SpeakButton.jsx';
 import Briefing from './kid/Briefing.jsx';
 import StormChaser from './kid/chaser/StormChaser.jsx';
-import VoicePicker from './VoicePicker.jsx';
 import '../kid/kid.css';
 import { openSafety } from '../safety/useSafetyPlan.js';
 
@@ -61,7 +60,7 @@ const KID_TABS = [
   ['badges', 'Badges', '🏅'],
 ];
 
-export default function KidMode({ weather, user, location, voice, onAlerts }) {
+export default function KidMode({ weather, user, location, onAlerts }) {
   const today = weather.kid.date;
   const kidData = useKidData(user, today);
   const [tab, setTab] = useState(() => (takeShelfRequest() ? 'badges' : 'today'));
@@ -100,7 +99,7 @@ export default function KidMode({ weather, user, location, voice, onAlerts }) {
         ))}
       </nav>
 
-      {tab === 'today' && <KidToday weather={weather} name={user?.displayName} kid={kidData} today={today} voice={voice} location={location} onAlerts={onAlerts} isAdmin={!!user?.isAdmin} />}
+      {tab === 'today' && <KidToday weather={weather} name={user?.displayName} kid={kidData} today={today} location={location} onAlerts={onAlerts} isAdmin={!!user?.isAdmin} />}
       {tab === 'play' && (
         <div className="kid-grid">
           <WhatToWear raccoon={weather.kid.raccoon} kid={kidData} />
@@ -132,7 +131,7 @@ export default function KidMode({ weather, user, location, voice, onAlerts }) {
   );
 }
 
-function KidToday({ weather, name, kid: kidData, today, voice, location, onAlerts, isAdmin }) {
+function KidToday({ weather, name, kid: kidData, today, location, onAlerts, isAdmin }) {
   const { kid, forecast } = weather;
   const c = forecast.current;
   const [done, toggle] = useChecklist();
@@ -148,7 +147,6 @@ function KidToday({ weather, name, kid: kidData, today, voice, location, onAlert
           <p className="hello">Hi{name ? ` ${name}` : ''}! I'm Rocky.</p>
           <p className="bubble">{said}</p>
           <SpeakButton text={`${said} It's ${round(c.temp)} degrees, and it feels like ${round(c.feelsLike)}.`} label="Hear Rocky" />
-          {voice && <div><VoicePicker {...voice} /></div>}
           <div className="kid-temp">
             <span className="big-icon" aria-hidden>{icon(c.icon, c.isDay)}</span>
             <span className="temp">{round(c.temp)}°</span>

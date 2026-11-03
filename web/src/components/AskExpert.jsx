@@ -3,7 +3,6 @@ import { api } from '../api.js';
 import { CLOUD_EMOJI, CLOUD_NAMES, speakable, suggestions, toHistory } from '../ai/logic.js';
 import SpeakButton from './kid/SpeakButton.jsx';
 import RockyFace from './RockyFace.jsx';
-import VoicePicker from './VoicePicker.jsx';
 import '../ai/ask.css';
 
 const STORE = 'ws-ask-chat';
@@ -42,7 +41,7 @@ async function shrink(file, max = 1280) {
   }
 }
 
-export default function AskExpert({ ai, weather, location, units, kidMode, voice }) {
+export default function AskExpert({ ai, weather, location, units, kidMode, tts }) {
   const [items, setItems] = useState(load);
   const [text, setText] = useState('');
   const [search, setSearch] = useState(false);
@@ -112,7 +111,7 @@ export default function AskExpert({ ai, weather, location, units, kidMode, voice
 
       <div className="ask-log" aria-live="polite">
         <Bubble who={name} kidMode={kidMode} m={{ role: 'assistant', text: intro }} />
-        {items.map((m, i) => <Bubble key={i} who={name} kidMode={kidMode} readAloud={kidMode || !!voice?.tts?.enabled} m={m} />)}
+        {items.map((m, i) => <Bubble key={i} who={name} kidMode={kidMode} readAloud={kidMode || !!tts?.enabled} m={m} />)}
         <div ref={endRef} />
       </div>
 
@@ -143,7 +142,6 @@ export default function AskExpert({ ai, weather, location, units, kidMode, voice
             <span aria-hidden>🔎</span> Search the web{kidMode ? ' (kid-safe science sites)' : ''}
           </label>
         )}
-        {voice && <VoicePicker {...voice} />}
       </div>
       <p className="ask-note">
         {kidMode

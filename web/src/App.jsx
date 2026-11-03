@@ -65,10 +65,9 @@ export default function App() {
   const lightningMiles = lightningOn ? (prefs.lightningMiles ?? DEFAULT_ALERT_MILES) : 0;
   const theme = useTheme(prefs.theme, weather);
   const chasers = { mode: popupMode(prefs.chaserPopups), onChange: (m) => setPrefs({ chaserPopups: m }) };
-  const voice = { tts: config?.tts, value: prefs.voice || '', onChange: (v) => setPrefs({ voice: v }) };
 
-  // Read-aloud uses the server's Kokoro voice when there is one.
-  useEffect(() => configureVoice({ enabled: config?.tts?.enabled, voice: prefs.voice, fallback: config?.tts?.fallback }), [config?.tts?.enabled, config?.tts?.fallback, prefs.voice]);
+  // Read-aloud uses the voice the admin picked in Family & settings (Kokoro when set up).
+  useEffect(() => configureVoice({ enabled: config?.tts?.enabled, fallback: config?.tts?.fallback }), [config?.tts?.enabled, config?.tts?.fallback]);
 
   const load = useCallback(async () => {
     if (!location) return;
@@ -169,11 +168,11 @@ export default function App() {
               />
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} layers={prefs.mapLayers} onLayers={(l) => setPrefs({ mapLayers: l })} signedIn={!!user} lightningMiles={lightningMiles} />}
-            {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} voice={voice} onAlerts={() => setModal('alerts')} />}
+            {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} onAlerts={() => setModal('alerts')} />}
             {weather && tab === 'learn' && <Learn weather={weather} location={location} kidMode={kidMode} chasers={chasers} onOcean={() => setTab('ocean')} />}
             {tab === 'ocean' && location && <Ocean location={location} units={units} kidMode={kidMode} ai={config.ai} />}
             {tab === 'models' && location && <ModelsView location={location} units={units} />}
-            {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} voice={voice} />}
+            {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} tts={config.tts} />}
             {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} kidMode={kidMode} location={location} />}
           </main>
         </>

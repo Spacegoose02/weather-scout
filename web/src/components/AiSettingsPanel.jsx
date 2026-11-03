@@ -168,7 +168,7 @@ export default function AiSettingsPanel() {
             <select value={form.KOKORO_VOICE || DEFAULTS.KOKORO_VOICE} onChange={set('KOKORO_VOICE')} disabled={!kokoroUrl}>
               {voiceOptions.map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
             </select>
-            <small className="hint">Everyone hears this unless they pick another voice for themselves.</small>
+            <small className="hint">Everyone in the family hears this voice. Only grown-ups can change it here.</small>
           </label>
           <label>
             <span>Speed: {speed.toFixed(2).replace(/0$/, '')}× <Source ctx={ctx} k="KOKORO_SPEED" /></span>
