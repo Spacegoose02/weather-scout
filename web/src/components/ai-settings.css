@@ -1,0 +1,28 @@
+/* Family & settings: AI helper and read-aloud voice. */
+.ai-settings { display: grid; gap: 12px; }
+.ai-settings fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px 12px; margin: 0; display: grid; gap: 10px; min-width: 0; }
+.ai-settings legend { font-weight: 800; padding: 0 6px; }
+.ai-settings label { display: grid; gap: 4px; font-weight: 700; min-width: 0; }
+.ai-settings label > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.ai-settings input[type='text'], .ai-settings input[type='password'], .ai-settings input[type='number'], .ai-settings select {
+  padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-weight: 400; min-width: 0; width: 100%; box-sizing: border-box;
+}
+.ai-settings input[type='range'] { width: 100%; }
+.ai-settings small.hint { font-weight: 400; }
+.ai-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; align-items: start; }
+.ai-src { font-size: 0.78rem; font-weight: 600; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+.ai-src.saved { color: var(--brand); border-color: var(--brand); }
+.ai-src .link { font-size: 0.78rem; padding: 0 0 0 6px; }
+.ai-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ai-test { margin: 0; font-weight: 600; }
+.ai-test.good { color: var(--good); }
+.ai-test.bad { color: var(--bad); }
+.ai-save { position: sticky; bottom: 0; background: var(--card); padding: 8px 0; }
+
+/* App settings: one collapsible box per part of the app. */
+.settings-group { border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; }
+.settings-group[open] { padding-bottom: 12px; }
+.settings-group > summary { cursor: pointer; font-weight: 800; padding: 12px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.settings-group > .ai-row, .settings-group > .ai-actions, .settings-group > .place-finder { margin-top: 10px; }
+.settings-group > .ai-test { margin-top: 8px; }
+.place-finder input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; }

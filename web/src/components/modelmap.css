@@ -1,0 +1,57 @@
+/* Forecast model maps on the Models tab (ModelMap.jsx). */
+.model-map .card-title { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
+.mm-controls { display: grid; gap: 10px; margin: 10px 0 6px; }
+.mm-chip.on { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.mm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.mm-select { font-weight: 700; font-size: 0.92rem; }
+.mm-select select { font: inherit; font-weight: 600; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; }
+.mm-windy { margin-left: auto; cursor: pointer; }
+.mm-fields { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+.mm-fields button { white-space: nowrap; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font: inherit; font-weight: 700; cursor: pointer; }
+.mm-fields button.on { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.mm-kid { margin: 4px 0 10px; font-size: 0.95rem; }
+
+.mm-maps { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
+.mm-maps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mm-pane { min-width: 0; }
+.mm-pane-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 10px; margin-bottom: 4px; }
+.mm-map-wrap { position: relative; }
+.mm-map { height: 420px; border-radius: 12px; overflow: hidden; background: #1d2433; }
+.mm-maps.two .mm-map { height: 360px; }
+.mm-overlay { image-rendering: auto; }
+.mm-note { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 500; margin: 0; max-width: 80%;
+  background: rgba(15, 20, 32, 0.85); color: #fff; padding: 8px 14px; border-radius: 10px; text-align: center; font-weight: 600; pointer-events: none; }
+.mm-note.err { background: rgba(120, 20, 30, 0.9); }
+
+.mm-arrow span { display: block; width: 22px; height: 22px; line-height: 22px; text-align: center; color: #fff; font-weight: 900; font-size: 17px;
+  text-shadow: 0 0 3px #000, 0 0 2px #000; }
+.mm-arrow span.calm { font-size: 22px; opacity: 0.7; }
+.mm-hl { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; text-shadow: 0 0 4px #000, 0 0 2px #000; }
+.mm-hl b { font-size: 24px; }
+.mm-hl small { font-size: 10px; color: #fff; font-weight: 700; }
+.mm-hl.low b { color: #ff6b6b; }
+.mm-hl.high b { color: #6bb6ff; }
+.mm-pop .leaflet-popup-content { margin: 6px 10px; font-weight: 600; }
+
+.mm-legend { position: relative; margin: 12px 0 4px; padding-bottom: 18px; }
+.mm-bar { height: 12px; border-radius: 6px; border: 1px solid var(--line); }
+.mm-ticks { position: relative; height: 16px; margin-top: 2px; }
+.mm-ticks span { position: absolute; transform: translateX(-50%); font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+.mm-ticks span:first-child { transform: none; }
+.mm-ticks span:last-child { transform: translateX(-100%); }
+.mm-unit { position: absolute; right: 0; bottom: 0; font-size: 0.75rem; color: var(--muted); }
+
+.mm-time { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.mm-play { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--brand); color: var(--brand-ink); font-size: 1rem; cursor: pointer; }
+.mm-play:disabled { opacity: 0.5; cursor: default; }
+.mm-time input[type='range'] { flex: 1; min-width: 0; accent-color: var(--brand); }
+.mm-when { flex: none; min-width: 9.5em; text-align: right; }
+
+@media (max-width: 700px) {
+  .mm-maps.two { grid-template-columns: minmax(0, 1fr); }
+  .mm-map, .mm-maps.two .mm-map { height: 320px; }
+  .mm-windy { margin-left: 0; }
+  .mm-time { flex-wrap: wrap; }
+  .mm-time input[type='range'] { flex-basis: calc(100% - 60px); }
+  .mm-when { min-width: 0; text-align: left; flex-basis: 100%; }
+}
