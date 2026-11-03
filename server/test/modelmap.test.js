@@ -1,21 +1,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { modelMapUrl, normalizeModelMap } from '../src/providers/modelmaps.js';
+import { PointBudget, modelMapUrl, normalizeModelMap } from '../src/providers/modelmaps.js';
 import {
-  GRID_COLS, GRID_ROWS, MAP_MODELS, colorAt, gridFor, gridPos, legendFor, pressureCenters, sampleGrid, scaleValue,
+  GRID_COLS, GRID_ROWS, MAP_MODELS, defaultArea, colorAt, gridFor, gridPos, legendFor, pressureCenters, sampleGrid, scaleValue,
 } from '../../shared/modelmap.js';
 import { testApp, mockFetch } from './helpers.js';
 
 const HOUR = 3600_000;
 
+// Rows and columns asked for in a model map url.
+const sizeOf = (u) => {
+  const q = new URL(u).searchParams;
+  const lats = q.get('latitude').split(',');
+  const cols = lats.filter((x) => x === lats[0]).length;
+  return { rows: lats.length / cols, cols };
+};
+
 // One Open-Meteo forecast per grid point. Temperature rises west to east, it
 // rains 0.1 in every hour in the north-west corner, and pressure dips in the middle.
-function fakeGrid({ days = 7, nullAt = () => false } = {}) {
+function fakeGrid({ days = 7, nullAt = () => false, rows = GRID_ROWS, cols = GRID_COLS } = {}) {
   const start = Math.floor(Date.now() / HOUR) * HOUR - 24 * HOUR;
   const time = Array.from({ length: 24 * days }, (_, i) => (start + i * HOUR) / 1000);
   const out = [];
-  for (let r = 0; r < GRID_ROWS; r++) {
-    for (let c = 0; c < GRID_COLS; c++) {
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       const fill = (v) => time.map(() => (nullAt(r, c) ? null : v));
       out.push({
         latitude: 0, longitude: 0, utc_offset_seconds: 0,
@@ -96,8 +104,8 @@ test('/api/modelmap returns a grid; HRRR outside the US says so', async () => {
   const { app, fetchImpl } = await testApp({
     fetchImpl: mockFetch({
       'models=gfs_hrrr': () => new Response('{"error":true,"reason":"No data"}', { status: 400 }),
-      'models=gem_seamless': () => Response.json(fakeGrid({ nullAt: () => true })),
-      'models=ecmwf_ifs025': () => Response.json(fakeGrid()),
+      'models=gem_seamless': (u) => Response.json(fakeGrid({ nullAt: () => true, ...sizeOf(u) })),
+      'models=ecmwf_ifs025': (u) => Response.json(fakeGrid(sizeOf(u))),
     }),
   });
   const r = await app.inject({ url: '/api/modelmap?lat=37.55&lon=-77.46&model=ecmwf_ifs025&area=region' });
@@ -116,4 +124,42 @@ test('/api/modelmap returns a grid; HRRR outside the US says so', async () => {
   assert.equal(empty.statusCode, 404);
   const bad = await app.inject({ url: '/api/modelmap?lat=37.55&lon=-77.46&model=nope' });
   assert.equal(bad.statusCode, 400);
+});
+
+test('US places get the whole lower 48 by default; elsewhere a wide area', async () => {
+  const g = gridFor(37.55, -77.46, 'country');
+  assert.equal(g.lats[0], 50);
+  assert.equal(g.lats[g.rows - 1], 23.5);
+  assert.equal(g.lons[0], -126);
+  assert.equal(g.lons[g.cols - 1], -65.5);
+  assert.deepEqual(gridFor(47.6, -122.3, 'country').lats, g.lats); // Seattle shares the same map
+  assert.ok(g.rows * g.cols * 2 <= 600, 'two whole-US maps fit in a minute of Open-Meteo calls');
+  assert.equal(defaultArea(37.55, -77.46), 'country');
+  assert.equal(defaultArea(51.5, -0.1), 'region');
+  const uk = gridFor(51.5, -0.1, 'country');
+  assert.ok(uk.lats[0] > 60 && uk.lats[uk.rows - 1] < 40);
+
+  const { app, fetchImpl } = await testApp({ fetchImpl: mockFetch({ 'models=gfs_hrrr': (u) => Response.json(fakeGrid(sizeOf(u))) }) });
+  const r = await app.inject({ url: '/api/modelmap?lat=37.55&lon=-77.46&model=gfs_hrrr' });
+  assert.equal(r.statusCode, 200);
+  const m = r.json();
+  assert.equal(m.area, 'country');
+  assert.equal(m.fields.temp[0].length, m.rows * m.cols);
+  assert.equal(m.lons[0], -126);
+  await app.inject({ url: '/api/modelmap?lat=34.05&lon=-118.24&model=gfs_hrrr' }); // Los Angeles: same cached map
+  assert.equal(fetchImpl.calls.filter((c) => c.url.includes('models=gfs_hrrr')).length, 1);
+});
+
+test('point budget makes a request wait when the minute is used up', async () => {
+  let t = 0;
+  const waits = [];
+  const b = new PointBudget({ perMinute: 600, now: () => t, sleep: async (ms) => { waits.push(ms); t += ms; } });
+  await b.take(275);
+  await b.take(275);
+  assert.equal(waits.length, 0);
+  await b.take(275);
+  assert.equal(waits.length, 1);
+  assert.ok(t >= 60_000);
+  await b.take(2000); // bigger than a minute's worth still goes, alone
+  assert.ok(waits.length >= 2);
 });

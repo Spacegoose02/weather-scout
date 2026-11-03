@@ -5,7 +5,7 @@ import { baseMap } from './basemap.js';
 import WindyView from './WindyView.jsx';
 import './modelmap.css';
 import {
-  MAP_AREAS, MAP_FIELDS, MAP_MODELS, colorAt, gridPos, legendFor, pressureCenters, sampleGrid, sampleSmooth, scaleValue,
+  MAP_AREAS, MAP_FIELDS, MAP_MODELS, colorAt, defaultArea, inConus, gridPos, legendFor, pressureCenters, sampleGrid, sampleSmooth, scaleValue,
 } from '../../../shared/modelmap.js';
 
 // Forecast maps for the Models tab: one model (or two side by side) painted on a
@@ -13,8 +13,8 @@ import {
 // The grid comes from /api/modelmap (Open-Meteo, no key). ECMWF, GFS and ICON
 // can also open in Windy for the full animated map.
 
-const IMG_W = 280;
-const IMG_H = 240;
+// About 22 pixels per grid cell; the browser smooths the rest.
+const imgSize = (data) => [Math.min(600, data.cols * 22), Math.min(400, data.rows * 24)];
 const PLAY_MS = 850;
 
 function useModelGrid(location, units, model, area) {
@@ -58,6 +58,7 @@ const unMercY = (y) => (360 / Math.PI) * Math.atan(Math.exp(y)) - 90;
 /** Paint one time step of one field to a data: URL the size of the overlay. */
 export function paintField(data, field, idx, units, canvas = document.createElement('canvas')) {
   const values = data.fields[field]?.[idx];
+  const [IMG_W, IMG_H] = imgSize(data);
   canvas.width = IMG_W;
   canvas.height = IMG_H;
   const ctx = canvas.getContext('2d');
@@ -114,7 +115,7 @@ const latLonAt = (data, r, c) => {
   return [data.lats[0] + ((data.lats[data.rows - 1] - data.lats[0]) * r) / (data.rows - 1), lon];
 };
 
-function ModelPane({ state, modelId, field, time, units, location, sync }) {
+function ModelPane({ state, modelId, field, time, units, location, sync, panes = 1 }) {
   const el = useRef(null);
   const map = useRef(null);
   const overlay = useRef(null);
@@ -153,12 +154,15 @@ function ModelPane({ state, modelId, field, time, units, location, sync }) {
   // Fit the map to the grid the first time a new area arrives.
   useEffect(() => {
     if (!data || !map.current) return;
-    const k = `${data.area}:${data.center.lat},${data.center.lon}`;
+    // Refit when a second map is added or removed too, since each map got narrower or wider.
+    const k = `${data.area}:${data.center.lat},${data.center.lon}:${panes}`;
     if (fitted.current === k) return;
     fitted.current = k;
     if (sync.maps.size > 1 && [...sync.maps][0] !== map.current) return; // the first map leads
-    map.current.fitBounds(boundsOf(data), { padding: [4, 4] });
-  }, [data, sync]);
+    map.current.invalidateSize();
+    // No animation: a second map copies this view right away and would cut an animation short.
+    map.current.fitBounds(boundsOf(data), { padding: [4, 4], animate: false });
+  }, [data, sync, panes]);
 
   // Paint the field for this time step.
   useEffect(() => {
@@ -244,7 +248,7 @@ export default function ModelMap({ location, units }) {
   const [model, setModel] = useState(MAP_MODELS[0].id);
   const [compare, setCompare] = useState('');
   const [field, setField] = useState('precip');
-  const [area, setArea] = useState('region');
+  const [area, setArea] = useState(() => defaultArea(location.lat, location.lon));
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [windy, setWindy] = useState(false);
@@ -301,7 +305,7 @@ export default function ModelMap({ location, units }) {
           </label>
           <label className="mm-select">Area{' '}
             <select value={area} onChange={(e) => setArea(e.target.value)}>
-              {MAP_AREAS.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+              {MAP_AREAS.map((x) => <option key={x.id} value={x.id}>{x.wideName && !inConus(location.lat, location.lon) ? x.wideName : x.name}</option>)}
             </select>
           </label>
           {windyModel && (
@@ -320,7 +324,7 @@ export default function ModelMap({ location, units }) {
       <p className="mm-kid">{f.emoji} {f.kid}</p>
 
       <div className={`mm-maps ${compare ? 'two' : ''}`}>
-        <ModelPane state={a} modelId={model} field={field} time={time} units={units} location={location} sync={sync} />
+        <ModelPane state={a} modelId={model} field={field} time={time} units={units} location={location} sync={sync} panes={compare ? 2 : 1} />
         {compare && <ModelPane key={compare} state={b} modelId={compare} field={field} time={time} units={units} location={location} sync={sync} />}
       </div>
 
@@ -343,7 +347,7 @@ export default function ModelMap({ location, units }) {
 
       {windy && (
         <WindyView
-          center={{ lat: location.lat, lon: location.lon, zoom: area === 'nearby' ? 8 : 6 }}
+          center={{ lat: location.lat, lon: location.lon, zoom: area === 'nearby' ? 8 : area === 'country' ? 4 : 6 }}
           initial={{ overlay: f.windy, product: windyModel }}
           units={units}
           onClose={() => setWindy(false)}

@@ -12,16 +12,26 @@ export const MAP_MODELS = [
   { id: 'ecmwf_aifs025_single', name: 'AIFS', days: 5, ai: true, note: "ECMWF's AI model." },
 ];
 
-// How much of the map to cover. `half` is half the height in degrees of latitude.
-export const MAP_AREAS = [
-  { id: 'nearby', name: 'Nearby', half: 2.2 },
-  { id: 'region', name: 'Region', half: 6 },
-];
-
 // 176 points per map. Open-Meteo counts each point as one call (600 a minute
 // for free), so two maps side by side stay well under the limit.
 export const GRID_ROWS = 11;
 export const GRID_COLS = 16;
+
+// The lower 48 states, edge to edge (and HRRR's whole domain, near enough).
+export const CONUS = { south: 23.5, north: 50, west: -126, east: -65.5 };
+export const inConus = (lat, lon) => lat >= CONUS.south && lat <= CONUS.north && lon >= CONUS.west && lon <= CONUS.east;
+
+// How much of the map to cover. `half` is half the height in degrees of latitude.
+// "country" is the whole lower 48 for US places, and a wide area anywhere else.
+// Its 275 points keep two maps side by side under Open-Meteo's 600 a minute.
+export const MAP_AREAS = [
+  { id: 'nearby', name: 'Nearby', half: 2.2 },
+  { id: 'region', name: 'Region', half: 6 },
+  { id: 'country', name: 'Whole US', wideName: 'Wide area', half: 13, rows: 11, cols: 25, aspect: 2 },
+];
+
+/** The area to start on: the whole country for US places, the region elsewhere. */
+export const defaultArea = (lat, lon) => (inConus(lat, lon) ? 'country' : 'region');
 export const STEP_HOURS = 3;
 
 // Open-Meteo hourly variable for each field.
@@ -126,16 +136,28 @@ export function legendFor(field, units) {
 // The center is snapped so nearby lookups share one cached grid.
 export function gridFor(lat, lon, areaId = 'region') {
   const area = MAP_AREAS.find((a) => a.id === areaId) || MAP_AREAS[1];
+  const rows = area.rows || GRID_ROWS;
+  const cols = area.cols || GRID_COLS;
+  const r3 = (n) => Math.round(n * 1000) / 1000;
+  const spread = (from, to, n) => Array.from({ length: n }, (_, i) => r3(from + ((to - from) * i) / (n - 1)));
+  if (area.id === 'country' && inConus(lat, lon)) {
+    // One fixed grid for every US place, so they all share one cached map.
+    const center = { lat: (CONUS.north + CONUS.south) / 2, lon: (CONUS.west + CONUS.east) / 2 };
+    return {
+      area: area.id, center, rows, cols,
+      lats: spread(CONUS.north, CONUS.south, rows), lons: spread(CONUS.west, CONUS.east, cols),
+      latHalf: (CONUS.north - CONUS.south) / 2, lonHalf: (CONUS.east - CONUS.west) / 2,
+    };
+  }
   const snap = area.half > 3 ? 0.5 : 0.25;
   const cLat = Math.max(-80 + area.half, Math.min(80 - area.half, Math.round(lat / snap) * snap));
   const cLon = Math.round(lon / snap) * snap;
   const latHalf = area.half;
   // Wider than tall, and stretched for the shrinking of longitude toward the poles.
-  const lonHalf = Math.min(60, (area.half * 1.6) / Math.max(0.3, Math.cos((cLat * Math.PI) / 180)));
-  const r3 = (n) => Math.round(n * 1000) / 1000;
-  const lats = Array.from({ length: GRID_ROWS }, (_, i) => r3(cLat + latHalf - (2 * latHalf * i) / (GRID_ROWS - 1)));
-  const lons = Array.from({ length: GRID_COLS }, (_, j) => r3(((cLon - lonHalf + (2 * lonHalf * j) / (GRID_COLS - 1) + 540) % 360) - 180));
-  return { area: area.id, center: { lat: cLat, lon: cLon }, lats, lons, latHalf, lonHalf };
+  const lonHalf = Math.min(170, (area.half * (area.aspect || 1.6)) / Math.max(0.3, Math.cos((cLat * Math.PI) / 180)));
+  const lats = spread(cLat + latHalf, cLat - latHalf, rows);
+  const lons = Array.from({ length: cols }, (_, j) => r3(((cLon - lonHalf + (2 * lonHalf * j) / (cols - 1) + 540) % 360) - 180));
+  return { area: area.id, center: { lat: cLat, lon: cLon }, rows, cols, lats, lons, latHalf, lonHalf };
 }
 
 /**
