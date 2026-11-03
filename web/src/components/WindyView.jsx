@@ -5,9 +5,9 @@ import { WINDY_LEVELS, WINDY_MODELS, WINDY_OVERLAYS, windyEmbedUrl, windyView } 
 
 // Full-screen Windy map, opened from the Radar & Cams map. Uses the free Windy
 // embed unless the server has a WINDY_MAP_KEY, then the Map Forecast API page.
-export default function WindyView({ center, units = 'imperial', onClose }) {
+export default function WindyView({ center, initial, units = 'imperial', onClose }) {
   const [info, setInfo] = useState(null);
-  const [sel, setSel] = useState({ overlay: 'wind', product: 'ecmwf', level: 'surface' });
+  const [sel, setSel] = useState(() => ({ overlay: 'wind', product: 'ecmwf', level: 'surface', ...initial }));
   const frame = useRef(null);
   // The API page loads once at the starting view; later changes are posted to it.
   const [start] = useState(() => windyView({ ...center, ...sel }));
