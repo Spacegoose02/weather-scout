@@ -11,3 +11,88 @@
 .chaser-pills button { background: var(--card); color: var(--ink); border: 2px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 0.95rem; }
 .chaser-pills button.active { background: #5a3f8f; border-color: #5a3f8f; color: #fff; }
 @media (max-width: 560px) { .chaser-nav-label { min-width: 0; width: 100%; } }
+
+/* ---- Chase Day ---- */
+.chase-day-head { display: flex; gap: 12px; align-items: center; }
+.chase-day-head .rocky-face, .chase-day-head img { width: 64px; height: 64px; flex: none; }
+.chase-day h2 { margin: 2px 0 6px; }
+.chase-date { margin: 0; color: var(--muted); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.chase-rating { display: inline-block; border-radius: 999px; padding: 3px 12px; font-weight: 800; font-size: 0.9rem; background: var(--bg); border: 2px solid var(--line); }
+.chase-rating.rating-big { background: #ffd1dc; border-color: #e0507a; color: #5a0f27; }
+.chase-rating.rating-chase { background: #ffe2b8; border-color: #f0962a; color: #5a3200; }
+.chase-rating.rating-maybe { background: #e6f5d0; border-color: #7cb342; color: #2c4a0f; }
+.chase-rating.rating-down { background: #e3e8f2; border-color: #9aa8c4; color: #2c3550; }
+.chase-where { font-size: 1.1rem; margin: 12px 0 4px; }
+.chase-why { margin: 8px 0; padding-left: 20px; display: grid; gap: 6px; line-height: 1.45; }
+.chase-odds { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.chase-odds span { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 6px 10px; }
+.chase-map { width: 100%; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); z-index: 0; }
+.chase-map.pickable { cursor: crosshair; }
+.chase-target-pin span, .chase-home-pin span { display: grid; place-items: center; width: 100%; height: 100%; font-size: 1.5rem; filter: drop-shadow(0 1px 2px #0008); }
+.chase-home-pin span { font-size: 1.1rem; }
+.outlook-key, .report-key { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
+.outlook-key span, .report-key span { display: inline-flex; gap: 4px; align-items: center; }
+.outlook-key i, .report-key i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; border: 1px solid #0002; }
+.report-key i { border-radius: 50%; }
+.chase-recipe ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.chase-recipe li { display: flex; gap: 10px; align-items: flex-start; }
+.chase-recipe .emoji { font-size: 1.6rem; }
+.chase-recipe small { display: block; color: var(--muted); }
+.chase-home.level-2 { border: 3px solid #7aa7e0; background: linear-gradient(160deg, #dbeafe, #e0f2f1); color: #1d2433; }
+.chase-home.level-2 .hint { color: #3d4559; }
+.chase-grownup summary { cursor: pointer; font-weight: 700; }
+
+/* ---- target game ---- */
+.chase-rank { margin: 0 0 6px; font-size: 1.05rem; }
+.chase-rank small { color: var(--muted); }
+.state-pick select { padding: 6px 8px; border-radius: 10px; }
+.target-result { margin-top: 12px; background: var(--bg); border-radius: 14px; padding: 10px 14px; }
+.target-result p { margin: 4px 0; }
+.target-score { font-size: 1.15rem; }
+.target-score b { background: #5a3f8f; color: #fff; border-radius: 999px; padding: 2px 10px; margin-right: 6px; }
+.target-history ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+
+/* ---- live chase ---- */
+.warn-line { font-size: 1.05rem; }
+.live-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #000; }
+.live-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.live-list { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.live-list button { width: 100%; display: flex; gap: 10px; align-items: center; text-align: left; background: var(--bg); color: var(--ink); border: 2px solid var(--line); border-radius: 14px; padding: 6px; }
+.live-list button.on { border-color: #e53935; }
+.live-list img { width: 96px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; flex: none; }
+.live-list small { display: block; color: var(--muted); }
+
+/* ---- storm cards ---- */
+.card-deck { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.card-deck li { display: grid; gap: 6px; justify-items: center; }
+.card-deck li > button:not(.storm-card) { width: 100%; }
+.collected { margin: 0; font-weight: 700; color: var(--good); }
+.storm-card {
+  --c1: #4a5578; --c2: #232a40;
+  width: 100%; max-width: 220px; aspect-ratio: 5 / 7; display: flex; flex-direction: column; gap: 6px; padding: 10px;
+  border-radius: 16px; border: 4px solid #c9ced8; background: linear-gradient(160deg, var(--c1), var(--c2)); color: #fff; text-align: left;
+  box-shadow: 0 4px 12px #0003; font-size: 0.85rem; line-height: 1.25; overflow: hidden;
+}
+.storm-card.type-tornado { --c1: #6a4c93; --c2: #2b1d45; }
+.storm-card.type-hail { --c1: #2f8fa8; --c2: #12384a; }
+.storm-card.type-wind { --c1: #3c7d5a; --c2: #163524; }
+.storm-card.rar-rare { border-color: #6fb3ff; }
+.storm-card.rar-epic { border-color: #c084fc; box-shadow: 0 0 0 2px #c084fc55, 0 4px 14px #0004; }
+.storm-card.rar-legendary { border-color: #ffd34d; box-shadow: 0 0 0 3px #ffd34d66, 0 4px 18px #ffb30066; }
+.sc-top { display: flex; justify-content: space-between; gap: 4px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.sc-sotd { background: #ffd34d; color: #3a2a00; border-radius: 999px; padding: 0 6px; }
+.sc-art { flex: 1; display: grid; place-items: center; border-radius: 12px; background: radial-gradient(circle at 50% 40%, #ffffff40, #ffffff08 70%); min-height: 70px; }
+.sc-art span { font-size: 3.4rem; filter: drop-shadow(0 3px 4px #0006); }
+.sc-name { font-size: 0.95rem; }
+.sc-stat { opacity: 0.92; }
+.sc-power { height: 8px; border-radius: 999px; background: #ffffff30; overflow: hidden; }
+.sc-power i { display: block; height: 100%; background: linear-gradient(90deg, #ffe066, #ff6b6b); }
+.sc-foot { font-size: 0.72rem; opacity: 0.8; }
+.sc-back { display: grid; gap: 6px; align-content: start; height: 100%; }
+.sc-fact { margin-top: auto; background: #ffffff20; border-radius: 10px; padding: 6px; }
+.binder-count { display: flex; gap: 6px; flex-wrap: wrap; }
+.rar { border-radius: 999px; padding: 2px 10px; font-weight: 700; font-size: 0.85rem; border: 2px solid; }
+.rar-legendary.rar { border-color: #e6b400; } .rar-epic.rar { border-color: #a855f7; } .rar-rare.rar { border-color: #3b8be0; } .rar-common.rar { border-color: #9aa3b5; }
+
+/* ---- admin ---- */
+.chase-admin .form.inline input:first-child { min-width: 260px; flex: 1; }

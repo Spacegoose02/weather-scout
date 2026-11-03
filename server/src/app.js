@@ -7,6 +7,7 @@ import { registerKidZone } from './kidzone.js';
 import { registerDashboard } from './dashboard.js';
 import { registerSafetyPlan } from './safetyplan.js';
 import { registerHistory } from './history.js';
+import { registerChaser } from './chaser.js';
 import { loadConfig, loadOrCreateSecret } from './config.js';
 import { TtlCache, UpstreamError, fetchJson } from './cache.js';
 import { openDb, publicUser } from './db.js';
@@ -266,6 +267,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const safety = registerSafetyPlan(app, { db, requireUser, requireAdmin });
   if (push) push.shelterFor = safety.shelterFor;
   registerHistory(app, { cache, fetchImpl, latLonSchema, loc, forecast, settle });
+  registerChaser(app, { db, cache, fetchImpl, requireAdmin, latLonSchema, loc, nwsUserAgent: cfg.nwsUserAgent });
 
   // ---- AI weather expert, cloud photos, web search ---------------------------
   registerAi(app, { ai, forecast, alerts, air, settle, loc });
