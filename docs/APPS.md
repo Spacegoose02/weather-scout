@@ -48,15 +48,12 @@ builds the APK for you.
    | `ANDROID_PACKAGE_NAME` | optional package id (default `app.weatherscout.android`) |
 
 4. **Link the app to your server** so Android shows it full screen with no browser bar. In
-   Unraid (*Edit container → Add another variable*) or `.env`, set:
+   Weather Scout, open 👤 → *Family & settings* → *App settings* → *Alerts, sign-out & Android app*
+   and paste the fingerprint into *Android app fingerprint* (printed by the script, and in every
+   build's summary). Set *Android package name* only if you changed it in step 3. Save; no restart
+   needed. (`ANDROID_CERT_SHA256` / `ANDROID_PACKAGE_NAME` in `.env` or the container still work.)
 
-   ```
-   ANDROID_CERT_SHA256=AB:CD:...   # printed by the script, and in every build's summary
-   # ANDROID_PACKAGE_NAME=...      # only if you changed it in step 3
-   ```
-
-   Restart the container and check `https://<your address>/.well-known/assetlinks.json`
-   shows your fingerprint.
+   Check `https://<your address>/.well-known/assetlinks.json` shows your fingerprint.
 
 ### Build and install
 

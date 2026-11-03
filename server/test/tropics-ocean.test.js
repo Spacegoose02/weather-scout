@@ -153,5 +153,9 @@ test('API: /api/tropics, /api/buoys and /api/tides', async () => {
   assert.equal(tide.state, 'rising');
   assert.match(tide.link, /8638610/);
   assert.equal((await app.inject('/api/tides?lat=39.1&lon=-84.5')).json().station, null);
+  const ts = (await app.inject('/api/tides/stations?south=35&west=-80&north=38&east=-70')).json();
+  assert.equal(ts.total, 1);
+  assert.equal(ts.stations[0].id, '8638610');
+  assert.equal((await app.inject('/api/tides/stations?south=40&west=-80&north=42&east=-70')).json().total, 0);
   await app.close();
 });
