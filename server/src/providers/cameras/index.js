@@ -417,19 +417,22 @@ export class CameraService {
     results.forEach((r, i) => {
       const f = feeds[i];
       const name = f.name || f.id;
+      const region = f.region || null;
       if (r.status === 'fulfilled') {
         cameras.push(...r.value.cameras);
-        status.push({ id: f.id, name, ok: !r.value.stale, stale: r.value.stale, count: r.value.cameras.length, ...(r.value.stale ? { error: r.value.error, savedAt: r.value.savedAt } : {}) });
+        status.push({ id: f.id, name, region, ok: !r.value.stale, stale: r.value.stale, count: r.value.cameras.length, ...(r.value.stale ? { error: r.value.error, savedAt: r.value.savedAt } : {}) });
       } else {
-        status.push({ id: f.id, name, ok: false, error: r.reason?.message || 'failed' });
+        status.push({ id: f.id, name, region, ok: false, error: r.reason?.message || 'failed' });
       }
     });
     return { cameras, feeds: status };
   }
 
-  async inBounds({ south, west, north, east }, limit = 400) {
+  // `hide` is a list of feed ids the viewer switched off in the map's layer panel.
+  async inBounds({ south, west, north, east, hide = [] }, limit = 400) {
     const { cameras, feeds } = await this.all();
-    const inside = cameras.filter((c) => c.lat >= south && c.lat <= north && c.lon >= west && c.lon <= east);
+    const off = new Set(hide);
+    const inside = cameras.filter((c) => !off.has(c.feed) && c.lat >= south && c.lat <= north && c.lon >= west && c.lon <= east);
     // Snapshot URLs stay on the server (they go through the image proxy). Live video and
     // embedded players are only passed on when they are https, so they work on an https site.
     return {

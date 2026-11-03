@@ -151,7 +151,7 @@ export default function App() {
                 onAdmin={() => setModal('admin')}
               />
             )}
-            {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} />}
+            {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} layers={prefs.mapLayers} onLayers={(l) => setPrefs({ mapLayers: l })} signedIn={!!user} />}
             {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} voice={voice} onAlerts={() => setModal('alerts')} />}
             {weather && tab === 'learn' && <Learn weather={weather} location={location} kidMode={kidMode} chasers={chasers} />}
             {tab === 'models' && location && <ModelsView location={location} units={units} />}
