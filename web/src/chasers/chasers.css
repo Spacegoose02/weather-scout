@@ -1,0 +1,17 @@
+/* Live storm chaser streams: Storm Center section and the corner pop-up. */
+.live-badge { display: inline-block; padding: 1px 7px; border-radius: 6px; background: #d62828; color: #fff; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; vertical-align: middle; }
+.chaser-thumb { position: relative; display: block; }
+.chaser-thumb .live-badge { position: absolute; top: 8px; left: 8px; }
+.chasers .chaser-list { margin-top: 8px; }
+.chaser-tip { background: var(--bg); border-radius: 12px; padding: 8px 12px; margin: 6px 0 10px; }
+.chaser-safety { background: #ffe5e5; color: #7a0000; border-radius: 12px; padding: 8px 12px; font-weight: 700; }
+.chaser-channels { margin: 10px 0 0; font-size: 0.92rem; }
+.chaser-popups { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; font-weight: 700; }
+.chaser-popups select { padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); max-width: 100%; }
+.chaser-toast {
+  position: fixed; right: 16px; bottom: 16px; z-index: 1500; max-width: min(380px, calc(100vw - 32px));
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; box-shadow: var(--shadow);
+}
+.chaser-toast-text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.chaser-toast-text .hint { margin: 0; font-size: 0.85rem; }
+@media (max-width: 520px) { .chaser-toast { left: 16px; right: 16px; max-width: none; } }

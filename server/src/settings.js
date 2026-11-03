@@ -15,6 +15,7 @@
 //   VAPID_* - generated on first start and kept in /data; changing them breaks every subscription.
 //   CAMERA_FEEDS_JSON, CAMERAS_FILE, IP_LOCATION, CAMERA_RETRY_DELAY_MS - advanced/testing.
 import { loadConfig } from './config.js';
+import { CHASER_LIST } from './chasers.js';
 
 const MODEL = /^[\w.:@/-]{1,100}$/;
 
@@ -34,6 +35,10 @@ export const SETTINGS = [
   { key: 'KOKORO_VOICE', group: 'ai', pattern: /^[a-z]{2}_[a-z0-9]+(?:[+][a-z]{2}_[a-z0-9]+)*$/ },
   { key: 'KOKORO_SPEED', group: 'ai', range: [0.5, 2] },
   { key: 'KOKORO_FALLBACK', group: 'ai', options: ['browser', 'off'] },
+  // Live storm chaser streams (shown in the AI panel, saved with it).
+  { key: 'YOUTUBE_API_KEY', group: 'ai', secret: true },
+  { key: 'STORM_CHASER_CHANNELS', group: 'ai', pattern: CHASER_LIST },
+  { key: 'STORM_CHASER_SEARCH', group: 'ai', options: ['', 'true', 'false'] },
 
   // ---- home place ----
   { key: 'DEFAULT_LOCATION_NAME', group: 'home', label: 'Home name', placeholder: 'Richmond, VA', max: 80 },
@@ -125,7 +130,7 @@ export function validate(key, raw) {
 
 // The parts of the live config that saved settings can change. Services keep
 // references to these objects, so they are updated in place.
-const LIVE_OBJECTS = ['ai', 'tts', 'defaultLocation', 'windy', 'android', 'stations', 'homeAssistant', 'push'];
+const LIVE_OBJECTS = ['ai', 'tts', 'youtube', 'defaultLocation', 'windy', 'android', 'stations', 'homeAssistant', 'push'];
 
 export class Settings {
   constructor(db, cfg) {

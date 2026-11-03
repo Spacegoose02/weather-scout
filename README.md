@@ -32,6 +32,12 @@ from free, official data sources.
 - **Hurricanes & ocean**: active storms from the National Hurricane Center with forecast cones and
   tracks on the map, NOAA buoys (waves, water temperature, wind), and today's tides when you're near
   the coast.
+- **Ocean** (🌊 tab, made for kids with a grown-up view too): the latest ocean discoveries from NOAA Ocean
+  Exploration, Schmidt Ocean Institute, MBARI and ScienceDaily, with kid-sized summaries, topic tags, "wow
+  word" meanings and read-aloud (and "Rocky, explain it!" when the AI helper is on); a creature of the week
+  from 26 sea animals; a depth explorer that dives from the waves to Challenger Deep through every zone;
+  the nearest live NOAA buoys (waves, water temperature) and tides; and an ocean quiz. Five Ocean explorer
+  badges. Change the news sources with `OCEAN_FEEDS`.
 - **Models**: what ECMWF, GFS, ICON, GEM, HRRR and the AI models GraphCast and AIFS each predict,
   plotted together, with an ensemble confidence band (10th to 90th percentile), a High/Medium/Low
   confidence rating per day and a side-by-side table. Forecast maps show any one model (or two
@@ -61,6 +67,14 @@ from free, official data sources.
   and a sunset / stargazing countdown. Plus Rocky's daily fact or joke (read aloud), weather
   bingo, a kid forecaster game, dress-Rocky, backyard experiments, camera field trips, a
   seasons photo tracker, badges, and a calm storm-safe mode during warnings.
+- **Storm picture of the day**: a real tornado or lightning photo every day in the Kid Zone (and as a
+  dashboard card), with a kid caption, a fun fact and a 🔊 button so Rocky reads it aloud. Photos
+  come from Wikimedia Commons (mostly NOAA / NSSL public domain shots of the sky, never damage or
+  people); the photographer and license are pulled live from Commons and shown under every picture,
+  and anything not freely licensed is skipped. Kids can flip through the last three weeks in an
+  album and earn the *Storm Gazer* badge. Admins can hide any picture for everyone (right on the
+  card, or in *Family & settings*) and add their own from Commons. Needs outbound access to
+  `commons.wikimedia.org` and `upload.wikimedia.org`.
 - **Profiles**: local username sign-in, tinyauth SSO, and admins can link an SSO identity to a
   username. Saved places, units and Kid Mode follow you between devices.
 - **News & Videos**: local and national weather news. Your NWS office's outlook, forecast
@@ -307,6 +321,17 @@ and paste it under *Family & settings → App settings → Windy maps* (or set `
 is sent to the browser inside the Windy map page; it is never in the repository or `/api/config`, and
 the page needs sign-in when `AUTH_REQUIRED=true`. Which models and layers show depends on your key's plan.
 
+### Live storm chasers
+
+*Learn → Storm Center* shows storm chasers who are streaming live on YouTube, and a small pop-up
+appears when they're live while severe warnings or watches are active near you. Each person picks
+*When storms are near me* (default), *Whenever storm chasers are live*, or *Never* under the list.
+With no setup, Weather Scout checks a trusted list of chaser channels (Ryan Hall Y'all, Reed Timmer,
+Pecos Hank, Max Velocity, Live Storms Media, Vince Waelti) through their public live pages. Admins
+can change the list, and add an optional YouTube Data API v3 key, in *Family & settings*: the key adds
+viewer counts and, for grown-ups, a YouTube search for other live chasers (about 7,200 of the free
+10,000 daily quota units at most). Kid Mode only ever shows the trusted list.
+
 ## Data sources
 
 | Data | Source | Key |
@@ -324,6 +349,7 @@ the page needs sign-in when `AUTH_REQUIRED=true`. Which models and layers show d
 | Wind and model maps | [Windy](https://www.windy.com) embed, or the Map Forecast API | none for the embed, optional `WINDY_MAP_KEY` |
 | Cameras | VA, SC, MD, KY and DE public feeds; NC, NY, GA and OH with free keys; plus any state 511 feed you add | none for VA, SC, MD, KY, DE |
 | Ask an Expert, cloud photos, web search (optional) | [Claude](https://www.anthropic.com/claude) via the Anthropic API, or your own [Ollama](https://ollama.com/) | `ANTHROPIC_API_KEY`, or `OLLAMA_URL` |
+| Live storm chasers | YouTube live streams from a trusted chaser list, plus YouTube search with a key | none; optional `YOUTUBE_API_KEY` (set it in Family & settings) |
 | Read-aloud voice (optional) | Your own [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) | none |
 
 Open-Meteo's free tier is for non-commercial use, which fits a family server. All upstream

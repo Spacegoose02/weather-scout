@@ -4,6 +4,7 @@ import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import { registerKidZone } from './kidzone.js';
+import { registerStormPhoto } from './stormphoto.js';
 import { registerDashboard } from './dashboard.js';
 import { registerSafetyPlan } from './safetyplan.js';
 import { registerHistory } from './history.js';
@@ -19,6 +20,7 @@ import { radarFrames } from './providers/radar.js';
 import * as severe from './providers/severe.js';
 import * as tropics from './providers/tropics.js';
 import * as ocean from './providers/ocean.js';
+import * as discoveries from './providers/discoveries.js';
 import * as models from './providers/models.js';
 import * as modelMaps from './providers/modelmaps.js';
 import { MAP_AREAS, MAP_MODELS, gridFor } from '../../shared/modelmap.js';
@@ -27,6 +29,7 @@ import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
 import { moonPhase } from './sky.js';
 import { MediaService } from './media.js';
+import { ChaserService } from './chasers.js';
 import { getOfficeProducts } from './providers/news.js';
 import { PushService, LEVELS } from './push.js';
 import { AiService, registerAi } from './ai.js';
@@ -71,6 +74,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const cameras = new CameraService(cfg, cache, fetchImpl, { retry: { baseDelayMs: Number(cfg.env.CAMERA_RETRY_DELAY_MS) || 1500 } });
   const appKeys = new AppKeys(db);
   const media = new MediaService(db, cache, fetchImpl);
+  const chasers = new ChaserService(cfg, cache, fetchImpl);
   const makePush = () => new PushService(db, cfg, { send: pushSend, log: app.log });
   let push = cfg.push.enabled ? makePush() : null;
   const ai = new AiService(cfg, { fetchImpl, log: app.log });
@@ -266,6 +270,23 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     return { ...t, station: near, ...ocean.upcomingTides(events, nowLocal), source: 'NOAA Tides & Currents' };
   });
 
+  // ---- ocean section -------------------------------------------------------------
+  // kid=1 drops stories that mention grim things (see kidSafeText in providers/news.js).
+  const oceanFeeds = discoveries.feedsFromEnv(cfg.oceanFeeds);
+  app.get('/api/ocean/discoveries', {
+    schema: { querystring: { type: 'object', properties: { kid: { type: 'string', enum: ['0', '1', 'true', 'false'] } } } },
+  }, async (req) => {
+    const kid = req.query.kid === '1' || req.query.kid === 'true';
+    const all = await cache.wrap('ocean-discoveries', 60 * MIN, () => discoveries.getDiscoveries(oceanFeeds, { fetchImpl }));
+    return { ...all, items: kid ? all.items.filter((i) => i.kidSafe) : all.items };
+  });
+  // The closest ocean buoys (waves and water temperature) to a place, even far inland.
+  app.get('/api/ocean/buoys', { schema: latLonSchema }, async (req) => {
+    const l = loc(req.query);
+    const all = await cache.wrap(`buoys:${l.units}`, 15 * MIN, () => ocean.getBuoys(l.units, fetchImpl));
+    return { buoys: discoveries.nearestBuoys(all, l, tropics.milesBetween), units: l.units, source: 'NOAA National Data Buoy Center' };
+  });
+
   // ---- model comparison & ensemble confidence ---------------------------------
   app.get('/api/models', { schema: latLonSchema }, async (req) => {
     const l = loc(req.query);
@@ -303,6 +324,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
 
   // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----
   registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });
+  registerStormPhoto(app, { db, cache, fetchImpl, requireAdmin });
   registerDashboard(app, { db, requireUser, requireAdmin, cache, latLonSchema, loc });
   const safety = registerSafetyPlan(app, { db, requireUser, requireAdmin });
   if (push) push.shelterFor = safety.shelterFor;
@@ -315,6 +337,14 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const tts = registerTts(app, { cfg, fetchImpl });
   registerBriefing(app, { ai, forecast, alerts, air, settle, loc });
   registerWindy(app, { cfg });
+
+  // ---- live storm chaser streams (Storm Center) -------------------------------
+  app.get('/api/chasers/live', {
+    schema: { querystring: { type: 'object', properties: { kid: { type: 'string', enum: ['0', '1', 'true', 'false'] } } } },
+  }, async (req, reply) => {
+    reply.header('cache-control', 'private, max-age=60');
+    return chasers.live({ kid: req.query.kid === '1' || req.query.kid === 'true' });
+  });
 
   // ---- personal weather stations & Home Assistant ----------------------------
   registerStations(app, { stations, cfg, requireAdmin });
@@ -383,6 +413,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     if (changed.has('ai')) {
       ai.configure(cfg.ai);
       tts.reset();
+      chasers.reset();
     }
     if (changed.has('cameras')) cameras.reset();
     if (changed.has('stations') && started) {
@@ -624,7 +655,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const draftBody = { values: { type: 'object', additionalProperties: { type: ['string', 'null'], maxLength: 500 } } };
   app.post('/api/admin/ai-settings/test', {
     preHandler: requireAdmin,
-    schema: { body: { type: 'object', required: ['target'], properties: { target: { type: 'string', enum: ['anthropic', 'ollama', 'kokoro'] }, ...draftBody } } },
+    schema: { body: { type: 'object', required: ['target'], properties: { target: { type: 'string', enum: ['anthropic', 'ollama', 'kokoro', 'youtube'] }, ...draftBody } } },
   }, async (req, reply) => {
     const draft = draftOf(req, reply);
     if (!draft) return reply;
