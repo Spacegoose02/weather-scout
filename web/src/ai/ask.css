@@ -53,5 +53,3 @@ img.ask-avatar { width: 40px; height: auto; }
 .ask-kid .ask-chips button { font-size: 1rem; }
 
 /* read-aloud voice picker (Ask tab and Kid Zone) */
-.voice-picker { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 0.9rem; color: var(--muted); }
-.voice-picker select { padding: 4px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); max-width: 220px; }
