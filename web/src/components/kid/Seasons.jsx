@@ -4,7 +4,7 @@ import { seasonOf, seasonsCovered } from '../../kid/logic.js';
 import { icon } from '../../format.js';
 
 // Shrink a photo in the browser so uploads stay small (about 200 KB).
-async function shrink(file, max = 1280) {
+export async function shrink(file, max = 1280) {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((resolve, reject) => {
