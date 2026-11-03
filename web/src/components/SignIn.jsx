@@ -5,6 +5,7 @@ import Modal from './Modal.jsx';
 export default function SignIn({ setup, required, sso, onClose, onDone }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -13,7 +14,7 @@ export default function SignIn({ setup, required, sso, onClose, onDone }) {
     setBusy(true);
     setError('');
     try {
-      const r = await api(setup ? '/api/auth/setup' : '/api/auth/login', { method: 'POST', body: { username, password } });
+      const r = await api(setup ? '/api/auth/setup' : '/api/auth/login', { method: 'POST', body: setup && displayName.trim() ? { username, password, displayName } : { username, password } });
       onDone(r.user);
     } catch (err) {
       setError(err.message);
@@ -29,6 +30,7 @@ export default function SignIn({ setup, required, sso, onClose, onDone }) {
       <form onSubmit={submit} className="form">
         <label>Username<input autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required minLength={2} /></label>
         <label>Password<input type="password" autoComplete={setup ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={setup ? 8 : 1} /></label>
+        {setup && <label>What should Rocky call you? <span className="hint">(optional)</span><input autoComplete="nickname" value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={40} placeholder={username || 'Dad, Mom, Sam…'} /></label>}
         {error && <p className="error-text" role="alert">{error}</p>}
         <button type="submit" disabled={busy}>{busy ? 'One sec…' : setup ? 'Create account' : 'Sign in'}</button>
       </form>

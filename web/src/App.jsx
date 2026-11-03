@@ -5,6 +5,7 @@ import Header from './components/Header.jsx';
 import AlertsBanner from './components/AlertsBanner.jsx';
 import WeatherMap from './components/WeatherMap.jsx';
 import KidMode from './components/KidMode.jsx';
+import DisplayName from './components/DisplayName.jsx';
 import SignIn from './components/SignIn.jsx';
 import Admin from './components/Admin.jsx';
 import News from './components/News.jsx';
@@ -45,7 +46,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   // Tapping a lightning notification opens the map.
   const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).has('lightning') ? 'map' : 'today'));
-  const [modal, setModal] = useState(null); // 'signin' | 'admin' | 'alerts' | 'briefing'
+  const [modal, setModal] = useState(null); // 'signin' | 'admin' | 'alerts' | 'briefing' | 'profile'
 
   useEffect(() => {
     api('/api/config')
@@ -118,6 +119,7 @@ export default function App() {
         onSignIn={() => setModal('signin')}
         onSignOut={signOut}
         onAdmin={() => setModal('admin')}
+        onProfile={() => setModal('profile')}
         onAlerts={() => setModal('alerts')}
         sso={config.auth.sso}
         theme={{ value: prefs.theme || 'auto', active: theme.id, why: theme.why, onChange: (t) => setPrefs({ theme: t }) }}
@@ -193,6 +195,9 @@ export default function App() {
             setModal(null);
           }}
         />
+      )}
+      {modal === 'profile' && user && (
+        <DisplayName user={user} onClose={() => setModal(null)} onSaved={(u) => { setUser(u); setModal(null); }} />
       )}
       <BadgeCelebration user={user} onShelf={() => setTab('kids')} />
       {modal === 'alerts' && (

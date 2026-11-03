@@ -111,6 +111,27 @@ test('preferences are saved per user', async () => {
   await app.close();
 });
 
+test('people can set the name Rocky greets them with', async () => {
+  const { app } = await testApp({ env: { ADMIN_USERNAME: 'admin', ADMIN_PASSWORD: 'password123' } });
+  const cookie = cookieFrom(await app.inject({ method: 'POST', url: '/api/auth/login', payload: { username: 'admin', password: 'password123' } }));
+  const set = await app.inject({ method: 'PATCH', url: '/api/me', headers: { cookie }, payload: { displayName: '  Dad \n Underwood ' } });
+  assert.equal(set.statusCode, 200);
+  assert.equal(set.json().user.displayName, 'Dad Underwood');
+  assert.equal((await app.inject({ url: '/api/auth/me', headers: { cookie } })).json().user.displayName, 'Dad Underwood');
+  // Clearing it goes back to the username.
+  const cleared = await app.inject({ method: 'PATCH', url: '/api/me', headers: { cookie }, payload: { displayName: '   ' } });
+  assert.equal(cleared.json().user.displayName, 'admin');
+  // Only the name can change here, not the admin flag.
+  const sneaky = await app.inject({ method: 'PATCH', url: '/api/me', headers: { cookie }, payload: { displayName: 'x', isAdmin: false, password: 'hacked1234' } });
+  assert.equal(sneaky.json().user.isAdmin, true);
+  assert.equal((await app.inject({ method: 'PATCH', url: '/api/me', payload: { displayName: 'x' } })).statusCode, 401);
+  // An admin can rename someone else.
+  const kid = (await app.inject({ method: 'POST', url: '/api/admin/users', headers: { cookie }, payload: { username: 'kiddo', password: 'password123' } })).json().user;
+  const renamed = await app.inject({ method: 'PATCH', url: `/api/admin/users/${kid.id}`, headers: { cookie }, payload: { displayName: 'Lily' } });
+  assert.equal(renamed.json().user.displayName, 'Lily');
+  await app.close();
+});
+
 test('tinyauth headers are ignored unless trusted', async () => {
   const { app } = await testApp();
   const me = (await app.inject({ url: '/api/auth/me', headers: { 'remote-user': 'kid@example.com' } })).json();
