@@ -44,6 +44,7 @@ export const DEFAULT_LAYERS = {
   tides: false,
   radarSites: true,
   cams: true,
+  webcams: true, // Windy webcams; only shown when the server has a Webcams key
   camsOff: [], // camera feed ids (one per state, mostly) that are switched off
 };
 
@@ -80,7 +81,16 @@ export function cameraFeedRows(feeds = [], camsOff = []) {
 
 export const toggleFeed = (camsOff, id, on) => (on ? camsOff.filter((x) => x !== id) : [...new Set([...camsOff, id])]);
 
-// How many groups are on, for the button badge. Cameras count once.
-export function layerCount(layers) {
-  return BOOL_KEYS.filter((k) => layers[k]).length;
+// How many groups are on, for the button badge. Cameras count once. Layers this
+// server can't show (Windy webcams without a key) don't count.
+export function layerCount(layers, { webcams = false } = {}) {
+  return BOOL_KEYS.filter((k) => layers[k] && (k !== 'webcams' || webcams)).length;
+}
+
+// Distance for the near-me list, in the family's units.
+export function distanceText(km, units = 'imperial') {
+  if (km == null) return '';
+  if (units === 'metric') return km < 1 ? 'under 1 km' : `${Math.round(km)} km`;
+  const mi = km / 1.609344;
+  return mi < 1 ? 'under 1 mile' : `${Math.round(mi)} mile${Math.round(mi) === 1 ? '' : 's'}`;
 }

@@ -39,6 +39,7 @@ import { Settings, SettingsError } from './settings.js';
 import { testIntegration } from './integrationtests.js';
 import { registerBriefing, buildBriefing } from './briefing.js';
 import { registerWindy } from './windy.js';
+import { registerWebcams, testWebcamsKey } from './webcams.js';
 import { StationService, registerStations } from './stations.js';
 import { HomeAssistantService } from './homeassistant.js';
 import { LightningService, registerLightning } from './lightning.js';
@@ -347,6 +348,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const tts = registerTts(app, { cfg, fetchImpl });
   registerBriefing(app, { ai, forecast, alerts, air, settle, loc });
   registerWindy(app, { cfg });
+  registerWebcams(app, { cfg, cache, fetchImpl });
 
   // ---- live storm chaser streams (Storm Center) -------------------------------
   app.get('/api/chasers/live', {
@@ -708,10 +710,11 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   });
   app.post('/api/admin/settings/test', {
     preHandler: requireAdmin,
-    schema: { body: { type: 'object', required: ['target'], properties: { target: { type: 'string', pattern: '^(camera:[a-z]{2}|ambient|tempest|homeassistant|mqtt)$' }, values: valuesBody } } },
+    schema: { body: { type: 'object', required: ['target'], properties: { target: { type: 'string', pattern: '^(camera:[a-z]{2}|ambient|tempest|homeassistant|mqtt|webcams)$' }, values: valuesBody } } },
   }, async (req, reply) => {
     const draft = draftOf(req, reply);
     if (!draft) return reply;
+    if (req.body.target === 'webcams') return testWebcamsKey(draft, fetchImpl);
     return testIntegration(req.body.target, draft, { fetchImpl, cameras, ...(mqttConnect ? { connect: mqttConnect } : {}) });
   });
 

@@ -491,3 +491,19 @@ body.radar-full-open { overflow: hidden; }
 @media (max-width: 700px) {
   .map-card:not(.full) .layer-panel { position: fixed; top: auto; left: 16px; right: 16px; bottom: 16px; width: auto; max-height: 72vh; }
 }
+
+/* Windy webcams: map pins, the near-me grid and the credit Windy asks for */
+.webcam-pin span { background: #fff7e6; }
+.webcam-cluster span { display: grid; place-items: center; height: 26px; padding: 0 8px; border-radius: 13px; background: #fff7e6; box-shadow: 0 1px 4px rgba(0,0,0,.4); font-size: 13px; font-weight: 600; color: #1d2433; white-space: nowrap; }
+.webcam-credit { margin-top: 6px; color: #666; font-size: 12px; }
+.webcam-attrib { font-size: 0.8rem; color: var(--muted); }
+.webcam-tools { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.webcam-big { margin-bottom: 12px; }
+.webcam-big-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.webcam-big .cam-stage img, .webcam-big .cam-stage iframe { aspect-ratio: 16 / 9; max-height: 50vh; }
+.webcam-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.webcam-grid button { width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 0 0 6px; border-radius: 10px; overflow: hidden; text-align: left; background: var(--card, #fff); color: var(--ink); border: 2px solid var(--line); cursor: pointer; }
+.webcam-grid button.on { border-color: var(--brand); }
+.webcam-grid img, .webcam-none { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #ddd; display: grid; place-items: center; font-size: 28px; }
+.webcam-grid b { padding: 0 6px; font-size: 0.85rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.webcam-grid small { padding: 0 6px; color: var(--muted); font-size: 0.75rem; }

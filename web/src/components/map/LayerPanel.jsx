@@ -2,7 +2,7 @@ import { LAYER_GROUPS, DEFAULT_LAYERS, cameraFeedRows, toggleFeed, isDefault } f
 
 // The "Layers" panel on the Radar & Cams map: switch each marker group or
 // overlay on or off, and cameras state by state.
-export default function LayerPanel({ layers, feeds, signedIn, onChange, onClose }) {
+export default function LayerPanel({ layers, feeds, webcams, signedIn, onChange, onClose }) {
   const set = (patch) => onChange({ ...layers, ...patch });
   const rows = cameraFeedRows(feeds || [], layers.camsOff);
   const allOn = rows.every((r) => r.on);
@@ -30,11 +30,11 @@ export default function LayerPanel({ layers, feeds, signedIn, onChange, onClose 
         </fieldset>
       ))}
       <fieldset>
-        <legend>Road cameras</legend>
+        <legend>{webcams ? 'Cameras' : 'Road cameras'}</legend>
         <label className="layer-row">
           <input type="checkbox" checked={layers.cams} onChange={(e) => set({ cams: e.target.checked })} />
           <span aria-hidden>📷</span>
-          <span>Cameras<small>Zoom in to see them</small></span>
+          <span>{webcams ? 'Road cameras' : 'Cameras'}<small>Zoom in to see them</small></span>
         </label>
         {rows.length > 1 && (
           <div className="layer-states" aria-label="Cameras by state" hidden={!layers.cams}>
@@ -52,6 +52,13 @@ export default function LayerPanel({ layers, feeds, signedIn, onChange, onClose 
           </div>
         )}
         {feeds && !rows.length && <p className="hint">No camera feeds are set up yet.</p>}
+        {webcams && (
+          <label className="layer-row">
+            <input type="checkbox" checked={layers.webcams} onChange={(e) => set({ webcams: e.target.checked })} />
+            <span aria-hidden>🌄</span>
+            <span>Windy webcams<small>Beaches, mountains and towns around the world. <a href={webcams.url} target="_blank" rel="noopener noreferrer">{webcams.text}</a></small></span>
+          </label>
+        )}
       </fieldset>
       <p className="layer-saved">{signedIn ? 'Saved to your account.' : 'Saved on this device. Sign in to keep it everywhere.'}</p>
     </div>
