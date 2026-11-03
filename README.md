@@ -61,6 +61,13 @@ from free, official data sources.
   and a sunset / stargazing countdown. Plus Rocky's daily fact or joke (read aloud), weather
   bingo, a kid forecaster game, dress-Rocky, backyard experiments, camera field trips, a
   seasons photo tracker, badges, and a calm storm-safe mode during warnings.
+- **Junior Storm Chaser** (Kid Zone › Storm Chaser): *Chase Day*, where Rocky explains today's Storm Prediction
+  Center outlook in kid words (risk level, target states, tornado, hail and wind odds, the storm ingredients and what it
+  means at home); *Pick your target*, where kids tap the outlook map before 3 PM Central and are scored that evening
+  against real SPC storm reports, with points, chaser ranks and a chase log; *Live chase*, with YouTube chaser channels
+  a grown-up picks in *Family & settings › Live storm chasers*, shown only while tornado or severe thunderstorm
+  warnings are up (or marked "anytime") and starting muted; and *Storm cards*, collectible cards made from the day's
+  real storm reports with rarity, power and a binder. Nine chaser badges go on the badge shelf.
 - **Profiles**: local username sign-in, tinyauth SSO, and admins can link an SSO identity to a
   username. Saved places, units and Kid Mode follow you between devices.
 - **News & Videos**: local and national weather news. Your NWS office's outlook, forecast

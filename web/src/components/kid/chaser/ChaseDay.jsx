@@ -68,13 +68,6 @@ export default function ChaseDay({ location, kid, today, go }) {
         )}
       </section>
 
-      <section className="card chase-map-card">
-        <h2>Today's storm map</h2>
-        <p className="hint">Colors show where the Storm Prediction Center thinks storms could get strong. Darker colors mean a bigger chance.</p>
-        <ChaseMap outlook={outlook} home={location} height={300} label="Today's severe storm outlook map" />
-        <OutlookKey />
-      </section>
-
       {day.ingredients.length > 0 && (
         <section className="card chase-recipe">
           <h2>Rocky's storm recipe</h2>
@@ -94,6 +87,13 @@ export default function ChaseDay({ location, kid, today, go }) {
           {day.tomorrow && <p className="hint">{day.tomorrow.text}</p>}
         </section>
       )}
+
+      <section className="card chase-map-card">
+        <h2>Today's storm map</h2>
+        <p className="hint">Colors show where the Storm Prediction Center thinks storms could get strong. Darker colors mean a bigger chance.</p>
+        <ChaseMap outlook={outlook} home={location} height={300} label="Today's severe storm outlook map" />
+        <OutlookKey />
+      </section>
 
       {day.summary && (
         <section className="card chase-grownup">

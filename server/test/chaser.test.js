@@ -69,7 +69,7 @@ test('chase day: rating, where, tomorrow and a calm note at home', () => {
   assert.equal(d.category, 'ENH');
   assert.deepEqual(d.where.sort(), ['Kansas', 'Oklahoma']);
   assert.match(d.say, /chase day/);
-  assert.match(d.why.join(' '), /tornado chance tops out at 10%/);
+  assert.match(d.why.join(' '), /tornado near any one spot is as high as 10 out of 100/);
   assert.equal(d.home.category, 'ENH');
   assert.match(d.home.text, /safe spot/);
   assert.match(d.tomorrow.text, /Marginal/);
@@ -142,6 +142,7 @@ test('storm cards: one per storm kind per county, rarest first', () => {
   assert.match(hail.stat, /baseball/);
   assert.equal(new Set(deck.cards.map((c) => c.id)).size, deck.cards.length);
   assert.equal(hailLike(1.75), 'a golf ball');
+  assert.equal(deck.cards[0].name, 'Norman Tornado');
 });
 
 test('warnings and live YouTube detection', () => {

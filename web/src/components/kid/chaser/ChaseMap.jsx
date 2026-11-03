@@ -8,22 +8,31 @@ const targetIcon = L.divIcon({ className: 'chase-target-pin', html: '<span>🎯<
 const homeIcon = L.divIcon({ className: 'chase-home-pin', html: '<span>🏠</span>', iconSize: [26, 26], iconAnchor: [13, 13] });
 
 // A map of the lower 48 with the SPC outlook, storm reports, home and the kid's target.
-export default function ChaseMap({ outlook, reports, target, home, onPick, height = 340, label = 'Storm map' }) {
+export default function ChaseMap({ outlook, reports, target, home, onPick, height = 340, label = 'Storm map', fit = true }) {
   const el = useRef(null);
   const map = useRef(null);
   const layers = useRef({});
+  const want = useRef(null);
   const pick = useRef(onPick);
   pick.current = onPick;
 
   useEffect(() => {
     const m = L.map(el.current, { zoomControl: true, attributionControl: true, scrollWheelZoom: false, minZoom: 3, maxBounds: [[CONUS.south - 8, CONUS.west - 15], [CONUS.north + 8, CONUS.east + 15]] });
-    m.fitBounds([[CONUS.south + 1, CONUS.west + 2], [CONUS.north - 1, CONUS.east - 1]]);
+    want.current = L.latLngBounds([[CONUS.south + 1, CONUS.west + 2], [CONUS.north - 1, CONUS.east - 1]]);
+    m.fitBounds(want.current);
     baseMap(dark() ? 'dark' : 'light').addTo(m);
     m.on('click', (e) => {
       if (pick.current && inConus(e.latlng.lat, e.latlng.lng)) pick.current({ lat: e.latlng.lat, lon: e.latlng.lng });
     });
     map.current = m;
-    const ro = new ResizeObserver(() => m.invalidateSize());
+    // Leaflet measures the box once; if it was still 0 wide, fit again once it has a size.
+    m.on('dragstart', () => {
+      want.current = null;
+    });
+    const ro = new ResizeObserver(() => {
+      m.invalidateSize();
+      if (want.current && m.getSize().x > 0) m.fitBounds(want.current, { maxZoom: 7, animate: false });
+    });
     ro.observe(el.current);
     return () => {
       ro.disconnect();
@@ -37,11 +46,20 @@ export default function ChaseMap({ outlook, reports, target, home, onPick, heigh
   };
 
   useEffect(() => {
-    swap('outlook', outlook?.features?.length ? L.geoJSON(outlook, {
+    const layer = outlook?.features?.length ? L.geoJSON(outlook, {
       interactive: false,
       style: (f) => ({ color: f.properties.stroke, weight: 1.5, fillColor: f.properties.fill, fillOpacity: 0.35 }),
-    }) : null);
-  }, [outlook]);
+    }) : null;
+    swap('outlook', layer);
+    // Zoom to where the storms are expected (with room around them to pick a spot).
+    if (layer && fit) {
+      // Fit to the severe risk areas (level 1+), not the much bigger general-thunder area.
+      const severe = outlook.features.filter((f) => f.properties.label !== 'TSTM');
+      want.current = (severe.length ? L.geoJSON({ type: 'FeatureCollection', features: severe }) : layer).getBounds().pad(0.4);
+      map.current.invalidateSize();
+      map.current.fitBounds(want.current, { maxZoom: 7, animate: false });
+    }
+  }, [outlook]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!reports?.length) return swap('reports', null);

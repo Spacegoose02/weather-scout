@@ -220,7 +220,8 @@ export function chaseDay({ cat, torn, hail, wind, text, day2, home, day, now = D
   const why = [];
   if (rating === 'down') why.push(top === 'TSTM' ? 'There may be some thunderstorms, but the ingredients for big storms are not lined up. Chasers call this a down day: time to fix the car and study radar!' : 'The sky is calm for chasers today. Chasers call this a down day: time to fix the car and study radar!');
   else why.push(`The Storm Prediction Center gave today a ${info.word} risk. ${info.kid}`);
-  if (t.max >= 2) why.push(`The tornado chance tops out at ${t.max}% within 25 miles of any spot${tornWhere.length ? `, near ${listWords(tornWhere)}` : ''}.${t.sig ? ' Forecasters even drew a striped area where strong tornadoes could happen.' : ''}`);
+  const sameWhere = tornWhere.join() === where.join();
+  if (t.max >= 2) why.push(`The chance of a tornado near any one spot is as high as ${t.max} out of 100${tornWhere.length && !sameWhere ? `, around ${listWords(tornWhere)}` : ''}.${t.sig ? ' Forecasters even drew a striped area where strong tornadoes could happen.' : ''}`);
   if (h.max >= 15) why.push(`Hail chance up to ${h.max}%.${h.sig ? ' Some hail could be bigger than golf balls!' : ''}`);
   if (w.max >= 15) why.push(`Damaging wind chance up to ${w.max}%.${w.sig ? ' Some gusts could top 75 mph!' : ''}`);
 
@@ -385,6 +386,9 @@ export function statLine(r) {
   return r.magnitude != null ? `${r.magnitude} mph gust` : 'Damaging wind';
 }
 
+// "4 SW Chickasha" -> "Chickasha"
+export const townOf = (location) => String(location || '').replace(/^\d+(\.\d+)?\s+[NSEW]{1,3}\s+/, '');
+
 export function stormCards(reports, day, { max = 9 } = {}) {
   const score = (r) => RARITY.indexOf(rarityOf(r)) * 1000 + powerOf(r);
   const picked = [];
@@ -407,7 +411,7 @@ export function stormCards(reports, day, { max = 9 } = {}) {
       day,
       type: r.type,
       emoji: TYPE_INFO[r.type].emoji,
-      name: `${r.location || r.county} ${TYPE_INFO[r.type].name}`,
+      name: `${townOf(r.location) || r.county} ${TYPE_INFO[r.type].name}`,
       place: [r.location, r.county && `${r.county} County`, STATE_NAME[r.state] || r.state].filter(Boolean).join(', '),
       state: r.state,
       lat: r.lat,
