@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import './stations.css';
 
-// Family & settings: status of weather stations and Home Assistant. Everything is
-// set in the container's environment (see docs/HOME-ASSISTANT.md), so this is read-only.
+// Family & settings: status of weather stations and Home Assistant. They're set up
+// under App settings (or the container's environment); this part only shows status.
 const when = (iso) => (iso ? new Date(iso).toLocaleString() : 'not yet');
 
 export default function IntegrationsPanel() {
@@ -30,7 +30,7 @@ export default function IntegrationsPanel() {
         Ecowitt: in the WS View / Ecowitt app, Weather Services → Customized, protocol Ecowitt, path <code>/api/stations/push{st.tokenRequired ? '/YOUR_TOKEN' : ''}</code>.
         Ambient Weather: awnet → Customized, path <code>/api/stations/push{st.tokenRequired ? '/YOUR_TOKEN' : ''}?</code>.
         Other stations can use the Weather Underground protocol with <code>{pushUrl}</code>.
-        {st.tokenRequired ? ' YOUR_TOKEN is STATION_PUSH_TOKEN.' : ' Without STATION_PUSH_TOKEN, only uploads straight from your home network are accepted.'}
+        {st.tokenRequired ? ' YOUR_TOKEN is the station upload token from App settings.' : ' Without a station upload token (App settings → Weather stations), only uploads straight from your home network are accepted.'}
       </p>
       <dl>
         <dt>Ambient cloud</dt><dd>{st.ambientCloud ? 'on' : 'off'}</dd>
@@ -42,9 +42,9 @@ export default function IntegrationsPanel() {
       <h3>Home Assistant</h3>
       <dl>
         <dt>MQTT</dt>
-        <dd>{mqtt.enabled ? `${mqtt.connected ? '🟢 connected to' : '🔴 not connected to'} ${mqtt.url} · last sent ${when(mqtt.lastPublishAt)}${mqtt.lastError ? ` · ${mqtt.lastError}` : ''}` : 'off (set MQTT_URL)'}</dd>
+        <dd>{mqtt.enabled ? `${mqtt.connected ? '🟢 connected to' : '🔴 not connected to'} ${mqtt.url} · last sent ${when(mqtt.lastPublishAt)}${mqtt.lastError ? ` · ${mqtt.lastError}` : ''}` : 'off (add a broker under App settings → Home Assistant)'}</dd>
         <dt>REST</dt>
-        <dd>{rest.enabled ? `${rest.lastError ? '🔴' : '🟢'} ${rest.url} · last sent ${when(rest.lastPublishAt)}${rest.lastError ? ` · ${rest.lastError}` : ''}` : 'off (set HA_URL and HA_TOKEN)'}</dd>
+        <dd>{rest.enabled ? `${rest.lastError ? '🔴' : '🟢'} ${rest.url} · last sent ${when(rest.lastPublishAt)}${rest.lastError ? ` · ${rest.lastError}` : ''}` : 'off (add an address and token under App settings → Home Assistant)'}</dd>
       </dl>
     </div>
   );

@@ -30,7 +30,9 @@ import { getOfficeProducts } from './providers/news.js';
 import { PushService, LEVELS } from './push.js';
 import { AiService, registerAi } from './ai.js';
 import { registerTts } from './tts.js';
-import { AiSettings, SettingsError, testConnection, previewVoice } from './aisettings.js';
+import { testConnection, previewVoice } from './aisettings.js';
+import { Settings, SettingsError } from './settings.js';
+import { testIntegration } from './integrationtests.js';
 import { registerBriefing, buildBriefing } from './briefing.js';
 import { registerWindy } from './windy.js';
 import { StationService, registerStations } from './stations.js';
@@ -61,14 +63,15 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     return rockyBaseHref ?? null;
   };
   const db = openDb(cfg.dataDir);
+  // Settings saved in Family & settings win over the env vars; apply them before any service reads cfg.
+  const settings = new Settings(db, cfg);
+  settings.apply();
   const auth = new AuthService(db, cfg);
   const cameras = new CameraService(cfg, cache, fetchImpl, { retry: { baseDelayMs: Number(cfg.env.CAMERA_RETRY_DELAY_MS) || 1500 } });
   const appKeys = new AppKeys(db);
   const media = new MediaService(db, cache, fetchImpl);
-  const push = cfg.push.enabled ? new PushService(db, cfg, { send: pushSend, log: app.log }) : null;
-  // Saved admin AI/voice settings win over the env vars; apply them before anything reads cfg.ai.
-  const aiSettings = new AiSettings(db, cfg);
-  aiSettings.apply();
+  const makePush = () => new PushService(db, cfg, { send: pushSend, log: app.log });
+  let push = cfg.push.enabled ? makePush() : null;
   const ai = new AiService(cfg, { fetchImpl, log: app.log });
   const stations = new StationService(cfg, { fetchImpl, log: app.log });
   await auth.bootstrapAdmin();
@@ -302,15 +305,12 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   registerDashboard(app, { db, requireUser, requireAdmin, cache, latLonSchema, loc });
   const safety = registerSafetyPlan(app, { db, requireUser, requireAdmin });
   if (push) push.shelterFor = safety.shelterFor;
+  const shelterFor = safety.shelterFor;
   registerHistory(app, { cache, fetchImpl, latLonSchema, loc, forecast, settle });
 
   // ---- AI weather expert, cloud photos, web search ---------------------------
   registerAi(app, { ai, forecast, alerts, air, settle, loc });
   const tts = registerTts(app, { cfg, fetchImpl });
-  aiSettings.onChange(() => {
-    ai.configure(cfg.ai);
-    tts.reset();
-  });
   registerBriefing(app, { ai, forecast, alerts, air, settle, loc });
   registerWindy(app, { cfg });
 
@@ -359,11 +359,51 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.post('/api/push/briefing-test', {
     schema: { body: subSchema },
   }, async (req, reply) => (push ? push.testBriefing(req.body.endpoint, pushBriefing) : pushOff(reply)));
-  app.decorate('push', push);
+  app.decorate('push', { getter: () => push });
   app.decorate('pushBriefing', pushBriefing);
   // NWS alerts for a place, shared with the web app's cache (used by the background push check).
-  app.decorate('pushAlerts', (l) => alerts({ ...l, units: '' }));
+  const pushAlerts = (l) => alerts({ ...l, units: '' });
+  app.decorate('pushAlerts', pushAlerts);
   app.addHook('onClose', async () => push?.stop());
+
+  // ---- background work (started from index.js, so tests stay quiet) ---------
+  let started = false;
+  const startPush = () => push?.start(pushAlerts, cfg.push.pollSeconds * 1000, pushBriefing);
+  app.decorate('startBackground', () => {
+    started = true;
+    startPush();
+    stations.start();
+    homeAssistant.start();
+  });
+
+  // Saved settings take effect without a restart: restart only what changed.
+  settings.onChange((changed) => {
+    if (changed.has('ai')) {
+      ai.configure(cfg.ai);
+      tts.reset();
+    }
+    if (changed.has('cameras')) cameras.reset();
+    if (changed.has('stations') && started) {
+      stations.stop();
+      stations.start();
+    }
+    if (changed.has('homeassistant') || changed.has('home')) {
+      (async () => {
+        if (started) await homeAssistant.stop();
+        homeAssistant.reload(cfg);
+        if (started) homeAssistant.start();
+      })().catch((err) => app.log.warn({ err: err.message }, 'Home Assistant restart failed'));
+    }
+    if (changed.has('apps') || changed.has('home')) {
+      push?.stop();
+      if (!cfg.push.enabled) push = null;
+      else {
+        push ||= makePush();
+        push.shelterFor = shelterFor;
+        if (started) startPush();
+      }
+    }
+  });
 
   // ---- news & videos -------------------------------------------------------
   // Optional lat/lon adds the local NWS office's outlook, discussion and statements.
@@ -555,14 +595,14 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.delete('/api/admin/media-hidden/:id', { preHandler: requireAdmin }, async (req, reply) =>
     media.unhide(Number(req.params.id)) ? { ok: true } : reply.code(404).send({ error: 'Not found' }));
   // AI helper and read-aloud settings. Keys are write-only.
-  const aiSettingsView = () => ({ settings: aiSettings.view(), ai: ai.status(), tts: { enabled: !!cfg.tts.url } });
+  const aiSettingsView = () => ({ settings: settings.view('ai'), ai: ai.status(), tts: { enabled: !!cfg.tts.url } });
   app.get('/api/admin/ai-settings', { preHandler: requireAdmin }, async () => aiSettingsView());
   app.put('/api/admin/ai-settings', {
     preHandler: requireAdmin,
     schema: { body: { type: 'object', required: ['values'], properties: { values: { type: 'object', additionalProperties: { type: ['string', 'null'], maxLength: 500 } } } } },
   }, async (req, reply) => {
     try {
-      aiSettings.update(req.body.values);
+      settings.update(req.body.values, { only: ['ai'] });
     } catch (err) {
       if (err instanceof SettingsError) return reply.code(err.statusCode).send({ error: err.message });
       throw err;
@@ -572,7 +612,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   });
   const draftOf = (req, reply) => {
     try {
-      return aiSettings.draft(req.body?.values);
+      return settings.draft(req.body?.values);
     } catch (err) {
       if (err instanceof SettingsError) reply.code(err.statusCode).send({ error: err.message });
       else throw err;
@@ -601,6 +641,33 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       if (err instanceof SettingsError) return reply.code(err.statusCode).send({ error: err.message });
       throw err;
     }
+  });
+
+  // Everything else an admin can set in the app (home place, cameras, Windy,
+  // stations, Home Assistant, push, sign-out link, Android). Secrets are write-only.
+  const APP_GROUPS = ['home', 'cameras', 'maps', 'stations', 'homeassistant', 'apps'];
+  const valuesBody = { type: 'object', additionalProperties: { type: ['string', 'null'], maxLength: 800 } };
+  app.get('/api/admin/settings', { preHandler: requireAdmin }, async () => ({ settings: settings.view(APP_GROUPS) }));
+  app.put('/api/admin/settings', {
+    preHandler: requireAdmin,
+    schema: { body: { type: 'object', required: ['values'], properties: { values: valuesBody } } },
+  }, async (req, reply) => {
+    try {
+      settings.update(req.body.values, { only: APP_GROUPS });
+    } catch (err) {
+      if (err instanceof SettingsError) return reply.code(err.statusCode).send({ error: err.message });
+      throw err;
+    }
+    req.log.info({ keys: Object.keys(req.body.values), by: req.user.username }, 'settings changed');
+    return { settings: settings.view(APP_GROUPS) };
+  });
+  app.post('/api/admin/settings/test', {
+    preHandler: requireAdmin,
+    schema: { body: { type: 'object', required: ['target'], properties: { target: { type: 'string', pattern: '^(camera:[a-z]{2}|ambient|tempest|homeassistant|mqtt)$' }, values: valuesBody } } },
+  }, async (req, reply) => {
+    const draft = draftOf(req, reply);
+    if (!draft) return reply;
+    return testIntegration(req.body.target, draft, { fetchImpl, cameras, ...(mqttConnect ? { connect: mqttConnect } : {}) });
   });
 
   app.get('/api/admin/app-keys', { preHandler: requireAdmin }, async () => ({ keys: appKeys.list() }));

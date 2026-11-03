@@ -19,7 +19,7 @@ test('admin AI settings: env values show as from the template, keys are never se
   const res = await call('GET', '/api/admin/ai-settings');
   assert.equal(res.statusCode, 200);
   assert.doesNotMatch(res.body, /secret-1234/);
-  assert.deepEqual(row(res, 'ANTHROPIC_API_KEY'), { key: 'ANTHROPIC_API_KEY', secret: true, source: 'env', envSet: true, set: true, hint: '1234' });
+  assert.deepEqual(row(res, 'ANTHROPIC_API_KEY'), { key: 'ANTHROPIC_API_KEY', group: 'ai', secret: true, source: 'env', envSet: true, set: true, hint: '1234' });
   assert.equal(row(res, 'OLLAMA_MODEL').source, 'env');
   assert.equal(row(res, 'OLLAMA_URL').source, 'default');
   assert.equal(res.json().ai.provider, 'anthropic');
