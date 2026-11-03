@@ -19,6 +19,8 @@ import * as severe from './providers/severe.js';
 import * as tropics from './providers/tropics.js';
 import * as ocean from './providers/ocean.js';
 import * as models from './providers/models.js';
+import * as modelMaps from './providers/modelmaps.js';
+import { MAP_AREAS, MAP_MODELS, gridFor } from '../../shared/modelmap.js';
 import { kidReport } from './kid.js';
 import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
@@ -262,6 +264,28 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     const l = loc(req.query);
     const id = req.query.model || models.ENSEMBLES[0].id;
     return cache.wrap(key(`ens:${id}`, l), 60 * MIN, () => models.getEnsemble(l, id, fetchImpl));
+  });
+
+  // Forecast model maps: a grid of points every 3 hours for one model (Models tab).
+  app.get('/api/modelmap', {
+    schema: {
+      querystring: {
+        ...latLonSchema.querystring,
+        properties: {
+          ...latLonSchema.querystring.properties,
+          model: { type: 'string', enum: MAP_MODELS.map((m) => m.id) },
+          area: { type: 'string', enum: MAP_AREAS.map((a) => a.id) },
+        },
+      },
+    },
+  }, async (req, reply) => {
+    const l = loc(req.query);
+    const model = req.query.model || MAP_MODELS[0].id;
+    const area = req.query.area || 'region';
+    const g = gridFor(l.lat, l.lon, area);
+    reply.header('cache-control', 'private, max-age=600');
+    return cache.wrap(`mmap:${model}:${area}:${g.center.lat},${g.center.lon},${l.units}`, 60 * MIN,
+      () => modelMaps.getModelMap({ ...l, model, area }, fetchImpl));
   });
 
   // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----
