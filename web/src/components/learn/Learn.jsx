@@ -31,7 +31,7 @@ function useAudience(kidMode) {
 }
 
 // The Learn tab: a live sky, today's "why" lessons, the topic library and the Storm Center.
-export default function Learn({ weather, location, kidMode }) {
+export default function Learn({ weather, location, kidMode, chasers }) {
   const [audience, setAudience] = useAudience(kidMode);
   const [view, setView] = useState(null); // null | topic id | 'storms' | 'storms:<hazard>'
   const open = (id) => {
@@ -54,7 +54,7 @@ export default function Learn({ weather, location, kidMode }) {
     return (
       <div className="learn">
         {toggle}
-        <StormCenter audience={audience} weather={weather} location={location} onBack={() => open(null)} initial={view.split(':')[1] || 'tornado'} />
+        <StormCenter audience={audience} weather={weather} location={location} onBack={() => open(null)} initial={view.split(':')[1] || 'tornado'} chasers={chasers} />
       </div>
     );
   }

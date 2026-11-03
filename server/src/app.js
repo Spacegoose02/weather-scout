@@ -26,6 +26,7 @@ import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
 import { moonPhase } from './sky.js';
 import { MediaService } from './media.js';
+import { ChaserService } from './chasers.js';
 import { getOfficeProducts } from './providers/news.js';
 import { PushService, LEVELS } from './push.js';
 import { AiService, registerAi } from './ai.js';
@@ -65,6 +66,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const cameras = new CameraService(cfg, cache, fetchImpl, { retry: { baseDelayMs: Number(cfg.env.CAMERA_RETRY_DELAY_MS) || 1500 } });
   const appKeys = new AppKeys(db);
   const media = new MediaService(db, cache, fetchImpl);
+  const chasers = new ChaserService(cfg, cache, fetchImpl);
   const push = cfg.push.enabled ? new PushService(db, cfg, { send: pushSend, log: app.log }) : null;
   // Saved admin AI/voice settings win over the env vars; apply them before anything reads cfg.ai.
   const aiSettings = new AiSettings(db, cfg);
@@ -301,9 +303,18 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   aiSettings.onChange(() => {
     ai.configure(cfg.ai);
     tts.reset();
+    chasers.reset();
   });
   registerBriefing(app, { ai, forecast, alerts, air, settle, loc });
   registerWindy(app, { cfg });
+
+  // ---- live storm chaser streams (Storm Center) -------------------------------
+  app.get('/api/chasers/live', {
+    schema: { querystring: { type: 'object', properties: { kid: { type: 'string', enum: ['0', '1', 'true', 'false'] } } } },
+  }, async (req, reply) => {
+    reply.header('cache-control', 'private, max-age=60');
+    return chasers.live({ kid: req.query.kid === '1' || req.query.kid === 'true' });
+  });
 
   // ---- personal weather stations & Home Assistant ----------------------------
   registerStations(app, { stations, cfg, requireAdmin });
@@ -565,7 +576,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const draftBody = { values: { type: 'object', additionalProperties: { type: ['string', 'null'], maxLength: 500 } } };
   app.post('/api/admin/ai-settings/test', {
     preHandler: requireAdmin,
-    schema: { body: { type: 'object', required: ['target'], properties: { target: { type: 'string', enum: ['anthropic', 'ollama', 'kokoro'] }, ...draftBody } } },
+    schema: { body: { type: 'object', required: ['target'], properties: { target: { type: 'string', enum: ['anthropic', 'ollama', 'kokoro', 'youtube'] }, ...draftBody } } },
   }, async (req, reply) => {
     const draft = draftOf(req, reply);
     if (!draft) return reply;

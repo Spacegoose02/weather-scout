@@ -7,6 +7,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { loadConfig } from './config.js';
 import { voiceLabel } from './tts.js';
+import { CHASER_LIST, testYoutubeKey } from './chasers.js';
 
 // Saved under the same names as the env vars, so loadConfig parses and clamps them.
 export const AI_SETTINGS = [
@@ -23,6 +24,9 @@ export const AI_SETTINGS = [
   { key: 'KOKORO_VOICE', pattern: /^[a-z]{2}_[a-z0-9]+(?:[+][a-z]{2}_[a-z0-9]+)*$/ },
   { key: 'KOKORO_SPEED', range: [0.5, 2] },
   { key: 'KOKORO_FALLBACK', options: ['browser', 'off'] },
+  { key: 'YOUTUBE_API_KEY', secret: true },
+  { key: 'STORM_CHASER_CHANNELS', pattern: CHASER_LIST },
+  { key: 'STORM_CHASER_SEARCH', options: ['', 'true', 'false'] },
 ];
 const BY_KEY = new Map(AI_SETTINGS.map((f) => [f.key, f]));
 
@@ -77,6 +81,7 @@ export class AiSettings {
     const m = this.merged();
     Object.assign(this.cfg.ai, m.ai);
     Object.assign(this.cfg.tts, m.tts);
+    Object.assign(this.cfg.youtube, m.youtube);
     for (const fn of this.listeners) fn(this.cfg);
   }
 
@@ -188,6 +193,7 @@ export async function testConnection(target, draftCfg, fetchImpl) {
         message: ok ? `Connected. ${voices.length} English voices, including ${voiceLabel(tts.voice)}.` : `Connected, but Kokoro has no voice called "${tts.voice}". Pick one from the list.`,
       };
     }
+    if (target === 'youtube') return testYoutubeKey(draftCfg.youtube.apiKey, fetchImpl);
     return { ok: false, message: 'Unknown service.' };
   } catch (err) {
     return { ok: false, message: `Test failed: ${String(err.message || err).slice(0, 160)}` };
