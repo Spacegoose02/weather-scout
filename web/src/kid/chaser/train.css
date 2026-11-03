@@ -21,6 +21,9 @@
 .radar-screen.tappable { cursor: crosshair; }
 .radar-screen canvas, .radar-screen svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .radar-screen canvas { image-rendering: auto; }
+.radar-map { z-index: 1; pointer-events: none; }
+.radar-mark { z-index: 2; }
+.radar-tag { z-index: 2; }
 .radar-map path { fill: none; stroke: #4c6a8a; stroke-width: 2; }
 .radar-map path.county { stroke: #2c3c52; stroke-width: 1; stroke-dasharray: 4 4; }
 .radar-map circle { fill: #e9eef8; }
