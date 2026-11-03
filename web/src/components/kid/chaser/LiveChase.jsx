@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { api } from '../../../api.js';
 import { useChase } from '../../../kid/chaser/useChase.js';
 import { listWords } from '../../../kid/chaser/live.js';
+import { KidChaserTip, StreamList } from '../../chasers/LiveChasers.jsx';
+import '../../../chasers/chasers.css';
 
-// Kid-safe live chaser streams, picked by a grown-up in Family & settings.
-// They only show while tornado or severe thunderstorm warnings are up somewhere
-// (unless the grown-up marked a stream "anytime"), and start muted.
+// Live storm chasers from the Storm Center's trusted, kid-safe list (a grown-up
+// can change it in Family & settings). In the Kid Zone they only show while
+// tornado or severe thunderstorm warnings are up somewhere, and start muted.
 export default function LiveChase({ weather, kid, today, user }) {
   const [feed, setFeed] = useState(null);
   const [error, setError] = useState('');
@@ -28,7 +30,7 @@ export default function LiveChase({ weather, kid, today, user }) {
     };
   }, []);
 
-  // A stream that goes offline closes.
+  // A stream that goes offline (or a feed that turns off) closes.
   useEffect(() => {
     if (playing && feed && !feed.streams.some((s) => s.videoId === playing.videoId)) setPlaying(null);
   }, [feed]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -50,10 +52,11 @@ export default function LiveChase({ weather, kid, today, user }) {
   if (!feed) return <section className="card live-chase"><h2>🎥 Live chase</h2><p>Looking for chasers on the road… 🚙</p></section>;
 
   const w = feed.warnings;
+  const follow = feed.channels.filter((c) => !c.live);
   return (
     <section className="card live-chase">
       <h2>🎥 Live chase</h2>
-      <p className="hint">Real storm chasers stream from the road. Chasers are trained grown-ups who keep a safe distance, and watching from home is the safest chase there is!</p>
+      <KidChaserTip />
       {w.unavailable ? (
         <p className="warn-line">Could not check the National Weather Service warnings right now.</p>
       ) : w.active ? (
@@ -72,26 +75,19 @@ export default function LiveChase({ weather, kid, today, user }) {
               allowFullScreen
             />
           </div>
-          <p className="hint small">Starts muted. Chasers sometimes get excited, so a grown-up can turn the sound on. <button className="link" onClick={() => setPlaying(null)}>Close</button></p>
+          <p className="hint small">Starts muted. Live streams are not checked ahead of time, so a grown-up can turn the sound on. If something looks scary, close it. <button className="link" onClick={() => setPlaying(null)}>Close</button></p>
         </div>
       )}
 
-      {feed.streams.length > 0 ? (
-        <ul className="live-list">
-          {feed.streams.map((s) => (
-            <li key={s.id}>
-              <button className={playing?.videoId === s.videoId ? 'on' : ''} onClick={() => play(s)}>
-                <img src={`https://i.ytimg.com/vi/${s.videoId}/mqdefault.jpg`} alt="" loading="lazy" />
-                <span><strong>{s.title}</strong><small>{s.confirmedLive ? '🔴 Live now' : 'Tap to try'}</small></span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : feed.configured === 0 ? (
-        <p>No chasers are picked yet. {user?.isAdmin ? 'Add storm chaser YouTube channels in Family & settings › Live storm chasers.' : 'Ask a grown-up to pick some storm chaser channels in Family & settings.'}</p>
-      ) : w.active ? (
-        <p>None of your chasers are streaming right now. Check back in a few minutes!</p>
-      ) : null}
+      {feed.streams.length > 0 && <StreamList streams={feed.streams} onPlay={play} />}
+      {w.active && feed.available && !feed.streams.length && <p>None of the chasers are streaming right now. Check back in a few minutes!</p>}
+      {!feed.available && <p className="hint">Could not reach YouTube to check the chasers right now.</p>}
+      {follow.length > 0 && (
+        <p className="hint small">
+          Chasers on Rocky's list: {follow.map((c) => c.name).join(' · ')}.
+          {user?.isAdmin ? ' Change the list in Family & settings.' : ' A grown-up can change the list in Family & settings.'}
+        </p>
+      )}
     </section>
   );
 }
