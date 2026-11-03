@@ -236,6 +236,15 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     const r = ocean.inBox(all, box);
     return { buoys: r.items, total: r.total, truncated: r.truncated, units, source: 'NOAA National Data Buoy Center' };
   });
+  // Tide stations in the map view, for the radar map's tide layer.
+  app.get('/api/tides/stations', { schema: boxSchema }, async (req) => {
+    const q = req.query;
+    const all = await cache.wrap('tide-stations', 24 * 60 * MIN, () => ocean.getTideStations(fetchImpl));
+    const wide = q.east - q.west >= 360;
+    const box = { south: q.south, north: q.north, west: wide ? -180 : wrapLon(q.west), east: wide ? 180 : wrapLon(q.east) };
+    const r = ocean.inBox(all, box);
+    return { stations: r.items, total: r.total, truncated: r.truncated, source: 'NOAA Tides & Currents' };
+  });
   app.get('/api/tides', { schema: latLonSchema }, async (req) => {
     const l = loc(req.query);
     const stations = await cache.wrap('tide-stations', 24 * 60 * MIN, () => ocean.getTideStations(fetchImpl));
@@ -389,14 +398,22 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
         required: ['south', 'west', 'north', 'east'],
         properties: {
           south: { type: 'number' }, west: { type: 'number' }, north: { type: 'number' }, east: { type: 'number' },
+          hide: { type: 'string', maxLength: 2000 },
         },
       },
     },
   }, async (req) => {
-    const out = await cameras.inBounds(req.query);
+    const hide = (req.query.hide || '').split(',').map((x) => x.trim()).filter(Boolean);
+    const out = await cameras.inBounds({ ...req.query, hide });
     // Images are served through our proxy so http-only DOT cameras work on an https site.
     out.cameras = out.cameras.map((c) => ({ ...c, imageUrl: c.hasImage ? `/api/cameras/image/${encodeURIComponent(c.id)}` : null }));
     return out;
+  });
+
+  // Every camera feed (one per state, mostly), for the map's layer panel.
+  app.get('/api/cameras/feeds', async () => {
+    const { feeds } = await cameras.all();
+    return { feeds: feeds.map(({ id, name, region, ok, count }) => ({ id, name, region, ok, count: count || 0 })) };
   });
 
   app.get('/api/cameras/image/:id', async (req, reply) => {
