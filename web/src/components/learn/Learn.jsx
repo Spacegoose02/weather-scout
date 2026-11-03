@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAudience } from '../../learn/useAudience.js';
 import { TOPICS, topicById } from '../../learn/topics.js';
 import { HAZARDS } from '../../learn/storms.js';
 import SkyScene from './SkyScene.jsx';
@@ -9,29 +10,8 @@ import Raccoon from '../Raccoon.jsx';
 import { stopSpeaking } from '../../kid/speak.js';
 import '../../learn/learn.css';
 
-const AUDIENCE_KEY = 'weather-scout:learn-audience';
-
-function useAudience(kidMode) {
-  const [audience, setAudience] = useState(() => {
-    if (kidMode) return 'kid';
-    try {
-      return localStorage.getItem(AUDIENCE_KEY) || 'kid';
-    } catch {
-      return 'kid';
-    }
-  });
-  useEffect(() => {
-    try {
-      localStorage.setItem(AUDIENCE_KEY, audience);
-    } catch {
-      /* ignore */
-    }
-  }, [audience]);
-  return [kidMode ? 'kid' : audience, setAudience];
-}
-
 // The Learn tab: a live sky, today's "why" lessons, the topic library and the Storm Center.
-export default function Learn({ weather, location, kidMode }) {
+export default function Learn({ weather, location, kidMode, onOcean }) {
   const [audience, setAudience] = useAudience(kidMode);
   const [view, setView] = useState(null); // null | topic id | 'storms' | 'storms:<hazard>'
   const open = (id) => {
@@ -89,6 +69,13 @@ export default function Learn({ weather, location, kidMode }) {
           <span className="tile-sub">{HAZARDS.map((h) => h.emoji).join(' ')} Tornadoes, wildfires & hurricanes</span>
           {live > 0 && <span className="tile-badge">Live alert</span>}
         </button>
+        {onOcean && (
+          <button className="topic-tile storm-tile ocean-tile" style={{ '--topic': '#1b7fc4' }} onClick={onOcean}>
+            <span className="tile-emoji" aria-hidden>🌊</span>
+            <span className="tile-title">{kid ? "Rocky's Ocean Lab" : 'Ocean discoveries'}</span>
+            <span className="tile-sub">🔭 🐙 🤿 New discoveries, creature of the week & a dive to the deepest trench</span>
+          </button>
+        )}
         {TOPICS.map((t) => (
           <button key={t.id} className="topic-tile" style={{ '--topic': t.color }} onClick={() => open(t.id)}>
             <span className="tile-emoji" aria-hidden>{t.emoji}</span>

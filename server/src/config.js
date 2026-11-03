@@ -55,6 +55,8 @@ export function loadConfig(env = process.env) {
       webSearch: bool(env.AI_WEB_SEARCH, true),
       dailyLimit: Math.max(0, num(env.AI_DAILY_LIMIT, 40)),
     },
+    // Ocean discoveries feeds ("Title|https://url, ..."). Blank = the built-in list.
+    oceanFeeds: env.OCEAN_FEEDS || '',
     // Kokoro text-to-speech (e.g. the Kokoro-FastAPI container) for read-aloud.
     tts: {
       url: (env.KOKORO_URL || '').replace(/\/+$/, ''),

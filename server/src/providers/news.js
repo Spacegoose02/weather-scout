@@ -7,7 +7,7 @@ import { UpstreamError, fetchJson } from '../cache.js';
 // Titles and descriptions are kept raw (some feeds put bare HTML in them) and cleaned below.
 const parser = new XMLParser({
   ignoreAttributes: false, attributeNamePrefix: '@', textNodeName: '#text', processEntities: false,
-  stopNodes: ['*.title', '*.description', '*.summary', '*.media:description'],
+  stopNodes: ['*.title', '*.description', '*.summary', '*.media:description', '*.content:encoded', '*.content'],
 });
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 const decode = (s) => s
@@ -38,6 +38,35 @@ export const safeLink = (u) => {
     return null;
   }
 };
+// A picture for the story, when the feed has one: an image enclosure, Media RSS
+// content or thumbnail, or the first <img> in the story's HTML. https only.
+const IMG_EXT = /\.(jpe?g|png|webp|gif)(\?|$)/i;
+export function feedImage(it) {
+  const https = (u) => {
+    const link = safeLink(u);
+    return link && link.startsWith('https:') ? link : null;
+  };
+  for (const e of arr(it.enclosure)) {
+    const url = https(e?.['@url']);
+    if (url && (/^image\//i.test(e['@type'] || '') || IMG_EXT.test(url))) return url;
+  }
+  const media = [...arr(it['media:content']), ...arr(it['media:group']?.['media:content'])];
+  for (const m of media) {
+    const url = https(m?.['@url']);
+    if (url && (m['@medium'] === 'image' || /^image\//i.test(m['@type'] || '') || IMG_EXT.test(url))) return url;
+  }
+  for (const t of [...arr(it['media:thumbnail']), ...media.map((m) => m?.['media:thumbnail'])]) {
+    const url = https(t?.['@url']);
+    if (url) return url;
+  }
+  for (const html of [it['content:encoded'], it.content, it.description, it.summary]) {
+    const src = decode(decode(text(html))).match(/<img\b[^>]*?\ssrc=["']([^"']+)["']/i)?.[1];
+    const url = src && https(src);
+    if (url) return url;
+  }
+  return null;
+}
+
 const iso = (d) => {
   const t = Date.parse(text(d));
   return Number.isFinite(t) ? new Date(t).toISOString() : null;
@@ -54,6 +83,7 @@ export function parseFeed(xml) {
       link: safeLink(text(it.link) || it.guid?.['#text'] || it.guid),
       published: iso(it.pubDate || it['dc:date']),
       summary: clean(it.description, 280),
+      image: feedImage(it),
     }));
     return { title, items };
   }
@@ -72,6 +102,7 @@ export function parseFeed(xml) {
         link: linkOf(e),
         published: iso(e.published || e.updated),
         summary: clean(e.summary || media['media:description'], 280),
+        ...(videoId ? {} : { image: feedImage(e) }),
         ...(videoId && /^[\w-]{6,20}$/.test(videoId)
           ? { videoId, thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` }
           : {}),
