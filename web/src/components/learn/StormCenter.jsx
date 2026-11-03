@@ -3,6 +3,7 @@ import { api } from '../../api.js';
 import { HAZARDS, hazardById, hazardAlerts, nearbyStorms } from '../../learn/storms.js';
 import SpeakButton from '../kid/SpeakButton.jsx';
 import Quiz from './Quiz.jsx';
+import LiveChasers from '../chasers/LiveChasers.jsx';
 
 function LiveNow({ hazard, alerts, location, storms }) {
   const mine = hazardAlerts(alerts, hazard);
@@ -35,7 +36,7 @@ function LiveNow({ hazard, alerts, location, storms }) {
   );
 }
 
-export default function StormCenter({ audience, weather, location, onBack, initial = 'tornado' }) {
+export default function StormCenter({ audience, weather, location, onBack, initial = 'tornado', chasers }) {
   const kid = audience === 'kid';
   const pick = (x) => (kid ? x.kid : x.adult);
   const [id, setId] = useState(initial);
@@ -67,6 +68,8 @@ export default function StormCenter({ audience, weather, location, onBack, initi
       <SpeakButton text={pick(hazard)} />
 
       <LiveNow hazard={hazard} alerts={alerts} location={location} storms={storms} />
+
+      <LiveChasers kid={kid} popups={chasers} />
 
       <section className="topic-section">
         <h3>How {hazard.title.toLowerCase()} form</h3>

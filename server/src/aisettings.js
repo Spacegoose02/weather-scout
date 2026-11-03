@@ -1,137 +1,11 @@
-// AI and read-aloud settings an admin can change from Family & settings, so the
-// Anthropic key, Ollama address and Kokoro voice don't have to live in the
-// Unraid template. Saved values are stored in the database in the data volume
-// and win over environment variables; clearing one falls back to the env var
-// (or the built-in default). Keys are write-only: the API only says whether a
-// key is set and shows its last 4 characters.
+// "Test connection" and "Preview voice" for the AI helper and Kokoro, used by
+// the admin AI settings panel. The settings themselves live in settings.js.
 import Anthropic from '@anthropic-ai/sdk';
-import { loadConfig } from './config.js';
 import { voiceLabel } from './tts.js';
+import { SettingsError } from './settings.js';
+import { testYoutubeKey } from './chasers.js';
 
-// Saved under the same names as the env vars, so loadConfig parses and clamps them.
-export const AI_SETTINGS = [
-  { key: 'AI_PROVIDER', options: ['', 'anthropic', 'ollama', 'off'] },
-  { key: 'ANTHROPIC_API_KEY', secret: true },
-  { key: 'AI_MODEL', pattern: /^[\w.:@/-]{1,100}$/ },
-  { key: 'OLLAMA_URL', url: true },
-  { key: 'OLLAMA_MODEL', pattern: /^[\w.:@/-]{1,100}$/ },
-  { key: 'OLLAMA_VISION_MODEL', pattern: /^[\w.:@/-]{0,100}$/ },
-  { key: 'OLLAMA_API_KEY', secret: true },
-  { key: 'AI_WEB_SEARCH', options: ['true', 'false'] },
-  { key: 'AI_DAILY_LIMIT', pattern: /^\d{1,5}$/ },
-  { key: 'KOKORO_URL', url: true },
-  { key: 'KOKORO_VOICE', pattern: /^[a-z]{2}_[a-z0-9]+(?:[+][a-z]{2}_[a-z0-9]+)*$/ },
-  { key: 'KOKORO_SPEED', range: [0.5, 2] },
-  { key: 'KOKORO_FALLBACK', options: ['browser', 'off'] },
-];
-const BY_KEY = new Map(AI_SETTINGS.map((f) => [f.key, f]));
-
-export class SettingsError extends Error {
-  constructor(message) {
-    super(message);
-    this.statusCode = 400;
-  }
-}
-
-function validate(key, raw) {
-  const f = BY_KEY.get(key);
-  if (!f) throw new SettingsError(`Unknown setting ${key}.`);
-  const v = String(raw ?? '').trim();
-  if (v.length > 500) throw new SettingsError(`${key} is too long.`);
-  if (f.options && !f.options.includes(v.toLowerCase())) throw new SettingsError(`${key} must be one of: ${f.options.filter(Boolean).join(', ')}.`);
-  if (f.pattern && v && !f.pattern.test(v)) throw new SettingsError(`${key} doesn't look right.`);
-  if (f.range && v && !(Number(v) >= f.range[0] && Number(v) <= f.range[1])) throw new SettingsError(`${key} must be between ${f.range[0]} and ${f.range[1]}.`);
-  if (f.url && v) {
-    let u;
-    try {
-      u = new URL(v);
-    } catch {
-      throw new SettingsError(`${key} must be a web address like http://192.168.1.20:11434`);
-    }
-    if (!/^https?:$/.test(u.protocol) || u.username || u.password) throw new SettingsError(`${key} must start with http:// or https://`);
-  }
-  return f.options ? v.toLowerCase() : v;
-}
-
-export class AiSettings {
-  constructor(db, cfg) {
-    this.db = db;
-    this.cfg = cfg;
-    db.exec('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT (datetime(\'now\')))');
-    this.listeners = [];
-  }
-
-  saved() {
-    const out = {};
-    for (const r of this.db.prepare('SELECT key, value FROM settings').all()) if (BY_KEY.has(r.key)) out[r.key] = r.value;
-    return out;
-  }
-
-  // The env plus saved values (plus any unsaved form values), parsed like a fresh start.
-  merged(extra = {}) {
-    return loadConfig({ ...this.cfg.env, ...this.saved(), ...extra });
-  }
-
-  // Push the saved values into the live config. AiService/tts read these objects.
-  apply() {
-    const m = this.merged();
-    Object.assign(this.cfg.ai, m.ai);
-    Object.assign(this.cfg.tts, m.tts);
-    for (const fn of this.listeners) fn(this.cfg);
-  }
-
-  onChange(fn) {
-    this.listeners.push(fn);
-  }
-
-  // What the admin page shows. Secrets only say whether they're set.
-  view() {
-    const saved = this.saved();
-    const env = this.cfg.env;
-    return AI_SETTINGS.map(({ key, secret }) => {
-      const source = key in saved ? 'saved' : env[key] !== undefined && env[key] !== '' ? 'env' : 'default';
-      const value = saved[key] ?? (source === 'env' ? env[key] : '');
-      const row = { key, secret: !!secret, source, envSet: env[key] !== undefined && env[key] !== '' };
-      if (secret) return { ...row, set: !!value, hint: value ? value.slice(-4) : '' };
-      return { ...row, value };
-    });
-  }
-
-  // values: { KEY: string } saves; { KEY: null } clears back to the env/default.
-  // For secrets, leaving the key out keeps what's there.
-  update(values) {
-    if (!values || typeof values !== 'object') throw new SettingsError('Nothing to save.');
-    // A blank secret clears the saved key (back to the env var, if there is one).
-    const writes = Object.entries(values).map(([k, v]) => {
-      if (v === null || (BY_KEY.get(k)?.secret && String(v).trim() === '')) return [k, (validate(k, ''), null)];
-      return [k, validate(k, v)];
-    });
-    const put = this.db.prepare("INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at");
-    const del = this.db.prepare('DELETE FROM settings WHERE key = ?');
-    this.db.exec('BEGIN');
-    try {
-      for (const [k, v] of writes) (v === null ? del.run(k) : put.run(k, v));
-      this.db.exec('COMMIT');
-    } catch (err) {
-      this.db.exec('ROLLBACK');
-      throw err;
-    }
-    this.apply();
-  }
-
-  // Form values the admin hasn't saved yet, for Test and Preview. Blank secrets mean "use the saved one".
-  draft(values = {}) {
-    const extra = {};
-    for (const [k, v] of Object.entries(values || {})) {
-      if (v === null || v === undefined) continue;
-      if (BY_KEY.get(k)?.secret && String(v).trim() === '') continue;
-      extra[k] = validate(k, v);
-    }
-    return this.merged(extra);
-  }
-}
-
-const reach = (err, what, url) => (err?.name === 'TimeoutError' ? `${what} at ${url} took too long to answer.` : `Could not reach ${what} at ${url}. Is it running, and can this server reach that address?`);
+export const reach = (err, what, url) => (err?.name === 'TimeoutError' ? `${what} at ${url} took too long to answer.` : `Could not reach ${what} at ${url}. Is it running, and can this server reach that address?`);
 
 // "Test connection" for one service, with the draft settings. Never throws.
 export async function testConnection(target, draftCfg, fetchImpl) {
@@ -188,6 +62,7 @@ export async function testConnection(target, draftCfg, fetchImpl) {
         message: ok ? `Connected. ${voices.length} English voices, including ${voiceLabel(tts.voice)}.` : `Connected, but Kokoro has no voice called "${tts.voice}". Pick one from the list.`,
       };
     }
+    if (target === 'youtube') return testYoutubeKey(draftCfg.youtube.apiKey, fetchImpl);
     return { ok: false, message: 'Unknown service.' };
   } catch (err) {
     return { ok: false, message: `Test failed: ${String(err.message || err).slice(0, 160)}` };

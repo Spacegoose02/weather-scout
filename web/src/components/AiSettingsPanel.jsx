@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { speak } from '../kid/speak.js';
 import { voiceLabel, changedValues, draftValues } from '../ai/settings.js';
+import { Source, Secret, Text, Result } from './SettingsFields.jsx';
 
 // Family & settings: the AI helper (Claude or Ollama) and Rocky's read-aloud
 // voice (Kokoro). Saved on the server and used right away; anything left alone
@@ -87,7 +88,7 @@ export default function AiSettingsPanel() {
     await audio.current.play();
   });
 
-  const ctx = { rows, form, set, save, tests };
+  const ctx = { rows, form, set, save, tests, defaults: DEFAULTS };
 
   const status = view.ai.enabled
     ? `🟢 On, using ${PROVIDER[view.ai.provider]}${view.ai.search ? ' with web search' : ''}.`
@@ -189,61 +190,30 @@ export default function AiSettingsPanel() {
         <Result ctx={ctx} target="kokoro" />
       </fieldset>
 
+      <fieldset>
+        <legend>Storm chaser live streams</legend>
+        <p className="hint">The Storm Center checks a trusted list of storm chaser channels with no setup. A free YouTube key adds viewer counts and, for grown-ups, a search for other live chasers. Kid Mode only ever shows the trusted list.</p>
+        <Secret ctx={ctx} k="YOUTUBE_API_KEY" label="YouTube Data API key" help={<>Optional. Create one in the <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener noreferrer">Google Cloud console</a> with the YouTube Data API v3 turned on. The free quota is plenty.</>} />
+        <Text ctx={ctx} k="STORM_CHASER_CHANNELS" label="Trusted chaser channels" placeholder="@RyanHallYall, @ReedTimmerWx, @PecosHank, @MaxVelocityWX, @LiveStormsMedia, @VinceWaelti" help="Comma-separated @handles or channel ids. Leave blank for the built-in list." />
+        <label>
+          <span>Search YouTube for more live chasers <Source ctx={ctx} k="STORM_CHASER_SEARCH" /></span>
+          <select value={form.STORM_CHASER_SEARCH || 'true'} onChange={set('STORM_CHASER_SEARCH')}>
+            <option value="true">Yes, for grown-ups (needs the key)</option>
+            <option value="false">No, trusted list only</option>
+          </select>
+        </label>
+        <div className="ai-actions">
+          <button type="button" className="ghost" disabled={tests.youtube?.pending} onClick={() => test('youtube')}>Test YouTube key</button>
+        </div>
+        <Result ctx={ctx} target="youtube" />
+      </fieldset>
+
       {error && <p className="error-text" role="alert">{error}</p>}
       <div className="ai-actions ai-save">
-        <button type="submit" disabled={!dirty || busy === 'save'}>{busy === 'save' ? 'Saving…' : 'Save AI settings'}</button>
+        <button type="submit" disabled={!dirty || busy === 'save'}>{busy === 'save' ? 'Saving…' : 'Save settings'}</button>
         {dirty && <button type="button" className="link" onClick={() => show(view)}>Undo changes</button>}
         {saved && !dirty && <span className="hint" role="status">✅ {saved}</span>}
       </div>
     </form>
   );
-}
-
-// Field helpers live outside the panel so inputs keep focus while typing.
-function Source({ ctx, k }) {
-  const r = ctx.rows[k];
-  if (!r) return null;
-  if (r.source === 'saved') {
-    return (
-      <span className="ai-src saved">
-        saved here
-        <button type="button" className="link" onClick={() => ctx.save({ [k]: null }, r.envSet ? 'Back to the Unraid template value.' : 'Back to the default.')}>
-          {r.envSet ? 'use template value' : 'use default'}
-        </button>
-      </span>
-    );
-  }
-  return <span className="ai-src">{r.source === 'env' ? 'from Unraid template' : 'default'}</span>;
-}
-
-function Secret({ ctx, k, label, help }) {
-  const r = ctx.rows[k];
-  return (
-    <label>
-      <span>{label} <Source ctx={ctx} k={k} /></span>
-      <input
-        type="password" autoComplete="new-password" spellCheck={false}
-        placeholder={r.set ? `•••• ${r.hint} (type a new one to replace it)` : 'not set'}
-        value={ctx.form[k]} onChange={ctx.set(k)}
-      />
-      {help && <small className="hint">{help}</small>}
-    </label>
-  );
-}
-
-function Text({ ctx, k, label, placeholder, help, list }) {
-  return (
-    <label>
-      <span>{label} <Source ctx={ctx} k={k} /></span>
-      <input type="text" spellCheck={false} placeholder={placeholder ?? DEFAULTS[k] ?? ''} value={ctx.form[k]} onChange={ctx.set(k)} list={list} />
-      {help && <small className="hint">{help}</small>}
-    </label>
-  );
-}
-
-function Result({ ctx, target }) {
-  const r = ctx.tests[target];
-  if (!r) return null;
-  if (r.pending) return <p className="ai-test" role="status">Checking…</p>;
-  return <p className={`ai-test ${r.ok ? 'good' : 'bad'}`} role="status">{r.ok ? '🟢' : '🔴'} {r.message}</p>;
 }

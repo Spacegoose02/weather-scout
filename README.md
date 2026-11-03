@@ -102,7 +102,7 @@ and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how it fits together.
 ### Docker Compose
 
 ```bash
-cp .env.example .env      # set your home lat/lon and NWS contact email
+cp .env.example .env      # optional: sign-in settings; everything else can be set in the app
 docker compose up -d      # http://localhost:8080
 ```
 
@@ -110,8 +110,9 @@ docker compose up -d      # http://localhost:8080
 
 1. Copy `unraid/weather-scout.xml` to `/boot/config/plugins/dockerMan/templates-user/` on the
    flash drive.
-2. *Docker > Add Container*, pick **weather-scout**, set your home latitude/longitude and NWS
-   contact, and apply. App data lives in `/mnt/user/appdata/weather-scout`.
+2. *Docker > Add Container*, pick **weather-scout** and apply. The template only asks for the
+   port, the app data folder (`/mnt/user/appdata/weather-scout`) and sign-in. Everything else is set
+   in the app (see [Settings](#settings)).
 
 The image is built and published to `ghcr.io/spacegoose02/weather-scout` by GitHub Actions
 (amd64 and arm64). Every push to `main` updates `:latest`; a release tag such as `v0.1.0`
@@ -120,8 +121,39 @@ also publishes `:0.1.0` and `:0.1`, so you can pin a version in Unraid instead o
 ### First visit
 
 If you didn't set `ADMIN_USERNAME`/`ADMIN_PASSWORD`, the first visit asks you to create the
-admin account. Admins manage people, SSO links and see camera feed health under
-**Family & settings**.
+admin account. Admins manage people, SSO links, settings and camera feed health under
+👤 → **Family & settings**.
+
+### Settings
+
+Sign in as an admin and open 👤 → **Family & settings**. Two panels cover everything that used to be a
+container variable:
+
+- **AI helper & Rocky's voice**: Claude or Ollama, models, daily limit, web search, Kokoro voice, speed
+  and fallback, with *Test connection* and *Preview voice*.
+- **App settings**: home place and units (with a place search), NWS contact, road camera keys, Windy key,
+  weather stations (upload token, names, Ambient, Tempest), Home Assistant (MQTT and REST), push alerts,
+  the SSO sign-out link and the Android app fingerprint. Camera keys, Ambient, Tempest, MQTT and Home
+  Assistant each have a *Test* button.
+
+Saved settings are kept in the database in `/data`, take effect right away (no restart), and win over
+environment variables, which become the defaults. Keys are write-only: after saving, the page only shows
+the last 4 characters. Each field says whether its value is *saved here*, *from Unraid template* (an
+environment variable) or the *default*, and *use template value* goes back to the environment variable.
+
+A few settings stay in the container on purpose, because they are needed before the app can start or
+decide who can reach this page at all:
+
+| Setting | Why it stays in the container |
+| --- | --- |
+| Port, `/data` path (`DATA_DIR`) | Needed before the app starts and finds its database |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | Create the first admin, before anyone can sign in |
+| `AUTH_REQUIRED`, `AUTH_TRUST_PROXY_HEADERS`, `AUTH_PROXY_*_HEADER`, `AUTH_AUTO_CREATE_SSO_USERS`, `SECURE_COOKIES`, `SESSION_SECRET`, `SESSION_DAYS` | Decide who can sign in and depend on your reverse proxy. A wrong value saved in the app could lock everyone out (or let anyone in) with no way back except the container settings |
+| `VAPID_*` | Generated on first start and kept in `/data`; changing them breaks every push subscription |
+| `CAMERA_FEEDS_JSON`, `CAMERAS_FILE`, `IP_LOCATION` | Advanced; custom feeds live in `/data/cameras.json` |
+
+Every other variable in this README still works (handy for Docker Compose); a value saved in the app
+simply wins over it. Existing Unraid installs keep their variables as defaults.
 
 ### HTTPS (for "Use my location" and phone alerts)
 
@@ -152,7 +184,8 @@ Setup, signing keys and install steps are in [docs/APPS.md](docs/APPS.md).
 
 Nothing secret lives in this repository.
 
-- Settings and keys come from environment variables (`.env`, git-ignored, or the Unraid template).
+- Settings and keys come from *Family & settings* (stored in the database in `/data`) or environment
+  variables (`.env`, git-ignored, or the Unraid template). Saved keys are never sent back to the browser.
 - Camera feeds are defined in `/data/cameras.json` and refer to keys by variable name
   (`"keyEnv": "NY511_API_KEY"`), so the file itself is safe to share.
 - The browser never sees upstream URLs or keys: camera snapshots are proxied through the server,
@@ -187,17 +220,17 @@ Each key takes a few minutes and costs nothing. Keys stay on your server; they a
 | `GA511_API_KEY` | Create an account at [511ga.org](https://511ga.org), then request a key on the [developer page](https://511ga.org/developers/doc). |
 | `OHGO_API_KEY` | [Register with OHGO](https://publicapi.ohgo.com/docs/registration); the key arrives by email. |
 
-**Unraid:** open the Docker tab, click the Weather Scout icon, choose *Edit*, paste the key into
-the matching "API key" field and click *Apply* (the container restarts). **Docker Compose:** put it in
-`.env` and run `docker compose up -d`. *Family & settings* then shows the state with its camera count;
-until then it lists the state as "set NC_DRIVENC_API_KEY" with a link to get one.
+Paste the key under **Family & settings → App settings → Road cameras**, press *Test*, then *Save
+app settings*. The state switches on right away, no restart. (Setting the variable in `.env` or the
+container also works.) *Family & settings* then shows the state with its camera count; until then it
+lists the state as needing a key, with a link to get one.
 
 Not built in yet: West Virginia (WV511) and Tennessee (SmartWay) have no public camera feed we could
 find (SmartWay's camera list sits behind its own website), and Pennsylvania (511PA) gives feeds only
 after a [data-feed request to PennDOT](https://www.pa.gov/services/penndot/request-access-to-transportation-related-data-feeds.html).
 Once you have access, add them to `cameras.json`.
 
-Set `CAMERAS_DEFAULT_FEEDS` to `false` to turn them off, or to a list such as `va,md,nc` to pick states.
+Set *Built-in camera feeds* (`CAMERAS_DEFAULT_FEEDS`) to `false` to turn them off, or to a list such as `va,md,nc` to pick states.
 
 To add other states or your own cameras, copy
 [`server/cameras.example.json`](server/cameras.example.json) to `/data/cameras.json` and enable
@@ -226,9 +259,8 @@ variables below, and keys are never shown again (only their last 4 characters). 
 value* next to a field goes back to the environment variable.
 
 - **Claude**: create a key at [console.anthropic.com](https://console.anthropic.com/) (pay as you
-  go) and set `ANTHROPIC_API_KEY` (*Anthropic API key* in the Unraid template), or paste it in
-  *Family & settings*.
-- **Ollama**: set `OLLAMA_URL`, e.g. `http://192.168.1.20:11434`, and pull a model that can see
+  go) and paste it in *Family & settings* (or set `ANTHROPIC_API_KEY`).
+- **Ollama**: enter its address in *Family & settings* (or `OLLAMA_URL`), e.g. `http://192.168.1.20:11434`, and pull a model that can see
   photos, e.g. `ollama pull gemma3`. Free and private, but answers are slower and less accurate
   than Claude on most home hardware.
 
@@ -278,9 +310,20 @@ directly. If Kokoro is down, read-aloud quietly falls back to the device voice (
 The 🌬️ *Windy* button on the Radar & Cams map works with no setup: it opens the free Windy embed.
 For the full Windy map (smoother layer switching, no embed limits), get a **Map Forecast API** key at
 [api.windy.com/keys](https://api.windy.com/keys), set its allowed domain to your Weather Scout address,
-and paste it into `WINDY_MAP_KEY` (Unraid: *Windy map key*). Windy map keys are browser keys, so the key
+and paste it under *Family & settings → App settings → Windy maps* (or set `WINDY_MAP_KEY`). Windy map keys are browser keys, so the key
 is sent to the browser inside the Windy map page; it is never in the repository or `/api/config`, and
 the page needs sign-in when `AUTH_REQUIRED=true`. Which models and layers show depends on your key's plan.
+
+### Live storm chasers
+
+*Learn → Storm Center* shows storm chasers who are streaming live on YouTube, and a small pop-up
+appears when they're live while severe warnings or watches are active near you. Each person picks
+*When storms are near me* (default), *Whenever storm chasers are live*, or *Never* under the list.
+With no setup, Weather Scout checks a trusted list of chaser channels (Ryan Hall Y'all, Reed Timmer,
+Pecos Hank, Max Velocity, Live Storms Media, Vince Waelti) through their public live pages. Admins
+can change the list, and add an optional YouTube Data API v3 key, in *Family & settings*: the key adds
+viewer counts and, for grown-ups, a YouTube search for other live chasers (about 7,200 of the free
+10,000 daily quota units at most). Kid Mode only ever shows the trusted list.
 
 ## Data sources
 
@@ -299,6 +342,7 @@ the page needs sign-in when `AUTH_REQUIRED=true`. Which models and layers show d
 | Wind and model maps | [Windy](https://www.windy.com) embed, or the Map Forecast API | none for the embed, optional `WINDY_MAP_KEY` |
 | Cameras | VA, SC, MD, KY and DE public feeds; NC, NY, GA and OH with free keys; plus any state 511 feed you add | none for VA, SC, MD, KY, DE |
 | Ask an Expert, cloud photos, web search (optional) | [Claude](https://www.anthropic.com/claude) via the Anthropic API, or your own [Ollama](https://ollama.com/) | `ANTHROPIC_API_KEY`, or `OLLAMA_URL` |
+| Live storm chasers | YouTube live streams from a trusted chaser list, plus YouTube search with a key | none; optional `YOUTUBE_API_KEY` (set it in Family & settings) |
 | Read-aloud voice (optional) | Your own [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) | none |
 
 Open-Meteo's free tier is for non-commercial use, which fits a family server. All upstream
