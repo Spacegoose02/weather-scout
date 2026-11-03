@@ -61,7 +61,7 @@ export class AuthService {
     const hash = password != null ? await hashPassword(password) : null;
     const info = this.db
       .prepare('INSERT INTO users (username, display_name, password_hash, is_admin, sso_subject) VALUES (?, ?, ?, ?, ?)')
-      .run(username, displayName || username, hash, isAdmin ? 1 : 0, ssoSubject || null);
+      .run(username, cleanDisplayName(displayName) || username, hash, isAdmin ? 1 : 0, ssoSubject || null);
     return this.userById(Number(info.lastInsertRowid));
   }
 
@@ -69,7 +69,7 @@ export class AuthService {
     const user = this.userById(id);
     if (!user) throw new AuthError(404, 'No such user.');
     if (patch.displayName !== undefined) {
-      this.db.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(String(patch.displayName).slice(0, 64) || user.username, id);
+      this.db.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(cleanDisplayName(patch.displayName) || user.username, id);
     }
     if (patch.isAdmin !== undefined) {
       if (!patch.isAdmin && user.is_admin && this.adminCount() <= 1) throw new AuthError(400, 'At least one admin must remain.');
@@ -170,6 +170,12 @@ export class AuthService {
     if (existing) return existing;
     return this.createUser({ username: adminUsername, password: adminPassword, isAdmin: true, displayName: adminUsername });
   }
+}
+
+// Friendly name Rocky uses in greetings. Collapses whitespace, drops control
+// characters and caps the length; an empty result falls back to the username.
+export function cleanDisplayName(name) {
+  return String(name ?? '').replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40);
 }
 
 export class AuthError extends Error {

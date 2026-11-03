@@ -583,6 +583,11 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   });
 
   // ---- profile ---------------------------------------------------------------
+  // Anyone signed in can change the friendly name Rocky greets them with.
+  app.patch('/api/me', {
+    preHandler: requireUser,
+    schema: { body: { type: 'object', additionalProperties: false, required: ['displayName'], properties: { displayName: { type: 'string', maxLength: 64 } } } },
+  }, async (req) => ({ user: publicUser(await auth.updateUser(req.user.id, { displayName: req.body.displayName })) }));
   app.get('/api/me/preferences', { preHandler: requireUser }, async (req) => publicUser(req.user).preferences);
   app.put('/api/me/preferences', { preHandler: requireUser, schema: { body: { type: 'object' } } }, async (req) =>
     publicUser(auth.setPreferences(req.user.id, req.body)).preferences);

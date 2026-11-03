@@ -64,6 +64,12 @@ export default function Admin({ me, onClose }) {
     act(() => api(`/api/admin/users/${u.id}`, { method: 'PATCH', body: { ssoSubject: subject } }));
   };
 
+  const rename = (u) => {
+    const displayName = prompt(`What should Rocky call ${u.username}? Leave empty to use the username.`, u.displayName === u.username ? '' : u.displayName);
+    if (displayName === null) return;
+    act(() => api(`/api/admin/users/${u.id}`, { method: 'PATCH', body: { displayName } }));
+  };
+
   const resetPassword = (u) => {
     const password = prompt(`New password for ${u.username} (8+ characters)`);
     if (password) act(() => api(`/api/admin/users/${u.id}`, { method: 'PATCH', body: { password } }));
@@ -78,7 +84,7 @@ export default function Admin({ me, onClose }) {
         <tbody>
           {users.map((u) => (
             <tr key={u.id}>
-              <td>{u.displayName}</td>
+              <td>{u.displayName} <button className="link" onClick={() => rename(u)}>rename</button></td>
               <td>{u.username}</td>
               <td>{u.ssoSubject || <em>none</em>} <button className="link" onClick={() => link(u)}>{u.ssoSubject ? 'change' : 'link'}</button></td>
               <td>
@@ -96,7 +102,7 @@ export default function Admin({ me, onClose }) {
       <h3>Add someone</h3>
       <form className="form inline" onSubmit={create}>
         <input placeholder="username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
-        <input placeholder="display name" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
+        <input placeholder="name Rocky uses (optional)" maxLength={40} value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
         <input placeholder="password (optional with SSO)" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
         <input placeholder="SSO identity (optional)" value={form.ssoSubject} onChange={(e) => setForm({ ...form, ssoSubject: e.target.value })} />
         <label><input type="checkbox" checked={form.isAdmin} onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })} /> admin</label>
