@@ -3,10 +3,33 @@
 // Open-Meteo answers many coordinates at once with a list of forecasts.
 import { UpstreamError, fetchJson } from '../cache.js';
 import { unitParams } from './openmeteo.js';
-import { GRID_COLS, GRID_ROWS, MAP_MODELS, MAP_VARS, STEP_HOURS, gridFor } from '../../../shared/modelmap.js';
+import { MAP_MODELS, MAP_VARS, STEP_HOURS, gridFor } from '../../../shared/modelmap.js';
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const HOUR = 3600_000;
+
+// Open-Meteo's free tier counts every point as one call and allows 600 a minute.
+// A whole-US map is 275 points, so a third map in the same minute waits its turn
+// here instead of being refused.
+export class PointBudget {
+  constructor({ perMinute = 560, now = () => Date.now(), sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
+    Object.assign(this, { perMinute, now, sleep, spent: [] });
+  }
+
+  async take(points) {
+    for (;;) {
+      const t = this.now();
+      this.spent = this.spent.filter((x) => x.at > t - 60_000);
+      const used = this.spent.reduce((s, x) => s + x.points, 0);
+      if (!this.spent.length || used + points <= this.perMinute) {
+        this.spent.push({ at: t, points });
+        return;
+      }
+      await this.sleep(this.spent[0].at + 60_000 - t + 50);
+    }
+  }
+}
+const budget = new PointBudget();
 
 export function modelMapUrl(model, grid, units) {
   // Every grid point, row by row (north to south, west to east).
@@ -33,7 +56,7 @@ const DIGITS = { temp: 1, precip: 3, wind: 0, windDir: 0, clouds: 0, pressure: 1
 // Open-Meteo's list (one forecast per grid point) -> one flat grid per field per 3-hour step.
 export function normalizeModelMap(raw, model, grid, units, now = Date.now()) {
   const points = Array.isArray(raw) ? raw : [raw];
-  const n = GRID_ROWS * GRID_COLS;
+  const n = grid.rows * grid.cols;
   if (points.length !== n) throw new Error(`Expected ${n} grid points, got ${points.length}`);
   const times = (points[0].hourly?.time || []).map((t) => t * 1000);
   const first = Math.floor(now / HOUR) * HOUR;
@@ -70,8 +93,8 @@ export function normalizeModelMap(raw, model, grid, units, now = Date.now()) {
     note: model.note,
     area: grid.area,
     center: grid.center,
-    rows: GRID_ROWS,
-    cols: GRID_COLS,
+    rows: grid.rows,
+    cols: grid.cols,
     lats: grid.lats,
     lons: grid.lons,
     step: STEP_HOURS,
@@ -82,7 +105,7 @@ export function normalizeModelMap(raw, model, grid, units, now = Date.now()) {
   };
 }
 
-export async function getModelMap({ lat, lon, units, model: id, area }, fetchImpl) {
+export async function getModelMap({ lat, lon, units, model: id, area }, fetchImpl, points = budget) {
   const model = MAP_MODELS.find((m) => m.id === id) || MAP_MODELS[0];
   const grid = gridFor(lat, lon, area);
   const noData = () => {
@@ -91,6 +114,7 @@ export async function getModelMap({ lat, lon, units, model: id, area }, fetchImp
     return err;
   };
   let raw;
+  await points.take(grid.rows * grid.cols);
   try {
     raw = await fetchJson(modelMapUrl(model, grid, units), { source: `Open-Meteo ${model.name} map`, fetchImpl, timeoutMs: 25000 });
   } catch (err) {

@@ -42,7 +42,7 @@ from free, official data sources.
   plotted together, with an ensemble confidence band (10th to 90th percentile), a High/Medium/Low
   confidence rating per day and a side-by-side table. Forecast maps show any one model (or two
   side by side) across the region for temperature, rain and snow, wind, clouds or pressure, every
-  3 hours with a play button. Keyless (Open-Meteo grid on Esri/OSM tiles); ECMWF, GFS and ICON
+  3 hours with a play button. US places start on the whole lower 48. Keyless (Open-Meteo grid on Esri/OSM tiles); ECMWF, GFS and ICON
   also open in Windy.
 - **Health & sky**: pressure-swing warnings for migraine-sensitive folks, wet-bulb globe temperature
   heat stress, moon phase and sunrise/sunset.

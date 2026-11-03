@@ -23,7 +23,7 @@ import * as ocean from './providers/ocean.js';
 import * as discoveries from './providers/discoveries.js';
 import * as models from './providers/models.js';
 import * as modelMaps from './providers/modelmaps.js';
-import { MAP_AREAS, MAP_MODELS, gridFor } from '../../shared/modelmap.js';
+import { MAP_AREAS, MAP_MODELS, defaultArea, gridFor } from '../../shared/modelmap.js';
 import { kidReport } from './kid.js';
 import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
@@ -326,7 +326,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   }, async (req, reply) => {
     const l = loc(req.query);
     const model = req.query.model || MAP_MODELS[0].id;
-    const area = req.query.area || 'region';
+    const area = req.query.area || defaultArea(l.lat, l.lon);
     const g = gridFor(l.lat, l.lon, area);
     reply.header('cache-control', 'private, max-age=600');
     return cache.wrap(`mmap:${model}:${area}:${g.center.lat},${g.center.lon},${l.units}`, 60 * MIN,
