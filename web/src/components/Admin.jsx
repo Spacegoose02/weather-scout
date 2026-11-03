@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Modal from './Modal.jsx';
 import IntegrationsPanel from './stations/IntegrationsPanel.jsx';
+import StormPhotoAdmin from './kid/StormPhotoAdmin.jsx';
 
 export default function Admin({ me, onClose }) {
   const [users, setUsers] = useState([]);
@@ -217,6 +218,8 @@ export default function Admin({ me, onClose }) {
           </ul>
         </>
       )}
+
+      <StormPhotoAdmin />
 
       <IntegrationsPanel />
 

@@ -291,6 +291,7 @@ export const BADGES = [
   { id: 'streak-7', group: 'journal', emoji: '📅', name: 'Week Watcher', how: 'Write in your journal 7 days in a row.' },
   { id: 'streak-30', group: 'journal', emoji: '🏆', name: 'Sky Scribe', how: 'Write in your journal 30 days in a row.' },
   { id: 'journal-25', group: 'journal', emoji: '📚', name: 'Weather Historian', how: 'Fill 25 journal pages.' },
+  { id: 'storm-gazer', group: 'learn', emoji: '🌪️', name: 'Storm Gazer', how: 'Hear Rocky tell you about the storm picture on 7 different days.' },
   { id: 'quiz-first', group: 'learn', emoji: '🧠', name: 'Quiz Kid', how: 'Finish a quiz in Learn.' },
   { id: 'quiz-perfect', group: 'learn', emoji: '💯', name: 'Perfect Score', how: 'Get every question right on a quiz.' },
   { id: 'quiz-5', group: 'learn', emoji: '🎓', name: 'Weather Scholar', how: 'Finish quizzes on 5 different topics.' },

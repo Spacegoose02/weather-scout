@@ -1,0 +1,32 @@
+/* Storm picture of the day (Kid Zone card, dashboard card, album) */
+.storm-photo { display: flex; flex-direction: column; gap: 8px; }
+.storm-photo .card-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.storm-photo h2 { margin: 0; }
+.storm-img-btn { padding: 0; border: 0; background: none; border-radius: 12px; overflow: hidden; cursor: zoom-in; display: block; width: 100%; }
+.storm-img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 12px; background: #1d2433; }
+.storm-img.loading { animation: storm-pulse 1.4s ease-in-out infinite alternate; }
+@keyframes storm-pulse { from { opacity: 0.35; } to { opacity: 0.7; } }
+.storm-photo.compact.size-s .storm-img { aspect-ratio: 4 / 3; }
+.storm-photo.compact.size-l .storm-img { aspect-ratio: 21 / 9; }
+.storm-caption { font-weight: 700; font-size: 1.08rem; line-height: 1.4; margin: 0; }
+.storm-photo.compact .storm-caption { font-size: 1rem; }
+.storm-fact { margin: 0; line-height: 1.45; }
+.storm-rocky { margin: 0; color: var(--muted); }
+.storm-actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.storm-hide { color: var(--bad) !important; }
+.storm-credit { margin: 0; font-size: 0.8rem; color: var(--muted); overflow-wrap: anywhere; }
+.storm-credit a { color: inherit; }
+.storm-big { display: block; width: 100%; max-height: 70vh; object-fit: contain; border-radius: 12px; background: #000; margin-bottom: 10px; }
+.storm-gallery { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.storm-gallery button { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 0; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 12px; overflow: hidden; text-align: left; cursor: pointer; }
+.storm-gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: #1d2433; }
+.storm-gallery span { padding: 4px 8px 8px; font-size: 0.85rem; }
+.kid-zone .storm-photo { background: linear-gradient(135deg, #2b2d5c, #4b3b8f); color: #f4f1ff; }
+.kid-zone .storm-photo .hint, .kid-zone .storm-photo .storm-credit, .kid-zone .storm-photo .storm-rocky { color: #d7d0ff; }
+.kid-zone .storm-photo button.link { color: #ffe066; }
+.kid-zone .storm-photo .storm-hide { color: #ffb4b4 !important; }
+/* The album and big view open inside the card; keep them in normal colors. */
+.kid-zone .storm-photo .modal { color: var(--ink); }
+.kid-zone .storm-photo .modal .hint, .kid-zone .storm-photo .modal .storm-credit, .kid-zone .storm-photo .modal .storm-rocky { color: var(--muted); }
+.kid-zone .storm-photo .modal button.link { color: var(--brand); }
+.kid-zone .storm-photo .modal .storm-hide { color: var(--bad) !important; }
