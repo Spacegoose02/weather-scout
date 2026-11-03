@@ -319,8 +319,8 @@ export class CameraService {
     return feedsNeedingKeys(env.CAMERAS_DEFAULT_FEEDS, env);
   }
 
-  async fetchFeed(feed) {
-    const env = this.cfg.env;
+  // env/retry can be overridden for the admin Test button (unsaved keys, one try).
+  async fetchFeed(feed, env = this.cfg.env, retry = this.retry) {
     const opts = { source: feed.id, fetchImpl: this.fetchImpl, headers: { ...this.headers }, timeoutMs: 20000 };
     let cams = [];
     if (feed.type === 'static') {
@@ -329,20 +329,20 @@ export class CameraService {
       const key = feedKey(feed, env);
       const p = feed.apiVersion === 2 ? '/api/v2/get/cameras' : '/api/getcameras';
       const url = `${feed.baseUrl.replace(/\/$/, '')}${p}?key=${encodeURIComponent(key)}&format=json`;
-      cams = parseIbi511(await fetchJsonRetry(url, opts, this.retry), feed);
+      cams = parseIbi511(await fetchJsonRetry(url, opts, retry), feed);
     } else if (feed.type === 'ohgo') {
       const key = feedKey(feed, env);
       const url = `${(feed.baseUrl || 'https://publicapi.ohgo.com').replace(/\/$/, '')}/api/v1/cameras?page-all=true`;
       opts.headers.authorization = `APIKEY ${key}`;
-      cams = parseOhgo(await fetchJsonRetry(url, opts, this.retry));
+      cams = parseOhgo(await fetchJsonRetry(url, opts, retry));
     } else if (feed.type === 'geojson') {
       const url = new URL(feed.url);
       const key = feedKey(feed, env);
       if (key && feed.keyParam) url.searchParams.set(feed.keyParam, key);
       if (key && feed.keyHeader) opts.headers[feed.keyHeader] = key;
-      cams = parseGeoJson(await fetchJsonRetry(url.toString(), opts, this.retry), feed);
+      cams = parseGeoJson(await fetchJsonRetry(url.toString(), opts, retry), feed);
     } else if (feed.type === 'arcgis') {
-      cams = parseGeoJson(await fetchArcgis(feed, this.fetchImpl, { headers: opts.headers, retry: this.retry }), feed);
+      cams = parseGeoJson(await fetchArcgis(feed, this.fetchImpl, { headers: opts.headers, retry }), feed);
     } else {
       throw new Error(`Unknown camera feed type "${feed.type}"`);
     }
@@ -407,6 +407,12 @@ export class CameraService {
         return fallback(err.message);
       }
     });
+  }
+
+  // After an admin changes camera keys or the feed list: ask the DOTs again now.
+  reset() {
+    for (const k of [...this.cache.map.keys()]) if (k.startsWith('cams:')) this.cache.map.delete(k);
+    this.failures.clear();
   }
 
   async all() {
