@@ -32,6 +32,6 @@ describe('map layers', () => {
     expect(toggleFeed(['va'], 'va', false)).toEqual(['va']);
   });
   it('counts groups that are on', () => {
-    expect(layerCount(DEFAULT_LAYERS)).toBe(8);
+    expect(layerCount(DEFAULT_LAYERS)).toBe(9);
   });
 });

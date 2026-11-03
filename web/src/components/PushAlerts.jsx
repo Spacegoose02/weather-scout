@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Modal from './Modal.jsx';
 import { pushSupported, secureContext, currentSubscription, enablePush, disablePush } from '../push.js';
+import { ALERT_MILES, DEFAULT_ALERT_MILES, milesToKm } from '../../../shared/lightning.js';
 
 const KINDS = [
   ['warning', 'Warnings', 'Tornado, severe thunderstorm, flash flood, high wind, winter storm…'],
@@ -12,13 +13,16 @@ const KINDS = [
 const isIos = () => /iPad|iPhone|iPod/.test(navigator.userAgent);
 const standalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone;
 
-export default function PushAlerts({ location, saved, onClose }) {
+const milesLabel = (mi, units) => (units === 'metric' ? `${Math.round(milesToKm(mi))} km` : `${mi} miles`);
+
+export default function PushAlerts({ location, saved, onClose, lightningMiles = DEFAULT_ALERT_MILES, onLightningMiles, lightningOn = true, units }) {
   const places = dedupe([location, ...(saved || [])].filter(Boolean));
   const [status, setStatus] = useState(null);
   const [placeIdx, setPlaceIdx] = useState(0);
   const [levels, setLevels] = useState(['warning']);
   const [briefing, setBriefing] = useState(false);
   const [briefingTime, setBriefingTime] = useState('07:00');
+  const [boltPush, setBoltPush] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -34,6 +38,8 @@ export default function PushAlerts({ location, saved, onClose }) {
         setLevels(s.levels);
         setBriefing(!!s.briefingTime);
         if (s.briefingTime) setBriefingTime(s.briefingTime);
+        setBoltPush(!!s.lightningMiles);
+        if (s.lightningMiles && onLightningMiles && s.lightningMiles !== lightningMiles) onLightningMiles(s.lightningMiles);
         const i = places.findIndex((p) => Math.abs(p.lat - s.place.lat) < 0.01 && Math.abs(p.lon - s.place.lon) < 0.01);
         if (i >= 0) setPlaceIdx(i);
       }
@@ -55,8 +61,8 @@ export default function PushAlerts({ location, saved, onClose }) {
   };
 
   const save = () => run(
-    async () => setStatus(await enablePush({ place: places[placeIdx], levels, briefingTime: briefing ? briefingTime : null })),
-    levels.length ? 'Alerts are on for this device.' : "Rocky's morning briefing is on for this device.",
+    async () => setStatus(await enablePush({ place: places[placeIdx], levels, briefingTime: briefing ? briefingTime : null, lightningMiles: boltPush && lightningMiles ? lightningMiles : null })),
+    levels.length || boltPush ? 'Alerts are on for this device.' : "Rocky's morning briefing is on for this device.",
   );
   const off = () => run(async () => { await disablePush(); setStatus({ subscribed: false }); }, 'Alerts are off for this device.');
   const test = () => run(async () => {
@@ -78,6 +84,15 @@ export default function PushAlerts({ location, saved, onClose }) {
   return (
     <Modal title="Weather alerts on this device" onClose={onClose}>
       <p className="hint">Get a notification on this phone or computer when the National Weather Service issues an alert, or a morning briefing from Rocky, even when Weather Scout is closed. Each device picks its own place.</p>
+      {lightningOn && onLightningMiles && (
+        <label className="bolt-distance">
+          ⚡ Warn me on screen when lightning strikes within{' '}
+          <select value={lightningMiles || 0} onChange={(e) => onLightningMiles(Number(e.target.value))}>
+            <option value={0}>Off</option>
+            {ALERT_MILES.map((m) => <option key={m} value={m}>{milesLabel(m, units)}</option>)}
+          </select>
+        </label>
+      )}
       {blocker ? (
         <p className="error-text" role="alert">{blocker}</p>
       ) : !status ? (
@@ -99,6 +114,15 @@ export default function PushAlerts({ location, saved, onClose }) {
               </label>
             ))}
           </fieldset>
+          {lightningOn && (
+            <fieldset>
+              <legend>Lightning</legend>
+              <label className="check">
+                <input type="checkbox" checked={boltPush && !!lightningMiles} disabled={!lightningMiles} onChange={(e) => setBoltPush(e.target.checked)} />
+                <span><strong>⚡ Lightning nearby</strong> <span className="tile-note">{lightningMiles ? `When lightning strikes within ${milesLabel(lightningMiles, units)} (the distance above), then an all-clear after 30 quiet minutes.` : 'Pick a distance above first.'}</span></span>
+              </label>
+            </fieldset>
+          )}
           <fieldset>
             <legend>Every morning</legend>
             <label className="check">
@@ -113,7 +137,7 @@ export default function PushAlerts({ location, saved, onClose }) {
             )}
           </fieldset>
           <div className="row-actions">
-            <button onClick={save} disabled={busy || (!levels.length && !briefing) || (briefing && !briefingTime)}>{status.subscribed ? 'Save' : '🔔 Turn on'}</button>
+            <button onClick={save} disabled={busy || (!levels.length && !briefing && !(boltPush && lightningMiles)) || (briefing && !briefingTime)}>{status.subscribed ? 'Save' : '🔔 Turn on'}</button>
             {status.subscribed && <button className="ghost" onClick={test} disabled={busy}>Send a test</button>}
             {status.subscribed && status.briefingTime && <button className="ghost" onClick={testBriefing} disabled={busy}>Try the briefing</button>}
             {status.subscribed && <button className="link danger" onClick={off} disabled={busy}>Turn off</button>}

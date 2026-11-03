@@ -57,6 +57,12 @@ export const SETTINGS = [
   // ---- maps ----
   { key: 'WINDY_MAP_KEY', group: 'maps', label: 'Windy Map Forecast key', secret: true, signup: 'https://api.windy.com/keys', help: 'Optional. Blank uses the free Windy embed.' },
 
+  // ---- live lightning ----
+  { key: 'LIGHTNING_GLM', group: 'lightning', label: 'NOAA GOES satellite lightning', options: ['true', 'false'], choices: ['On (free, no key)', 'Off'], help: 'Strikes across the Americas about a minute after they happen. Only downloaded (about 1 MB a minute) while someone is watching or a device has lightning alerts on.' },
+  { key: 'LIGHTNING_GLM_SATELLITE', group: 'lightning', label: 'Satellite', options: ['goes19', 'goes18'], choices: ['GOES-East (most of the US)', 'GOES-West (Alaska, Hawaii, Pacific)'] },
+  { key: 'LIGHTNING_BACKFILL_MIN', group: 'lightning', label: 'Minutes to load when the map opens', range: [0, 30], integer: true, placeholder: '10' },
+  { key: 'BLITZORTUNG_ENABLED', group: 'lightning', label: 'Blitzortung.org ground sensors', options: ['false', 'true'], choices: ['Off', 'On (private, non-commercial use only)'], help: 'Faster and more precise volunteer network. Free only for private, non-commercial use, which fits a home server; credited on the map.', signup: 'https://www.blitzortung.org/en/cover_your_area.php' },
+
   // ---- weather stations ----
   { key: 'STATION_PUSH_TOKEN', group: 'stations', label: 'Station upload token', secret: true, pattern: /^[\w-]{0,100}$/, help: 'Needed when your station uploads through a reverse proxy or from outside your home network. Letters, numbers, - and _.' },
   { key: 'STATION_NAMES', group: 'stations', label: 'Station names', placeholder: 'ecowitt_1a2b3c4d=Backyard', max: 500, help: 'id=Name pairs, separated by commas.' },
@@ -130,7 +136,7 @@ export function validate(key, raw) {
 
 // The parts of the live config that saved settings can change. Services keep
 // references to these objects, so they are updated in place.
-const LIVE_OBJECTS = ['ai', 'tts', 'youtube', 'defaultLocation', 'windy', 'android', 'stations', 'homeAssistant', 'push'];
+const LIVE_OBJECTS = ['ai', 'tts', 'youtube', 'defaultLocation', 'windy', 'android', 'stations', 'homeAssistant', 'push', 'lightning'];
 
 export class Settings {
   constructor(db, cfg) {

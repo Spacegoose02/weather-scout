@@ -51,7 +51,7 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 
 | Board card | Plan |
 | --- | --- |
-| Severe weather push notifications (watches, warnings, lightning, high wind) | ✅ Web Push per device: pick a place and warnings / watches / advisories (high wind is an NWS warning). Lightning alerts wait on a lightning source |
+| Severe weather push notifications (watches, warnings, lightning, high wind) | ✅ Web Push per device: pick a place and warnings / watches / advisories (high wind is an NWS warning). Lightning alerts: "lightning within X miles" push plus a 30-minute all-clear |
 | Daily observation journal | ✅ Weather journal card: sky stickers, your own high/low and rain-gauge reading, a note, a snapshot of the forecast to compare with, earlier pages and a day streak. One page per person per day, saved on the server |
 | Badges & achievements | 🚧 19 Kid Zone badges are in (bingo, forecaster, experiments, field trips, storm drill, seasons). Still to come: first frost, thunderstorm spotted, double rainbow, journal streaks |
 | Learning section for kids and adults | Lesson library; same lessons at two reading levels |
@@ -59,7 +59,7 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Learn about clouds, droughts, El Niño, ocean | Lessons; US Drought Monitor and NOAA ENSO status feeds |
 | Hurricane tracker | ✅ Active NHC storms with forecast cones, tracks and advisories on the map, and a Hurricane tracker card on Today when a storm is within 2,000 miles |
 | Ocean data | ✅ NOAA NDBC buoys on the map (waves, water temperature, wind) and a Tides card with the next highs and lows from the nearest CO-OPS station within 60 miles |
-| Live lightning | Strike markers with age rings and distance from you (source TBD: Blitzortung community feed or a paid API) |
+| Live lightning | ✅ ⚡ Lightning layer on the Radar & Cams map (normal and full screen) from NOAA GOES GLM, plus optional Blitzortung.org ground sensors; strikes fade over 30 minutes. On-screen and push "lightning within X miles" alerts with the 30-30 rule countdown and an all-clear, and Rocky's Count to 30 thunder timer in Kid Mode |
 | Radar precipitation type and storm cell tracks | 🚧 Full-screen radar adds single-site NEXRAD (super-res), echo tops, MRMS 1 h / 24 h rain, HRRR future radar, nationwide warning polygons and SPC Day 1-3 outlooks. Rain/snow/mix and storm tracks still to come |
 | Local and national weather news, RSS feeds | ✅ News & Videos tab with Local / National / Videos filters. Your NWS office's Hazardous Weather Outlook, forecast discussion and public statements appear automatically; admin-managed RSS/Atom feeds are marked local or national, with one-click free NOAA and NASA sources. Kid Mode shows only kid-safe feeds and skips stories about deaths or injuries |
 | YouTube weather gurus | ✅ Admin-curated channels, playlists and pinned single videos (paste a link or @handle); they play in the app via youtube-nocookie |

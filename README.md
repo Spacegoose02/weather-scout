@@ -338,6 +338,26 @@ can change the list, and add an optional YouTube Data API v3 key, in *Family & s
 viewer counts and, for grown-ups, a YouTube search for other live chasers (about 7,200 of the free
 10,000 daily quota units at most). Kid Mode only ever shows the trusted list.
 
+## Live lightning
+
+The Radar & Cams map has a **⚡ Lightning** layer (normal and full screen) with every strike from the last
+30 minutes, fading from white-hot to red as it ages. Under *🔔 Alerts* you pick a distance (5 to 50 miles):
+the app shows a banner when lightning strikes inside it, with the 30-30 rule countdown ("stay inside until
+30 minutes after the last strike"), and each device can also get a push notification plus an all-clear.
+Kid Mode adds Rocky's **Count to 30** thunder timer.
+
+- **NOAA GOES satellite lightning (GLM)** is on by default: free, no key, the whole Americas, about a minute
+  behind, located to roughly 8 km. The server only downloads it (about 1 MB a minute) while someone has the
+  map or banner open, or a device has lightning push alerts on.
+- **Blitzortung.org ground sensors** are optional: strikes within seconds, located to a few hundred meters.
+  Their data is free for **private, non-commercial use only** and is credited on the map, so it stays off
+  until an admin turns it on for a personal home server. Please consider
+  [hosting a sensor](https://www.blitzortung.org/en/cover_your_area.php) if you use it.
+
+Admins change both, and pick GOES-East or GOES-West, in *Family & settings → ⚡ Live lightning*. The same
+names also work as environment variables (`LIGHTNING_GLM`, `LIGHTNING_GLM_SATELLITE`,
+`LIGHTNING_BACKFILL_MIN`, `BLITZORTUNG_ENABLED`), but saved settings win.
+
 ## Data sources
 
 | Data | Source | Key |
@@ -350,6 +370,7 @@ viewer counts and, for grown-ups, a YouTube search for other live chasers (about
 | Watches, warnings, advisories | [api.weather.gov](https://www.weather.gov/documentation/services-web-api) | none, but set `NWS_USER_AGENT` |
 | Satellite | NASA [GIBS](https://earthdata.nasa.gov/gibs) GOES-East infrared | none |
 | Severe outlooks | NOAA [Storm Prediction Center](https://www.spc.noaa.gov/) | none |
+| Lightning | NOAA [GOES GLM](https://registry.opendata.aws/noaa-goes/) on AWS Open Data; optional [Blitzortung.org](https://www.blitzortung.org/) (private, non-commercial use) | none |
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
 | Map | OpenStreetMap | none |
 | Wind and model maps | [Windy](https://www.windy.com) embed, or the Map Forecast API | none for the embed, optional `WINDY_MAP_KEY` |

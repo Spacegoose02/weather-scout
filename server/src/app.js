@@ -41,6 +41,7 @@ import { registerBriefing, buildBriefing } from './briefing.js';
 import { registerWindy } from './windy.js';
 import { StationService, registerStations } from './stations.js';
 import { HomeAssistantService } from './homeassistant.js';
+import { LightningService, registerLightning } from './lightning.js';
 import { cleanOutfit, rockySvg } from '../../shared/rocky-outfit.js';
 
 const MIN = 60_000;
@@ -52,7 +53,7 @@ function rockyPath({ items, mood }) {
   return `/api/connect/rocky.svg?${q}`;
 }
 
-export async function buildApp({ config, fetchImpl = fetch, logger = true, pushSend, mqttConnect } = {}) {
+export async function buildApp({ config, fetchImpl = fetch, logger = true, pushSend, mqttConnect, WebSocketImpl } = {}) {
   const cfg = config || loadConfig();
   const app = Fastify({ logger, trustProxy: true });
   const cache = new TtlCache();
@@ -79,6 +80,9 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   let push = cfg.push.enabled ? makePush() : null;
   const ai = new AiService(cfg, { fetchImpl, log: app.log });
   const stations = new StationService(cfg, { fetchImpl, log: app.log });
+  const lightning = new LightningService(cfg, { fetchImpl, log: app.log, WebSocketImpl });
+  // Lightning alerts keep the feeds running even when nobody has the map open.
+  lightning.alertsWanted = () => (push ? push.lightningCount() > 0 : false);
   await auth.bootstrapAdmin();
 
   await app.register(fastifyCookie, { secret: loadOrCreateSecret(cfg) });
@@ -194,7 +198,13 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     user: publicUser(req.user),
     ai: ai.status(),
     tts: { enabled: !!cfg.tts.url, voice: cfg.tts.url ? cfg.tts.voice : null, fallback: cfg.tts.fallback },
+    lightning: { enabled: lightning.enabled, sources: lightning.status().map((x) => x.id) },
   }));
+
+  // ---- live lightning (NOAA GOES GLM, optional Blitzortung.org) -------------
+  registerLightning(app, lightning);
+  app.decorate('lightning', lightning);
+  app.addHook('onClose', async () => lightning.stop());
 
   // ---- weather --------------------------------------------------------------
   app.get('/api/weather', { schema: latLonSchema }, async (req) => {
@@ -376,7 +386,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.get('/api/push/key', async (req, reply) => (push ? { publicKey: push.publicKey, levels: LEVELS } : pushOff(reply)));
   app.post('/api/push/status', { schema: { body: subSchema } }, async (req, reply) => (push ? push.status(req.body.endpoint) : pushOff(reply)));
   app.post('/api/push/subscribe', {
-    schema: { body: { type: 'object', required: ['subscription', 'place'], properties: { subscription: { type: 'object' }, place: { type: 'object' }, levels: { type: 'array', items: { type: 'string' }, maxItems: 3 }, briefingTime: { type: ['string', 'null'], maxLength: 5 } } } },
+    schema: { body: { type: 'object', required: ['subscription', 'place'], properties: { subscription: { type: 'object' }, place: { type: 'object' }, levels: { type: 'array', items: { type: 'string' }, maxItems: 3 }, briefingTime: { type: ['string', 'null'], maxLength: 5 }, lightningMiles: { type: ['integer', 'null'], minimum: 0, maximum: 100 } } } },
   }, async (req, reply) => (push ? reply.code(201).send(push.subscribe(req.body, req.user?.id ?? null)) : pushOff(reply)));
   app.post('/api/push/unsubscribe', { schema: { body: subSchema } }, async (req, reply) => (push ? { ok: push.unsubscribe(req.body.endpoint) } : pushOff(reply)));
   app.post('/api/push/test', {
@@ -400,10 +410,11 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
 
   // ---- background work (started from index.js, so tests stay quiet) ---------
   let started = false;
-  const startPush = () => push?.start(pushAlerts, cfg.push.pollSeconds * 1000, pushBriefing);
+  const startPush = () => push?.start(pushAlerts, cfg.push.pollSeconds * 1000, pushBriefing, lightning);
   app.decorate('startBackground', () => {
     started = true;
     startPush();
+    lightning.start();
     stations.start();
     homeAssistant.start();
   });
@@ -416,6 +427,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       chasers.reset();
     }
     if (changed.has('cameras')) cameras.reset();
+    if (changed.has('lightning')) lightning.configure(cfg.lightning);
     if (changed.has('stations') && started) {
       stations.stop();
       stations.start();
@@ -678,7 +690,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
 
   // Everything else an admin can set in the app (home place, cameras, Windy,
   // stations, Home Assistant, push, sign-out link, Android). Secrets are write-only.
-  const APP_GROUPS = ['home', 'cameras', 'maps', 'stations', 'homeassistant', 'apps'];
+  const APP_GROUPS = ['home', 'cameras', 'maps', 'lightning', 'stations', 'homeassistant', 'apps'];
   const valuesBody = { type: 'object', additionalProperties: { type: ['string', 'null'], maxLength: 800 } };
   app.get('/api/admin/settings', { preHandler: requireAdmin }, async () => ({ settings: settings.view(APP_GROUPS) }));
   app.put('/api/admin/settings', {

@@ -16,6 +16,7 @@
     "astronomy-engine": "^2.1.19",
     "fast-xml-parser": "^5.11.2",
     "fastify": "^5.6.0",
+    "jsfive": "^0.4.2",
     "mqtt": "^5.16.1",
     "web-push": "^3.6.7"
   }

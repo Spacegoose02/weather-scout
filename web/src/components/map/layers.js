@@ -7,6 +7,7 @@ export const LAYER_GROUPS = [
     layers: [
       { id: 'radar', icon: '🌧️', label: 'Radar' },
       { id: 'satellite', icon: '🛰️', label: 'Satellite clouds' },
+      { id: 'lightning', icon: '⚡', label: 'Lightning', note: 'Strikes from the last 30 minutes' },
       { id: 'storms', icon: '🌀', label: 'Hurricanes & tropical storms' },
     ],
   },
@@ -34,6 +35,7 @@ export const LAYER_GROUPS = [
 export const DEFAULT_LAYERS = {
   radar: true,
   satellite: false,
+  lightning: true,
   storms: true,
   warnings: true,
   watches: true,

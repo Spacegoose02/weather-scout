@@ -100,6 +100,14 @@ export function loadConfig(env = process.env) {
       certFingerprints: String(env.ANDROID_CERT_SHA256 || '').split(/[\s,]+/).map((f) => f.trim().toUpperCase()).filter(Boolean),
     },
     // Windy maps. Blank = the free Windy embed; a key turns on the Map Forecast API.
+    lightning: {
+      // NOAA GOES satellite lightning: free, no key, on unless turned off.
+      glm: bool(env.LIGHTNING_GLM, true),
+      satellite: env.LIGHTNING_GLM_SATELLITE === 'goes18' ? 'goes18' : 'goes19',
+      backfillMin: Math.min(30, Math.max(0, num(env.LIGHTNING_BACKFILL_MIN, 10))),
+      // Blitzortung.org ground network: private, non-commercial use only, so opt in.
+      blitzortung: bool(env.BLITZORTUNG_ENABLED, false),
+    },
     windy: { mapKey: env.WINDY_MAP_KEY || '' },
     // Live storm chaser streams. Works without a key (a trusted channel list);
     // a YouTube Data API key adds viewer counts and a search for more chasers.

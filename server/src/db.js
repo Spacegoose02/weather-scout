@@ -71,6 +71,9 @@ const ADDED_COLUMNS = {
     ['briefing_time', 'TEXT'], // "HH:MM" local time for Rocky's morning briefing, or NULL
     ['briefing_sent', 'TEXT'], // local date (YYYY-MM-DD) of the last briefing sent
     ['utc_offset', 'INTEGER'], // the place's UTC offset in seconds, from the last forecast
+    ['lightning_miles', 'INTEGER'], // alert when lightning strikes this close, or NULL for off
+    ['lightning_alert_at', 'INTEGER'], // ms: when the current "lightning nearby" alert went out (NULL = all clear)
+    ['lightning_last_strike', 'INTEGER'], // ms: newest strike inside the circle since that alert
   ],
   media_feeds: [
     ['scope', "TEXT NOT NULL DEFAULT 'national'"], // local | national

@@ -22,7 +22,7 @@ export async function currentSubscription() {
   return reg ? reg.pushManager.getSubscription() : null;
 }
 
-export async function enablePush({ place, levels, briefingTime = null }) {
+export async function enablePush({ place, levels, briefingTime = null, lightningMiles = null }) {
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') throw new Error('Notifications are blocked for this site. Allow them in your browser settings, then try again.');
   const { publicKey } = await api('/api/push/key');
@@ -36,7 +36,7 @@ export async function enablePush({ place, levels, briefingTime = null }) {
       throw new Error(`This browser could not sign up for notifications (${err.message}). Check that notifications are allowed for this site.`);
     }
   }
-  return api('/api/push/subscribe', { method: 'POST', body: { subscription: sub.toJSON(), place, levels, briefingTime } });
+  return api('/api/push/subscribe', { method: 'POST', body: { subscription: sub.toJSON(), place, levels, briefingTime, lightningMiles } });
 }
 
 export async function disablePush() {
