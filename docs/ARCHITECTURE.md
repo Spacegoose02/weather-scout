@@ -87,6 +87,7 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/forecast`, `/api/alerts`, `/api/air` | The pieces, individually |
 | `GET /api/radar` | Radar frame list (tile URL templates) |
 | `GET /api/push/key`, `POST /api/push/subscribe`, `/unsubscribe`, `/status`, `/test` | Web Push sign-up per device; a background loop (every `PUSH_POLL_SECONDS`) checks NWS for each subscribed place and sends each new alert once |
+| `GET /api/lightning?south&west&north&east[&since]`, `GET /api/lightning/near?lat&lon&miles` | Live strikes from the last 30 minutes as compact `[time, lat, lon, source]` rows, and a nearby summary (count, nearest, direction, 30-30 all-clear time). Sources run only while someone is watching or has lightning alerts on; strike math is shared in `shared/lightning.js` |
 | `GET /api/ai/status`, `POST /api/ai/chat`, `POST /api/ai/cloud` | AI helper (only with `ANTHROPIC_API_KEY`): chat with the live forecast as context, cloud photo identifier, optional web search |
 | `GET /api/tts/voices`, `POST /api/tts` | Kokoro read-aloud (only with `KOKORO_URL`): English voice list, and MP3 speech for a text |
 | `GET/POST /api/stations/push[/:token]` | Personal weather station uploads (Ecowitt form POST, Ambient and Weather Underground GET). Token or home network only; no sign-in |

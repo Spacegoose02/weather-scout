@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import webpush from 'web-push';
+import { WINDOW_MIN, dirWord } from '../../shared/lightning.js';
 
 export const LEVELS = ['warning', 'watch', 'advisory'];
 const MAX_SUBSCRIPTIONS = 200;
@@ -55,6 +56,33 @@ export function alertPayload(alert, place, shelter = '') {
   };
 }
 
+const ago = (min) => (min <= 0 ? 'just now' : `${min} minute${min === 1 ? '' : 's'} ago`);
+
+// "Lightning 4 miles away": sent once when a storm's lightning first comes inside the circle.
+export function lightningPayload(near, place) {
+  const s = near.nearest;
+  const miles = s.miles < 1 ? 'less than 1 mile' : `${Math.round(s.miles)} mile${Math.round(s.miles) === 1 ? '' : 's'}`;
+  const where = place ? ` of ${place}` : '';
+  return {
+    title: `⚡ Lightning ${s.miles < 1 ? 'overhead' : `${Math.round(s.miles)} mi away`}`,
+    body: `Lightning struck ${miles} ${dirWord(s.dir)}${where} ${ago(s.ageMin)}. Head indoors and stay in until 30 minutes after the last thunder.`.replace(/\s+/g, ' '),
+    tag: 'lightning',
+    url: '/?lightning=1',
+    requireInteraction: s.miles <= 10,
+  };
+}
+
+// The 30-30 rule's second half: 30 minutes with no lightning inside the circle.
+export function lightningClearPayload(miles, place) {
+  return {
+    title: '✅ Lightning all clear',
+    body: `No lightning within ${miles} miles${place ? ` of ${place}` : ''} for ${WINDOW_MIN} minutes. It is OK to head back outside. If you hear thunder again, go back in.`,
+    tag: 'lightning',
+    url: '/?lightning=1',
+    requireInteraction: false,
+  };
+}
+
 // VAPID keys identify this server to the browsers' push services. They come from
 // the environment, or are generated once and kept in the data volume.
 export function loadVapid(cfg) {
@@ -94,13 +122,14 @@ export class PushService {
     return this.vapid.publicKey;
   }
 
-  subscribe({ subscription, place, levels, briefingTime }, userId = null) {
+  subscribe({ subscription, place, levels, briefingTime, lightningMiles }, userId = null) {
     const { endpoint, keys } = subscription || {};
     if (!/^https:\/\//.test(endpoint || '') || !keys?.p256dh || !keys?.auth) throw Object.assign(new Error('That is not a valid push subscription.'), { statusCode: 400 });
     const lv = (levels || ['warning']).filter((l) => LEVELS.includes(l));
     const briefing = briefingTime ? (TIME.test(briefingTime) ? briefingTime : null) : null;
     if (briefingTime && !briefing) throw Object.assign(new Error('Pick a time for the morning briefing, like 07:00.'), { statusCode: 400 });
-    if (!lv.length && !briefing) throw Object.assign(new Error('Pick at least one kind of alert, or the morning briefing.'), { statusCode: 400 });
+    const lightning = Number.isInteger(lightningMiles) && lightningMiles > 0 ? Math.min(100, lightningMiles) : null;
+    if (!lv.length && !briefing && !lightning) throw Object.assign(new Error('Pick at least one kind of alert, or the morning briefing.'), { statusCode: 400 });
     const lat = Math.round(Number(place?.lat) * 100) / 100;
     const lon = Math.round(Number(place?.lon) * 100) / 100;
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) throw Object.assign(new Error('Pick a place for alerts.'), { statusCode: 400 });
@@ -110,20 +139,22 @@ export class PushService {
     // Changing the place or time clears the stored offset and "sent today" mark,
     // so a new time later today still gets its briefing.
     this.db.prepare(`
-      INSERT INTO push_subscriptions (endpoint, p256dh, auth, user_id, lat, lon, place_name, levels, briefing_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO push_subscriptions (endpoint, p256dh, auth, user_id, lat, lon, place_name, levels, briefing_time, lightning_miles)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, user_id = excluded.user_id,
         utc_offset = CASE WHEN lat = excluded.lat AND lon = excluded.lon THEN utc_offset ELSE NULL END,
         briefing_sent = CASE WHEN briefing_time IS excluded.briefing_time AND lat = excluded.lat AND lon = excluded.lon THEN briefing_sent ELSE NULL END,
-        lat = excluded.lat, lon = excluded.lon, place_name = excluded.place_name, levels = excluded.levels, briefing_time = excluded.briefing_time
-    `).run(endpoint, keys.p256dh, keys.auth, userId, lat, lon, name, JSON.stringify(lv), briefing);
+        lightning_alert_at = CASE WHEN lat = excluded.lat AND lon = excluded.lon AND lightning_miles IS excluded.lightning_miles THEN lightning_alert_at ELSE NULL END,
+        lat = excluded.lat, lon = excluded.lon, place_name = excluded.place_name, levels = excluded.levels, briefing_time = excluded.briefing_time,
+        lightning_miles = excluded.lightning_miles
+    `).run(endpoint, keys.p256dh, keys.auth, userId, lat, lon, name, JSON.stringify(lv), briefing, lightning);
     return this.status(endpoint);
   }
 
   status(endpoint) {
-    const r = this.db.prepare('SELECT lat, lon, place_name, levels, last_sent_at, briefing_time FROM push_subscriptions WHERE endpoint = ?').get(endpoint);
+    const r = this.db.prepare('SELECT lat, lon, place_name, levels, last_sent_at, briefing_time, lightning_miles FROM push_subscriptions WHERE endpoint = ?').get(endpoint);
     return r
-      ? { subscribed: true, place: { lat: r.lat, lon: r.lon, name: r.place_name }, levels: JSON.parse(r.levels), lastSentAt: r.last_sent_at, briefingTime: r.briefing_time || null }
+      ? { subscribed: true, place: { lat: r.lat, lon: r.lon, name: r.place_name }, levels: JSON.parse(r.levels), lastSentAt: r.last_sent_at, briefingTime: r.briefing_time || null, lightningMiles: r.lightning_miles || null }
       : { subscribed: false };
   }
 
@@ -133,6 +164,10 @@ export class PushService {
 
   count() {
     return this.db.prepare('SELECT COUNT(*) AS n FROM push_subscriptions').get().n;
+  }
+
+  lightningCount() {
+    return this.db.prepare('SELECT COUNT(*) AS n FROM push_subscriptions WHERE lightning_miles > 0').get().n;
   }
 
   async deliver(row, payload) {
@@ -248,7 +283,36 @@ export class PushService {
     return { places: places.size, sent };
   }
 
-  start(getAlerts, everyMs, getBriefing) {
+  // Lightning near each device's place: one alert when strikes first come inside
+  // its circle (fresh ones, last 10 minutes), then one all-clear after 30 quiet
+  // minutes. Nothing is sent while the lightning data itself is stale, so an
+  // outage never looks like an all-clear.
+  async checkLightning(lightning, now = Date.now()) {
+    if (!lightning?.enabled || !lightning.healthy()) return { sent: 0, skipped: true };
+    const rows = this.db.prepare('SELECT * FROM push_subscriptions WHERE lightning_miles > 0').all();
+    const setAlert = this.db.prepare('UPDATE push_subscriptions SET lightning_alert_at = ?, lightning_last_strike = ? WHERE id = ?');
+    let sent = 0;
+    for (const sub of rows) {
+      const near = lightning.near({ lat: sub.lat, lon: sub.lon }, sub.lightning_miles);
+      const newest = near.newest?.t ?? null;
+      if (sub.lightning_alert_at == null) {
+        if (!near.last10 || !near.nearest) continue;
+        setAlert.run(now, newest, sub.id);
+        if (await this.deliver(sub, lightningPayload(near, sub.place_name))) sent++;
+        continue;
+      }
+      const last = Math.max(sub.lightning_last_strike || 0, newest || 0, sub.lightning_alert_at);
+      if (now - last >= WINDOW_MIN * 60_000) {
+        setAlert.run(null, null, sub.id);
+        if (await this.deliver(sub, lightningClearPayload(sub.lightning_miles, sub.place_name))) sent++;
+      } else if (last !== sub.lightning_last_strike) {
+        setAlert.run(sub.lightning_alert_at, last, sub.id);
+      }
+    }
+    return { sent };
+  }
+
+  start(getAlerts, everyMs, getBriefing, lightning) {
     const run = () => this.check(getAlerts).catch((err) => this.log.error?.(err, 'push check failed'));
     this.timer = setInterval(run, everyMs);
     this.timer.unref?.();
@@ -259,10 +323,16 @@ export class PushService {
       this.briefTimer.unref?.();
       setTimeout(brief, 8000).unref?.();
     }
+    if (lightning?.enabled) {
+      const bolt = () => this.checkLightning(lightning).catch((err) => this.log.error?.(err, 'lightning alert check failed'));
+      this.boltTimer = setInterval(bolt, 60_000);
+      this.boltTimer.unref?.();
+    }
   }
 
   stop() {
     clearInterval(this.timer);
     clearInterval(this.briefTimer);
+    clearInterval(this.boltTimer);
   }
 }

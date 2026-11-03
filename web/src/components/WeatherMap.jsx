@@ -3,6 +3,10 @@ import L from 'leaflet';
 import { api } from '../api.js';
 import WindyView from './WindyView.jsx';
 import { baseMap } from './basemap.js';
+import { lightningLayer } from '../lightning/layer.js';
+import { fromRows, mergeStrikes, newestTime, countText } from '../lightning/strikes.js';
+import { AGE_STEPS, SOURCES, milesToKm } from '../../../shared/lightning.js';
+import '../lightning/lightning.css';
 
 window.L = L; // leaflet.markercluster is a classic plugin that extends the global L
 
@@ -29,7 +33,7 @@ const siteIcon = (s, selected) => L.divIcon({
 });
 const dist2 = (a, b) => (a.lat - b.lat) ** 2 + ((a.lon - b.lon) * Math.cos((a.lat * Math.PI) / 180)) ** 2;
 
-export default function WeatherMap({ center, alerts, units = 'imperial' }) {
+export default function WeatherMap({ center, alerts, units = 'imperial', lightningMiles = 0 }) {
   const el = useRef(null);
   const card = useRef(null);
   const base = useRef(null);
@@ -60,7 +64,9 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [opacity, setOpacity] = useState(0.7);
-  const [show, setShow] = useState({ radar: true, cams: true, alerts: true, satellite: false, storms: true, buoys: true });
+  // Every toggleable map layer, by id. Lightning lives in its own module (lightning/layer.js).
+  const [show, setShow] = useState({ radar: true, cams: true, alerts: true, satellite: false, storms: true, buoys: true, lightning: true });
+  const [boltInfo, setBoltInfo] = useState('');
   const [camInfo, setCamInfo] = useState('');
   const [windy, setWindy] = useState(null); // { lat, lon, zoom } while the Windy map is open
 
@@ -324,6 +330,57 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
     }
   }, [show.storms, show.buoys, storms]);
 
+  // Live lightning: strikes in view, refreshed every 30 s and re-faded every 15 s.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !show.lightning) { setBoltInfo(''); return undefined; }
+    const layer = lightningLayer().addTo(m);
+    let strikes = [];
+    let off = false;
+    let attribution = '';
+    let ring = null;
+    if (lightningMiles > 0) {
+      ring = L.circle([center.lat, center.lon], { radius: lightningMiles * 1609.344, color: '#ffd23f', weight: 2, dashArray: '6 6', fill: false, interactive: false }).addTo(m);
+    }
+    const load = async (fresh) => {
+      const b = m.getBounds().pad(0.1);
+      const since = fresh ? 0 : newestTime(strikes);
+      try {
+        const r = await api(`/api/lightning?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}${since ? `&since=${since}` : ''}`);
+        if (off) return;
+        const now = r.now || Date.now();
+        strikes = mergeStrikes(fresh ? [] : strikes, fromRows(r.strikes), now);
+        layer.setStrikes(strikes, now);
+        const text = r.sources.map((x) => SOURCES[x.id]?.attribution).filter(Boolean).join(' · ');
+        if (text !== attribution) {
+          if (attribution) m.attributionControl?.removeAttribution(attribution);
+          attribution = text;
+          if (text) m.attributionControl?.addAttribution(text);
+        }
+        const down = r.sources.length && r.sources.every((x) => !x.ok && x.error);
+        setBoltInfo(down ? 'Lightning data is catching up…' : countText(strikes, now));
+      } catch (e) {
+        if (!off) setBoltInfo(e.status === 404 ? '' : 'Lightning unavailable');
+      }
+    };
+    load(true);
+    const poll = setInterval(() => load(false), 30_000);
+    const fade = setInterval(() => layer.restyle(Date.now()), 15_000);
+    let moveTimer;
+    const onMove = () => { clearTimeout(moveTimer); moveTimer = setTimeout(() => load(true), 500); };
+    m.on('moveend', onMove);
+    return () => {
+      off = true;
+      clearInterval(poll);
+      clearInterval(fade);
+      clearTimeout(moveTimer);
+      m.off('moveend', onMove);
+      if (attribution) m.attributionControl?.removeAttribution(attribution);
+      layer.remove();
+      ring?.remove();
+    };
+  }, [show.lightning, center.lat, center.lon, units, lightningMiles]);
+
   // Alert polygons
   useEffect(() => {
     const m = map.current;
@@ -373,6 +430,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
             <button key={p.id} className={p.id === productId ? 'on' : ''} aria-pressed={p.id === productId} onClick={() => setProductId(p.id)} title={p.note}>{p.name}</button>
           ))}
           <button className={show.satellite ? 'on' : ''} aria-pressed={show.satellite} onClick={() => setShow({ ...show, satellite: !show.satellite })}>Satellite</button>
+          <button className={show.lightning ? 'on' : ''} aria-pressed={show.lightning} onClick={() => setShow({ ...show, lightning: !show.lightning })}>⚡ Lightning</button>
           <label className="radar-select">Outlook{' '}
             <select value={outlookDay} onChange={(e) => setOutlookDay(Number(e.target.value))}>
               <option value={0}>Off</option><option value={1}>Day 1</option><option value={2}>Day 2</option><option value={3}>Day 3</option>
@@ -416,6 +474,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
         <label><input type="checkbox" checked={show.alerts} onChange={(e) => setShow({ ...show, alerts: e.target.checked })} /> Alerts</label>
         <label><input type="checkbox" checked={show.storms} onChange={(e) => setShow({ ...show, storms: e.target.checked })} /> Hurricanes</label>
         <label><input type="checkbox" checked={show.buoys} onChange={(e) => setShow({ ...show, buoys: e.target.checked })} /> Buoys</label>
+        <label><input type="checkbox" checked={show.lightning} onChange={(e) => setShow({ ...show, lightning: e.target.checked })} /> ⚡ Lightning</label>
         {!full && products.length > 1 && (
           <label className="radar-select">Show{' '}
             <select value={productId} onChange={(e) => setProductId(e.target.value)}>
@@ -433,6 +492,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
             <span className="lg-ends">{legend.ends.map((e, i) => <span key={i}>{e}</span>)}</span>
           </div>
         )}
+        {full && show.lightning && <LightningLegend miles={lightningMiles} units={units} />}
         {full && product?.note && <span className="radar-note">{product.note}{outlook?.features && outlookDay ? ` · SPC Day ${outlookDay} outlook: ${outlook.features.length ? [...new Set(outlook.features.map((f) => f.properties.name))].join(', ') : 'no severe risk'}` : ''}</span>}
       </div>
       <div ref={el} className="map" role="application" aria-label="Radar and camera map" />
@@ -442,12 +502,24 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
           {storms && (storms.length
             ? <button className="link" onClick={() => stormBounds.current && map.current?.flyToBounds(stormBounds.current.pad(0.1), { maxZoom: 6 })}>🌀 {storms.length} active storm{storms.length === 1 ? '' : 's'}</button>
             : 'No active tropical storms.')}
+          {boltInfo && ` · ${boltInfo}`}
           {buoyInfo && ` · ${buoyInfo}`}
           {camInfo && ` · ${camInfo}`}
         </span>
       </div>
       {windy && <WindyView center={windy} units={units} onClose={() => setWindy(null)} />}
     </section>
+  );
+}
+
+// Strike colors by age, plus the alert circle when one is set.
+function LightningLegend({ miles, units }) {
+  return (
+    <div className="bolt-legend" aria-label="Lightning colors by age">
+      <span className="lg-label">⚡ Lightning</span>
+      {AGE_STEPS.map((s) => <span key={s.min} className="bolt-chip"><i style={{ background: s.color, borderColor: s.ring }} />{s.label}</span>)}
+      {miles > 0 && <span className="bolt-chip"><i className="ring" />{units === 'metric' ? `${Math.round(milesToKm(miles))} km` : `${miles} mi`} alert</span>}
+    </div>
   );
 }
 

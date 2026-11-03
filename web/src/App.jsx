@@ -18,6 +18,8 @@ import SafetyCenter from './components/safety/SafetyCenter.jsx';
 import { BadgeCelebration } from './components/kid/Badges.jsx';
 import Briefing from './components/kid/Briefing.jsx';
 import Modal from './components/Modal.jsx';
+import LightningBanner from './components/LightningBanner.jsx';
+import { DEFAULT_ALERT_MILES } from '../../shared/lightning.js';
 import { configureVoice } from './kid/speak.js';
 import { useTheme } from './theme/useTheme.js';
 
@@ -37,7 +39,8 @@ export default function App() {
   const [weather, setWeather] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState('today');
+  // Tapping a lightning notification opens the map.
+  const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).has('lightning') ? 'map' : 'today'));
   const [modal, setModal] = useState(null); // 'signin' | 'admin' | 'alerts' | 'briefing'
 
   useEffect(() => {
@@ -54,6 +57,8 @@ export default function App() {
   const location = prefs.location || config?.defaultLocation;
   const units = prefs.units || config?.units || 'imperial';
   const kidMode = !!prefs.kidMode;
+  const lightningOn = !!config?.lightning?.enabled;
+  const lightningMiles = lightningOn ? (prefs.lightningMiles ?? DEFAULT_ALERT_MILES) : 0;
   const theme = useTheme(prefs.theme, weather);
   const voice = { tts: config?.tts, value: prefs.voice || '', onChange: (v) => setPrefs({ voice: v }) };
 
@@ -131,6 +136,16 @@ export default function App() {
           )}
 
           {weather && <AlertsBanner alerts={weather.alerts} kidMode={kidMode} />}
+          {lightningOn && location && (
+            <LightningBanner
+              location={location}
+              miles={lightningMiles}
+              units={units}
+              kidMode={kidMode}
+              onMap={tab === 'map' ? null : () => setTab('map')}
+              onSettings={() => setModal('alerts')}
+            />
+          )}
 
           <main>
             {!weather && !error && tab !== 'news' && tab !== 'ask' && tab !== 'models' && <div className="card skeleton">Fetching the sky…</div>}
@@ -148,7 +163,7 @@ export default function App() {
                 onAdmin={() => setModal('admin')}
               />
             )}
-            {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} />}
+            {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} lightningMiles={lightningMiles} />}
             {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} voice={voice} onAlerts={() => setModal('alerts')} />}
             {weather && tab === 'learn' && <Learn weather={weather} location={location} kidMode={kidMode} />}
             {tab === 'models' && location && <ModelsView location={location} units={units} />}
@@ -174,7 +189,17 @@ export default function App() {
         />
       )}
       <BadgeCelebration user={user} onShelf={() => setTab('kids')} />
-      {modal === 'alerts' && <PushAlerts location={location} saved={prefs.saved} onClose={() => setModal(null)} />}
+      {modal === 'alerts' && (
+        <PushAlerts
+          location={location}
+          saved={prefs.saved}
+          units={units}
+          lightningOn={lightningOn}
+          lightningMiles={lightningMiles}
+          onLightningMiles={(m) => setPrefs({ lightningMiles: m })}
+          onClose={() => setModal(null)}
+        />
+      )}
       {modal === 'briefing' && (briefingPlace() || location) && (
         <Modal title="Your weather from Rocky" onClose={() => { setModal(null); window.history.replaceState(null, '', window.location.pathname); }}>
           <Briefing location={briefingPlace() || location} units={units} name={user?.displayName} highlight />

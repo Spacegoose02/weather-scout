@@ -59,6 +59,8 @@
   <Config Name="MQTT password" Target="MQTT_PASSWORD" Default="" Description="" Type="Variable" Display="always" Required="false" Mask="true"></Config>
   <Config Name="MQTT topic prefix" Target="MQTT_TOPIC_PREFIX" Default="weather_scout" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">weather_scout</Config>
   <Config Name="MQTT discovery prefix" Target="MQTT_DISCOVERY_PREFIX" Default="homeassistant" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">homeassistant</Config>
+  <Config Name="Satellite lightning" Target="LIGHTNING_GLM" Default="true" Description="Free NOAA GOES lightning on the map and in alerts" Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="Blitzortung lightning" Target="BLITZORTUNG_ENABLED" Default="false" Description="Faster ground-sensor lightning from Blitzortung.org. Private, non-commercial use only" Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
   <Config Name="Home Assistant URL" Target="HA_URL" Default="" Description="Optional, instead of MQTT. e.g. http://homeassistant.local:8123" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="Home Assistant token" Target="HA_TOKEN" Default="" Description="Long-lived access token (your HA profile, Security)" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
   <Config Name="Home Assistant interval" Target="HA_PUBLISH_SECONDS" Default="300" Description="Seconds between forecast updates (60 or more)" Type="Variable" Display="advanced" Required="false" Mask="false">300</Config>
