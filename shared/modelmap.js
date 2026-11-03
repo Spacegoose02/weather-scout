@@ -8,7 +8,7 @@ export const MAP_MODELS = [
   { id: 'gfs_seamless', name: 'GFS', windy: 'gfs', days: 5, note: 'USA (NOAA). The main US global model.' },
   { id: 'icon_seamless', name: 'ICON', windy: 'icon', days: 5, note: 'Germany (DWD). Strong on fronts and temperatures.' },
   { id: 'gem_seamless', name: 'GEM', days: 5, note: 'Canada (ECCC). Good on winter storms.' },
-  { id: 'gfs_hrrr', name: 'HRRR', days: 2, usOnly: true, note: 'USA (NOAA), 3 km. Storm detail for the next 2 days, US only.' },
+  { id: 'gfs_hrrr', name: 'HRRR', days: 2, usOnly: true, domain: 'hrrr', note: 'USA (NOAA), 3 km. Storm detail for the next 2 days, US only.' },
   { id: 'ecmwf_aifs025_single', name: 'AIFS', days: 5, ai: true, note: "ECMWF's AI model." },
 ];
 
@@ -29,6 +29,43 @@ export const MAP_AREAS = [
   { id: 'region', name: 'Region', half: 6 },
   { id: 'country', name: 'Whole US', wideName: 'Wide area', half: 13, rows: 11, cols: 25, aspect: 2 },
 ];
+
+// HRRR's grid: 1799 x 1059 points 3 km apart on a Lambert conformal map
+// (true at 38.5°N, centered on 97.5°W), starting at 21.138°N 122.72°W.
+// Open-Meteo refuses a whole request if any point is off this grid, and the
+// lower 48 box's corners (Pacific Northwest, Baja, Nova Scotia) are.
+const LCC = (() => {
+  const R = 6371229;
+  const rad = Math.PI / 180;
+  const phi1 = 38.5 * rad;
+  const n = Math.sin(phi1);
+  const F = (Math.cos(phi1) * Math.tan(Math.PI / 4 + phi1 / 2) ** n) / n;
+  const rho = (lat) => (R * F) / Math.tan(Math.PI / 4 + (lat * rad) / 2) ** n;
+  const rho0 = rho(38.5);
+  const xy = (lat, lon) => {
+    const t = n * (lon + 97.5) * rad;
+    const r = rho(lat);
+    return [r * Math.sin(t), rho0 - r * Math.cos(t)];
+  };
+  return { xy, origin: xy(21.138, -122.72) };
+})();
+
+/** Is a point on HRRR's grid? `margin` keeps a few grid cells away from the edge. */
+export function inHrrr(lat, lon, margin = 3) {
+  const [x, y] = LCC.xy(lat, lon);
+  const i = (x - LCC.origin[0]) / 3000;
+  const j = (y - LCC.origin[1]) / 3000;
+  return i >= margin && i <= 1798 - margin && j >= margin && j <= 1058 - margin;
+}
+
+/** Which grid points (by index, row by row) a model can answer for. */
+export function pointsFor(model, grid) {
+  const keep = [];
+  grid.lats.forEach((lat, r) => grid.lons.forEach((lon, c) => {
+    if (model.domain !== 'hrrr' || inHrrr(lat, lon)) keep.push(r * grid.lons.length + c);
+  }));
+  return keep;
+}
 
 /** The area to start on: the whole country for US places, the region elsewhere. */
 export const defaultArea = (lat, lon) => (inConus(lat, lon) ? 'country' : 'region');
