@@ -3,15 +3,16 @@ import { speak } from '../../kid/speak.js';
 import { trackProgress } from '../../kid/badges.js';
 
 // One or more quick multiple-choice questions with instant feedback.
-// quizId (e.g. 'clouds' or 'storm-tornado') records the finished quiz for badges.
-export default function Quiz({ questions, quizId }) {
+// quizId (e.g. 'clouds' or 'storm-tornado') records the finished quiz for badges;
+// onDone(right, total) is called once every question has an answer.
+export default function Quiz({ questions, quizId, onDone, title = 'Quick quiz' }) {
   const list = Array.isArray(questions) ? questions : [questions];
   const [picked, setPicked] = useState({});
   const score = list.filter((q, i) => picked[i] === q.answer).length;
   const done = Object.keys(picked).length === list.length;
   return (
     <div className="learn-quiz">
-      <h3>Quick quiz</h3>
+      <h3>{title}</h3>
       {list.map((q, i) => {
         const p = picked[i];
         return (
@@ -26,9 +27,10 @@ export default function Quiz({ questions, quizId }) {
                   onClick={() => {
                     const next = { ...picked, [i]: j };
                     setPicked(next);
-                    if (quizId && Object.keys(next).length === list.length) {
+                    if (Object.keys(next).length === list.length) {
                       const right = list.filter((qq, k) => next[k] === qq.answer).length;
-                      trackProgress({ quizzes: { [quizId]: right }, ...(right === list.length ? { perfect: { [quizId]: 1 } } : {}) });
+                      if (quizId) trackProgress({ quizzes: { [quizId]: right }, ...(right === list.length ? { perfect: { [quizId]: 1 } } : {}) });
+                      onDone?.(right, list.length);
                     }
                     speak(j === q.answer ? `Yes! ${q.why}` : `Not quite. ${q.why}`);
                   }}
