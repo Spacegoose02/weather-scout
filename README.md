@@ -32,6 +32,12 @@ from free, official data sources.
 - **Hurricanes & ocean**: active storms from the National Hurricane Center with forecast cones and
   tracks on the map, NOAA buoys (waves, water temperature, wind), and today's tides when you're near
   the coast.
+- **Ocean** (🌊 tab, made for kids with a grown-up view too): the latest ocean discoveries from NOAA Ocean
+  Exploration, Schmidt Ocean Institute, MBARI and ScienceDaily, with kid-sized summaries, topic tags, "wow
+  word" meanings and read-aloud (and "Rocky, explain it!" when the AI helper is on); a creature of the week
+  from 26 sea animals; a depth explorer that dives from the waves to Challenger Deep through every zone;
+  the nearest live NOAA buoys (waves, water temperature) and tides; and an ocean quiz. Five Ocean explorer
+  badges. Change the news sources with `OCEAN_FEEDS`.
 - **Models**: what ECMWF, GFS, ICON, GEM, HRRR and the AI models GraphCast and AIFS each predict,
   plotted together, with an ensemble confidence band (10th to 90th percentile), a High/Medium/Low
   confidence rating per day and a side-by-side table. Forecast maps show any one model (or two
@@ -67,6 +73,14 @@ from free, official data sources.
   against real SPC storm reports, with points, chaser ranks and a chase log; *Live chase*, with the Storm Center's trusted storm chaser list, shown only while tornado or severe
   thunderstorm warnings are up and starting muted; and *Storm cards*, collectible cards made from the day's
   real storm reports with rarity, power and a binder. Nine chaser badges go on the badge shelf.
+- **Storm picture of the day**: a real tornado or lightning photo every day in the Kid Zone (and as a
+  dashboard card), with a kid caption, a fun fact and a 🔊 button so Rocky reads it aloud. Photos
+  come from Wikimedia Commons (mostly NOAA / NSSL public domain shots of the sky, never damage or
+  people); the photographer and license are pulled live from Commons and shown under every picture,
+  and anything not freely licensed is skipped. Kids can flip through the last three weeks in an
+  album and earn the *Storm Gazer* badge. Admins can hide any picture for everyone (right on the
+  card, or in *Family & settings*) and add their own from Commons. Needs outbound access to
+  `commons.wikimedia.org` and `upload.wikimedia.org`.
 - **Profiles**: local username sign-in, tinyauth SSO, and admins can link an SSO identity to a
   username. Saved places, units and Kid Mode follow you between devices.
 - **News & Videos**: local and national weather news. Your NWS office's outlook, forecast

@@ -66,6 +66,7 @@ server/src/
   health.js         pressure swings, WBGT heat stress
   sky.js            moon phase
   media.js          admin news/YouTube lists
+  stormphoto.js     storm picture of the day (Wikimedia Commons, live credit/license, admin hide)
   push.js           Web Push: subscriptions, VAPID keys, alert loop
   ai.js             Ask an Expert / Rocky chat, cloud photos, web search (Claude or Ollama)
   tts.js            Kokoro read-aloud proxy and voice list

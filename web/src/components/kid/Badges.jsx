@@ -9,6 +9,7 @@ const GROUPS = [
   ['journal', '📓 Weather journal'],
   ['learn', '🎓 Weather school'],
   ['clouds', '☁️ Cloud spotting'],
+  ['ocean', '🌊 Ocean explorer'],
   ['play', '🎲 Games'],
   ['science', '🧪 Backyard science'],
   ['explore', '🔭 Explorer'],
