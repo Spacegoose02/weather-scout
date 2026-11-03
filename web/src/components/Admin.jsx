@@ -2,11 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Modal from './Modal.jsx';
 import IntegrationsPanel from './stations/IntegrationsPanel.jsx';
-<<<<<<< HEAD
 import ChaseStreamsAdmin from './kid/chaser/ChaseStreamsAdmin.jsx';
-=======
 import StormPhotoAdmin from './kid/StormPhotoAdmin.jsx';
->>>>>>> origin/main
 import AiSettingsPanel from './AiSettingsPanel.jsx';
 import AppSettingsPanel from './AppSettingsPanel.jsx';
 import './ai-settings.css';
