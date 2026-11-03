@@ -291,6 +291,7 @@ export const BADGES = [
   { id: 'streak-7', group: 'journal', emoji: '📅', name: 'Week Watcher', how: 'Write in your journal 7 days in a row.' },
   { id: 'streak-30', group: 'journal', emoji: '🏆', name: 'Sky Scribe', how: 'Write in your journal 30 days in a row.' },
   { id: 'journal-25', group: 'journal', emoji: '📚', name: 'Weather Historian', how: 'Fill 25 journal pages.' },
+  { id: 'storm-gazer', group: 'learn', emoji: '🌪️', name: 'Storm Gazer', how: 'Hear Rocky tell you about the storm picture on 7 different days.' },
   { id: 'quiz-first', group: 'learn', emoji: '🧠', name: 'Quiz Kid', how: 'Finish a quiz in Learn.' },
   { id: 'quiz-perfect', group: 'learn', emoji: '💯', name: 'Perfect Score', how: 'Get every question right on a quiz.' },
   { id: 'quiz-5', group: 'learn', emoji: '🎓', name: 'Weather Scholar', how: 'Finish quizzes on 5 different topics.' },
@@ -298,5 +299,10 @@ export const BADGES = [
   { id: 'cloud-spotter', group: 'clouds', emoji: '☁️', name: 'Cloud Spotter', how: 'Spot your first cloud type outside.' },
   { id: 'cloud-collector', group: 'clouds', emoji: '🌥️', name: 'Cloud Collector', how: 'Spot 5 different cloud types.' },
   { id: 'cloud-master', group: 'clouds', emoji: '🌩️', name: 'Cloud Master', how: 'Spot every cloud type in the cloud spotter.' },
+  { id: 'ocean-reporter', group: 'ocean', emoji: '📰', name: 'Ocean Reporter', how: 'Read 3 ocean discoveries.' },
+  { id: 'creature-friend', group: 'ocean', emoji: '🐙', name: 'Creature Friend', how: 'Meet 5 sea creatures in the Ocean section.' },
+  { id: 'deep-diver', group: 'ocean', emoji: '🤿', name: 'Deep Diver', how: 'Dive through every ocean zone, all the way to the trench.' },
+  { id: 'buoy-watcher', group: 'ocean', emoji: '🛟', name: 'Buoy Watcher', how: 'Check the waves on a live ocean buoy.' },
+  { id: 'ocean-scholar', group: 'ocean', emoji: '🌊', name: 'Ocean Scholar', how: 'Get every question right on the ocean quiz.' },
   { id: 'super-scout', group: 'star', emoji: '⭐', name: 'Super Scout', how: 'Earn 10 other badges.' },
 ];

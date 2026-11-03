@@ -66,9 +66,13 @@ server/src/
   health.js         pressure swings, WBGT heat stress
   sky.js            moon phase
   media.js          admin news/YouTube lists
+  stormphoto.js     storm picture of the day (Wikimedia Commons, live credit/license, admin hide)
   push.js           Web Push: subscriptions, VAPID keys, alert loop
   ai.js             Ask an Expert / Rocky chat, cloud photos, web search (Claude or Ollama)
   tts.js            Kokoro read-aloud proxy and voice list
+  settings.js       Admin-saved settings (win over env vars), applied live; what stays env-only and why
+  aisettings.js     Test connection and voice preview for Claude, Ollama and Kokoro
+  integrationtests.js  Test buttons for camera keys, Ambient, Tempest, MQTT and Home Assistant
   weathercodes.js   WMO codes with kid descriptions
   providers/        openmeteo, nws, radar, cameras, news (RSS/Atom/YouTube)
 web/src/
@@ -89,6 +93,8 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/push/key`, `POST /api/push/subscribe`, `/unsubscribe`, `/status`, `/test` | Web Push sign-up per device; a background loop (every `PUSH_POLL_SECONDS`) checks NWS for each subscribed place and sends each new alert once |
 | `GET /api/lightning?south&west&north&east[&since]`, `GET /api/lightning/near?lat&lon&miles` | Live strikes from the last 30 minutes as compact `[time, lat, lon, source]` rows, and a nearby summary (count, nearest, direction, 30-30 all-clear time). Sources run only while someone is watching or has lightning alerts on; strike math is shared in `shared/lightning.js` |
 | `GET /api/ai/status`, `POST /api/ai/chat`, `POST /api/ai/cloud` | AI helper (only with `ANTHROPIC_API_KEY`): chat with the live forecast as context, cloud photo identifier, optional web search |
+| `GET`/`PUT /api/admin/settings`, `POST /api/admin/settings/test` | Admin only: home place, cameras, Windy, stations, Home Assistant, push, sign-out and Android settings saved in the database (keys write-only), and their Test buttons |
+| `GET`/`PUT /api/admin/ai-settings`, `POST /api/admin/ai-settings/test`, `POST /api/admin/ai-settings/preview-voice` | Admin only: AI and read-aloud settings saved in the database (keys write-only), connection tests for Claude, Ollama and Kokoro, and a voice preview with unsaved values |
 | `GET /api/tts/voices`, `POST /api/tts` | Kokoro read-aloud (only with `KOKORO_URL`): English voice list, and MP3 speech for a text |
 | `GET/POST /api/stations/push[/:token]` | Personal weather station uploads (Ecowitt form POST, Ambient and Weather Underground GET). Token or home network only; no sign-in |
 | `GET /api/stations?units` | Latest reading from each station, converted, plus the primary station id |

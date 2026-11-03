@@ -231,3 +231,21 @@ test('lightning can be turned off', async () => {
   assert.equal((await app.inject({ url: '/api/config' })).json().lightning.enabled, false);
   await app.close();
 });
+
+test('lightning sources follow saved settings without a restart', async () => {
+  const sockets = [];
+  class FakeWS { constructor(url) { this.url = url; sockets.push(this); } send() {} close() { this.closed = true; } }
+  const { app } = await testApp({ env: { LIGHTNING_GLM: 'false' } });
+  assert.equal(app.lightning.enabled, false);
+  const svc = new LightningService({ lightning: { glm: false } }, { WebSocketImpl: FakeWS, fetchImpl: async () => new Response('', { status: 404 }), log: {} });
+  assert.equal(svc.enabled, false);
+  svc.configure({ glm: false, blitzortung: true });
+  assert.ok(svc.blitz);
+  svc.add([{ t: Date.now(), lat: 1, lon: 1, src: 'bo' }]);
+  svc.configure({ glm: true, satellite: 'goes18', blitzortung: false });
+  assert.equal(svc.blitz, null);
+  assert.equal(svc.glm.label, 'GOES-18 (West)');
+  assert.equal(svc.strikes.length, 0, 'strikes from a source that was turned off are dropped');
+  svc.stop();
+  await app.close();
+});

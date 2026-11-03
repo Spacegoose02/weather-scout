@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Modal from './Modal.jsx';
 import IntegrationsPanel from './stations/IntegrationsPanel.jsx';
+import StormPhotoAdmin from './kid/StormPhotoAdmin.jsx';
+import AiSettingsPanel from './AiSettingsPanel.jsx';
+import AppSettingsPanel from './AppSettingsPanel.jsx';
+import './ai-settings.css';
 
 export default function Admin({ me, onClose }) {
   const [users, setUsers] = useState([]);
@@ -98,6 +102,10 @@ export default function Admin({ me, onClose }) {
         <label><input type="checkbox" checked={form.isAdmin} onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })} /> admin</label>
         <button type="submit">Add</button>
       </form>
+
+      <AiSettingsPanel />
+
+      <AppSettingsPanel />
 
       <h3>Connected apps</h3>
       <p className="hint">Give Den-Duty (or Home Assistant) a key so it can show the weather card on kid boards and the family wall.</p>
@@ -218,6 +226,8 @@ export default function Admin({ me, onClose }) {
         </>
       )}
 
+      <StormPhotoAdmin />
+
       <IntegrationsPanel />
 
       <h3>Camera feeds</h3>
@@ -237,11 +247,11 @@ export default function Admin({ me, onClose }) {
       )}
       {needsKey.length > 0 && (
         <>
-          <p className="hint">These states switch on with a free developer key. Sign up, then paste the key into the matching setting (Unraid: edit the container, or <code>.env</code> for Docker Compose) and restart.</p>
+          <p className="hint">These states switch on with a free developer key. Sign up, then paste the key under <strong>App settings → Road cameras</strong> above. No restart needed.</p>
           <ul className="feeds">
             {needsKey.map((f) => (
               <li key={f.id}>
-                ⚪ {f.name}: set <code>{f.keyEnv}</code>{f.signup && <> (<a href={f.signup} target="_blank" rel="noopener noreferrer">get a key</a>)</>}
+                ⚪ {f.name}: needs a key{f.signup && <> (<a href={f.signup} target="_blank" rel="noopener noreferrer">get a key</a>)</>}
               </li>
             ))}
           </ul>

@@ -121,20 +121,26 @@ export class HomeAssistantService {
   // snapshot(): resolves to { forecast, alerts, air, kid } for the home location.
   constructor(cfg, { stations, snapshot, fetchImpl = fetch, log = console, connect = mqtt.connect, version = '0.1.0' } = {}) {
     this.ha = cfg.homeAssistant;
-    this.units = cfg.units;
-    this.u = unitsFor(cfg.units);
-    this.home = cfg.defaultLocation;
+    this.reload(cfg);
     this.stations = stations;
     this.snapshot = snapshot;
     this.fetchImpl = fetchImpl;
     this.log = log;
     this.connectImpl = connect;
     this.version = version;
-    this.prefix = this.ha.topicPrefix;
-    this.disc = this.ha.discoveryPrefix;
     this.announced = new Set();
     this.lastStationPublish = new Map();
     this.state = { mqtt: { connected: false, lastPublishAt: null, lastError: null }, rest: { lastPublishAt: null, lastError: null } };
+  }
+
+  // Pick up changed settings (call stop() first, start() after).
+  reload(cfg) {
+    this.units = cfg.units;
+    this.u = unitsFor(cfg.units);
+    this.home = cfg.defaultLocation;
+    this.prefix = this.ha.topicPrefix;
+    this.disc = this.ha.discoveryPrefix;
+    this.announced?.clear();
   }
 
   get mqttEnabled() {
@@ -329,7 +335,9 @@ export class HomeAssistantService {
     if (this.client) {
       this.publish(this.availability, 'offline');
       await new Promise((resolve) => this.client.end(false, {}, resolve));
+      this.client = null;
     }
+    this.state.mqtt.connected = false;
   }
 
   status() {

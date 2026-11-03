@@ -1,8 +1,9 @@
 # Weather stations and Home Assistant
 
 Weather Scout can read your own backyard weather station and share everything it knows with
-Home Assistant. Both are optional and set with environment variables (on Unraid, in the
-container template). Nothing is stored in the repository.
+Home Assistant. Both are optional. Set them up in the app under 👤 → *Family & settings* → *App
+settings* (*Weather stations* and *Home Assistant*, each with a *Test* button), or with the
+environment variables below, which become the defaults. Nothing is stored in the repository.
 
 ## Personal weather stations
 

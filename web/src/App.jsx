@@ -13,6 +13,7 @@ import PushAlerts from './components/PushAlerts.jsx';
 import RockyFace from './components/RockyFace.jsx';
 import AskExpert from './components/AskExpert.jsx';
 import Learn from './components/learn/Learn.jsx';
+import Ocean from './components/ocean/Ocean.jsx';
 import Dashboard from './components/dashboard/Dashboard.jsx';
 import SafetyCenter from './components/safety/SafetyCenter.jsx';
 import { BadgeCelebration } from './components/kid/Badges.jsx';
@@ -20,6 +21,8 @@ import Briefing from './components/kid/Briefing.jsx';
 import Modal from './components/Modal.jsx';
 import LightningBanner from './components/LightningBanner.jsx';
 import { DEFAULT_ALERT_MILES } from '../../shared/lightning.js';
+import ChaserPopup from './components/chasers/ChaserPopup.jsx';
+import { popupMode } from './chasers/chasers.js';
 import { configureVoice } from './kid/speak.js';
 import { useTheme } from './theme/useTheme.js';
 
@@ -28,6 +31,7 @@ const TABS = [
   ['map', 'Radar & Cams', '🗺️'],
   ['kids', 'Kid Zone', <RockyFace key="rocky" />],
   ['learn', 'Learn', '🎓'],
+  ['ocean', 'Ocean', '🌊'],
   ['models', 'Models', '📊'],
   ['news', 'News & Videos', '📰'],
 ];
@@ -60,10 +64,11 @@ export default function App() {
   const lightningOn = !!config?.lightning?.enabled;
   const lightningMiles = lightningOn ? (prefs.lightningMiles ?? DEFAULT_ALERT_MILES) : 0;
   const theme = useTheme(prefs.theme, weather);
+  const chasers = { mode: popupMode(prefs.chaserPopups), onChange: (m) => setPrefs({ chaserPopups: m }) };
   const voice = { tts: config?.tts, value: prefs.voice || '', onChange: (v) => setPrefs({ voice: v }) };
 
   // Read-aloud uses the server's Kokoro voice when there is one.
-  useEffect(() => configureVoice({ enabled: config?.tts?.enabled, voice: prefs.voice }), [config?.tts?.enabled, prefs.voice]);
+  useEffect(() => configureVoice({ enabled: config?.tts?.enabled, voice: prefs.voice, fallback: config?.tts?.fallback }), [config?.tts?.enabled, config?.tts?.fallback, prefs.voice]);
 
   const load = useCallback(async () => {
     if (!location) return;
@@ -148,7 +153,7 @@ export default function App() {
           )}
 
           <main>
-            {!weather && !error && tab !== 'news' && tab !== 'ask' && tab !== 'models' && <div className="card skeleton">Fetching the sky…</div>}
+            {!weather && !error && tab !== 'news' && tab !== 'ask' && tab !== 'models' && tab !== 'ocean' && <div className="card skeleton">Fetching the sky…</div>}
             {weather && tab === 'today' && (
               <Dashboard
                 weather={weather}
@@ -163,9 +168,10 @@ export default function App() {
                 onAdmin={() => setModal('admin')}
               />
             )}
-            {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} lightningMiles={lightningMiles} />}
+            {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} layers={prefs.mapLayers} onLayers={(l) => setPrefs({ mapLayers: l })} signedIn={!!user} lightningMiles={lightningMiles} />}
             {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} voice={voice} onAlerts={() => setModal('alerts')} />}
-            {weather && tab === 'learn' && <Learn weather={weather} location={location} kidMode={kidMode} />}
+            {weather && tab === 'learn' && <Learn weather={weather} location={location} kidMode={kidMode} chasers={chasers} onOcean={() => setTab('ocean')} />}
+            {tab === 'ocean' && location && <Ocean location={location} units={units} kidMode={kidMode} ai={config.ai} />}
             {tab === 'models' && location && <ModelsView location={location} units={units} />}
             {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} voice={voice} />}
             {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} kidMode={kidMode} location={location} />}
@@ -173,6 +179,7 @@ export default function App() {
         </>
       )}
 
+      {!blocked && <ChaserPopup alerts={weather?.alerts || []} kidMode={kidMode} mode={chasers.mode} onMode={chasers.onChange} />}
       {!blocked && <SafetyCenter alerts={weather?.alerts} kidMode={kidMode} user={user} onSignIn={() => setModal('signin')} />}
 
       {modal === 'signin' && (

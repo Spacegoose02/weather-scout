@@ -1,9 +1,10 @@
 // Badges earned outside the Kid Zone games: journal streaks, Learn quizzes and
-// the cloud spotter. Progress lives next to the Kid Zone data
+// the cloud spotter and the Ocean section. Progress lives next to the Kid Zone data
 // (data.progress = { journalBest, journalPages, quizzes: {}, perfect: {}, clouds: {} })
 // and only ever grows, so it is safe to save from anywhere in the app.
 import { api } from '../api.js';
 import { CLOUD_TYPES } from '../learn/topics.js';
+import { ZONES } from '../ocean/ocean.js';
 import { BADGES } from './logic.js';
 
 const size = (o) => Object.keys(o || {}).length;
@@ -23,6 +24,11 @@ export const RULES = {
   'cloud-spotter': (p) => [size(p.clouds), 1],
   'cloud-collector': (p) => [size(p.clouds), 5],
   'cloud-master': (p) => [size(p.clouds), CLOUD_TYPES.length],
+  'ocean-reporter': (p) => [size(p.discoveries), 3],
+  'creature-friend': (p) => [size(p.creatures), 5],
+  'deep-diver': (p) => [size(p.oceanZones), ZONES.length],
+  'buoy-watcher': (p) => [size(p.buoys), 1],
+  'ocean-scholar': (p) => [p.perfect?.['ocean-explorer'] ? 1 : 0, 1],
 };
 export const SUPER_SCOUT_AT = 10;
 

@@ -15,17 +15,33 @@ const wrap = (lon) => ((((lon + 180) % 360) + 360) % 360) - 180;
 
 export class LightningService {
   constructor(cfg, { fetchImpl = fetch, log = console, WebSocketImpl, now = () => Date.now(), timers = globalThis } = {}) {
-    const lc = cfg.lightning || {};
-    this.cfg = lc;
     this.log = log;
     this.now = now;
     this.timers = timers;
+    this.deps = { fetchImpl, WebSocketImpl };
     this.strikes = [];
     this.lastViewer = 0;
     this.alertsWanted = () => false;
+    this.glm = null;
+    this.blitz = null;
+    this.configure(cfg.lightning || {});
+  }
+
+  // (Re)build the sources from settings. Called again when an admin changes them
+  // in Family & settings; strikes from a source that was turned off are dropped.
+  configure(lc) {
+    const old = this.cfg;
+    this.cfg = { ...lc };
     const onStrikes = (list) => this.add(list);
-    this.glm = lc.glm === false ? null : new GlmFeed({ satellite: lc.satellite, backfillMin: lc.backfillMin ?? 10, fetchImpl, log, onStrikes, parse: lc.parse });
-    this.blitz = lc.blitzortung ? new BlitzFeed({ WebSocketImpl, log, onStrikes, timers }) : null;
+    const { fetchImpl, WebSocketImpl } = this.deps;
+    const glmSame = old && old.glm === lc.glm && old.satellite === lc.satellite && old.backfillMin === lc.backfillMin;
+    if (!glmSame) this.glm = lc.glm === false ? null : new GlmFeed({ satellite: lc.satellite, backfillMin: lc.backfillMin ?? 10, fetchImpl, log: this.log, onStrikes, parse: lc.parse });
+    if (!!old?.blitzortung !== !!lc.blitzortung || !old) {
+      this.blitz?.stop();
+      this.blitz = lc.blitzortung ? new BlitzFeed({ WebSocketImpl, log: this.log, onStrikes, timers: this.timers }) : null;
+    }
+    if (old) this.strikes = this.strikes.filter((s) => (s.src === 'glm' ? !!this.glm && glmSame : !!this.blitz));
+    if (old && this.active()) this.tick().catch(() => {});
   }
 
   get enabled() {
@@ -61,7 +77,7 @@ export class LightningService {
 
   async tick() {
     this.prune();
-    if (!this.active()) {
+    if (!this.enabled || !this.active()) {
       this.blitz?.stop();
       return;
     }
@@ -73,7 +89,7 @@ export class LightningService {
   }
 
   start(everyMs = 30_000) {
-    if (!this.enabled) return;
+    this.timers.clearInterval(this.timer);
     this.timer = this.timers.setInterval(() => this.tick().catch((err) => this.log.error?.(err, 'lightning update failed')), everyMs);
     this.timer?.unref?.();
     this.timers.setTimeout(() => this.tick().catch(() => {}), 3000)?.unref?.();

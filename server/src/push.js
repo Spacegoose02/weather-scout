@@ -323,7 +323,7 @@ export class PushService {
       this.briefTimer.unref?.();
       setTimeout(brief, 8000).unref?.();
     }
-    if (lightning?.enabled) {
+    if (lightning) {
       const bolt = () => this.checkLightning(lightning).catch((err) => this.log.error?.(err, 'lightning alert check failed'));
       this.boltTimer = setInterval(bolt, 60_000);
       this.boltTimer.unref?.();
