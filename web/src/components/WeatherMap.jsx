@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import { api } from '../api.js';
 import WindyView from './WindyView.jsx';
 import { baseMap } from './basemap.js';
+import LayerPanel from './map/LayerPanel.jsx';
+import { normalizeLayers, alertVisible, anyAlerts, layerCount } from './map/layers.js';
 
 window.L = L; // leaflet.markercluster is a classic plugin that extends the global L
 
@@ -10,6 +12,8 @@ const camIcon = L.divIcon({ className: 'cam-pin', html: '<span>📷</span>', ico
 const ALERT_STYLE = { Extreme: '#b0003a', Severe: '#e2401c', Moderate: '#f0a202', Minor: '#e8c547' };
 const CAMERA_MIN_ZOOM = 8;
 const BUOY_MIN_ZOOM = 4;
+const TIDE_MIN_ZOOM = 7;
+const tideIcon = L.divIcon({ className: 'tide-pin', html: '<span>🌊</span>', iconSize: [22, 22], iconAnchor: [11, 11] });
 const CAT_COLOR = ['#5ebaff', '#ffd23f', '#ff9f1c', '#f25c05', '#d62839', '#8f2d56'];
 const stormIcon = (s) => L.divIcon({
   className: 'storm-pin',
@@ -29,7 +33,7 @@ const siteIcon = (s, selected) => L.divIcon({
 });
 const dist2 = (a, b) => (a.lat - b.lat) ** 2 + ((a.lon - b.lon) * Math.cos((a.lat * Math.PI) / 180)) ** 2;
 
-export default function WeatherMap({ center, alerts, units = 'imperial' }) {
+export default function WeatherMap({ center, alerts, units = 'imperial', layers: savedLayers, onLayers, signedIn = false }) {
   const el = useRef(null);
   const card = useRef(null);
   const base = useRef(null);
@@ -60,7 +64,17 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [opacity, setOpacity] = useState(0.7);
-  const [show, setShow] = useState({ radar: true, cams: true, alerts: true, satellite: false, storms: true, buoys: true });
+  // Which layers are on comes from saved preferences (account or this device).
+  const [guestLayers, setGuestLayers] = useState(() => normalizeLayers(savedLayers));
+  const show = useMemo(() => (onLayers ? normalizeLayers(savedLayers) : guestLayers), [onLayers, savedLayers, guestLayers]);
+  const setShow = (next) => (onLayers ? onLayers(normalizeLayers(next)) : setGuestLayers(normalizeLayers(next)));
+  const showRef = useRef(show);
+  showRef.current = show;
+  const reload = useRef({});
+  const tideLayer = useRef(null);
+  const [tideInfo, setTideInfo] = useState('');
+  const [feeds, setFeeds] = useState(null);
+  const [layersOpen, setLayersOpen] = useState(false);
   const [camInfo, setCamInfo] = useState('');
   const [windy, setWindy] = useState(null); // { lat, lon, zoom } while the Windy map is open
 
@@ -88,6 +102,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
     loadNational();
     const natTimer = setInterval(loadNational, 120_000);
     api('/api/radar/sites').then((r) => !cancelled && setSites(r.sites || [])).catch(() => {});
+    api('/api/cameras/feeds').then((r) => !cancelled && setFeeds(r.feeds || [])).catch(() => !cancelled && setFeeds([]));
 
     import('leaflet.markercluster').then(() => {
       if (cancelled) return;
@@ -102,6 +117,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
       clearTimeout(camTimer);
       camTimer = setTimeout(async () => {
         if (!camLayer.current) return;
+        if (!showRef.current.cams) { setCamInfo(''); return; }
         if (m.getZoom() < CAMERA_MIN_ZOOM) {
           camLayer.current.clearLayers();
           markers.clear();
@@ -110,7 +126,9 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
         }
         const b = m.getBounds();
         try {
-          const r = await api(`/api/cameras?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}`);
+          const off = showRef.current.camsOff;
+          const hide = off.length ? `&hide=${encodeURIComponent(off.join(','))}` : '';
+          const r = await api(`/api/cameras?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}${hide}`);
           // Update markers in place so an open popup survives the map panning to fit it.
           const keep = new Set(r.cameras.map((c) => c.id));
           for (const [id, marker] of markers) {
@@ -126,7 +144,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
           });
           camLayer.current.addLayers(added);
           if (!r.feeds.length) setCamInfo('No camera feeds are set up yet. An admin can add state 511 feeds in cameras.json.');
-          else if (!r.total) setCamInfo('No cameras in this view.');
+          else if (!r.total) setCamInfo(off.length ? 'No cameras in this view (some states are off in Layers).' : 'No cameras in this view.');
           else setCamInfo(`${r.total} camera${r.total === 1 ? '' : 's'} in view${r.truncated ? ' (zoom in for all)' : ''}.`);
         } catch (e) {
           setCamInfo(`Cameras unavailable: ${e.message}`);
@@ -134,6 +152,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
       }, 350);
     };
     m.on('moveend', loadCams);
+    reload.current.cams = loadCams;
 
     // Ocean buoys (NOAA NDBC), loaded for the current view.
     buoyLayer.current = L.layerGroup().addTo(m);
@@ -142,7 +161,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
       clearTimeout(buoyTimer);
       buoyTimer = setTimeout(async () => {
         if (!buoyLayer.current) return;
-        if (m.getZoom() < BUOY_MIN_ZOOM) { buoyLayer.current.clearLayers(); setBuoyInfo(''); return; }
+        if (!showRef.current.buoys || m.getZoom() < BUOY_MIN_ZOOM) { buoyLayer.current.clearLayers(); setBuoyInfo(''); return; }
         const b = m.getBounds();
         try {
           const r = await api(`/api/buoys?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}&units=${units}`);
@@ -160,7 +179,37 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
       }, 400);
     };
     m.on('moveend', loadBuoys);
+    reload.current.buoys = loadBuoys;
     loadBuoys();
+
+    // NOAA tide stations, loaded for the current view once you zoom in.
+    tideLayer.current = L.layerGroup().addTo(m);
+    let tideTimer;
+    const loadTides = () => {
+      clearTimeout(tideTimer);
+      tideTimer = setTimeout(async () => {
+        if (!tideLayer.current) return;
+        if (!showRef.current.tides) { tideLayer.current.clearLayers(); setTideInfo(''); return; }
+        if (m.getZoom() < TIDE_MIN_ZOOM) { tideLayer.current.clearLayers(); setTideInfo('Zoom in to see tide stations.'); return; }
+        const b = m.getBounds();
+        try {
+          const r = await api(`/api/tides/stations?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}`);
+          if (cancelled || !tideLayer.current) return;
+          tideLayer.current.clearLayers();
+          for (const x of r.stations) {
+            L.marker([x.lat, x.lon], { icon: tideIcon, title: `${x.name} tides` })
+              .bindPopup(() => tidePopup(x, units), { maxWidth: 260 })
+              .addTo(tideLayer.current);
+          }
+          setTideInfo(r.total ? `${r.total} tide station${r.total === 1 ? '' : 's'}` : '');
+        } catch {
+          setTideInfo('Tide stations unavailable');
+        }
+      }, 400);
+    };
+    m.on('moveend', loadTides);
+    reload.current.tides = loadTides;
+    loadTides();
 
     // Active tropical storms (NHC): cone, forecast track and current position.
     api('/api/tropics').then((t) => {
@@ -187,7 +236,10 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
       cancelled = true;
       clearTimeout(camTimer);
       clearTimeout(buoyTimer);
+      clearTimeout(tideTimer);
       clearInterval(natTimer);
+      reload.current = {};
+      tideLayer.current = null;
       m.remove();
       siteLayer.current = null;
       outlookLayer.current = null;
@@ -235,7 +287,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
     if (!m) return;
     siteLayer.current?.remove();
     siteLayer.current = null;
-    if (productId !== 'site' || !sites.length) return;
+    if (productId !== 'site' || !sites.length || !show.radarSites) return;
     const g = L.layerGroup();
     for (const x of sites) {
       L.marker([x.lat, x.lon], { icon: siteIcon(x, x.id === site?.id), title: `${x.name} radar`, zIndexOffset: x.id === site?.id ? 900 : 0 })
@@ -244,7 +296,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
         .addTo(g);
     }
     siteLayer.current = g.addTo(m);
-  }, [productId, sites, site]);
+  }, [productId, sites, site, show.radarSites]);
 
   // Base map
   useEffect(() => {
@@ -314,15 +366,21 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
     else m.removeLayer(camLayer.current);
   }, [show.cams]);
 
+  // Reload cameras when the layer or a state is switched; buoys and tides when switched on.
+  const camsOffKey = show.camsOff.join(',');
+  useEffect(() => { reload.current.cams?.(); }, [show.cams, camsOffKey]);
+  useEffect(() => { reload.current.buoys?.(); }, [show.buoys]);
+  useEffect(() => { reload.current.tides?.(); }, [show.tides]);
+
   useEffect(() => {
     const m = map.current;
     if (!m) return;
-    for (const [on, layer] of [[show.storms, stormLayer.current], [show.buoys, buoyLayer.current]]) {
+    for (const [on, layer] of [[show.storms, stormLayer.current], [show.buoys, buoyLayer.current], [show.tides, tideLayer.current]]) {
       if (!layer) continue;
       if (on) m.addLayer(layer);
       else m.removeLayer(layer);
     }
-  }, [show.storms, show.buoys, storms]);
+  }, [show.storms, show.buoys, show.tides, storms]);
 
   // Alert polygons
   useEffect(() => {
@@ -330,21 +388,22 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
     if (!m) return;
     alertLayer.current?.remove();
     alertLayer.current = null;
-    if (!show.alerts) return;
+    if (!anyAlerts(show)) return;
     if (national?.features?.length) {
       alertLayer.current = L.geoJSON(national, {
+        filter: (f) => alertVisible(show, f.properties.event),
         style: (f) => ({ color: f.properties.color, weight: f.properties.rank >= 70 ? 2.5 : 1.5, fillColor: f.properties.color, fillOpacity: f.properties.rank >= 70 ? 0.18 : 0.08 }),
         onEachFeature: (f, layer) => layer.bindPopup(() => alertPopup(f.properties), { maxWidth: 300 }),
       }).addTo(m);
       return;
     }
-    const features = alerts.filter((a) => a.geometry).map((a) => ({ type: 'Feature', geometry: a.geometry, properties: a }));
+    const features = alerts.filter((a) => a.geometry && alertVisible(show, a.event)).map((a) => ({ type: 'Feature', geometry: a.geometry, properties: a }));
     if (!features.length) return;
     alertLayer.current = L.geoJSON(features, {
       style: (f) => ({ color: ALERT_STYLE[f.properties.severity] || '#e8c547', weight: 2, fillOpacity: 0.15 }),
       onEachFeature: (f, layer) => layer.bindTooltip(f.properties.event),
     }).addTo(m);
-  }, [alerts, show.alerts, national]);
+  }, [alerts, show.warnings, show.watches, show.advisories, national]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = frames[frame]?.time;
   const timeText = !frames.length ? '…'
@@ -383,7 +442,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
           <button className="radar-exit" onClick={() => setFull(false)} aria-label="Exit full screen">✕</button>
         </div>
       )}
-      {full && show.alerts && national && (
+      {full && show.warnings && national && (
         <div className="warn-badge-wrap">
           <button className="warn-badge" onClick={() => setPanel(!panel)} aria-expanded={panel}>⚠️ <b>{national.counts?.warning || 0}</b> warnings</button>
           {panel && (
@@ -410,12 +469,12 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
           </>
         )}
         <span className="radar-time">{timeText}</span>
-        <label><input type="checkbox" checked={show.radar} onChange={(e) => setShow({ ...show, radar: e.target.checked })} /> Radar</label>
-        <label><input type="checkbox" checked={show.satellite} onChange={(e) => setShow({ ...show, satellite: e.target.checked })} /> Satellite</label>
-        <label><input type="checkbox" checked={show.cams} onChange={(e) => setShow({ ...show, cams: e.target.checked })} /> Cameras</label>
-        <label><input type="checkbox" checked={show.alerts} onChange={(e) => setShow({ ...show, alerts: e.target.checked })} /> Alerts</label>
-        <label><input type="checkbox" checked={show.storms} onChange={(e) => setShow({ ...show, storms: e.target.checked })} /> Hurricanes</label>
-        <label><input type="checkbox" checked={show.buoys} onChange={(e) => setShow({ ...show, buoys: e.target.checked })} /> Buoys</label>
+        <div className="layer-anchor">
+          <button className={`layers-btn ${layersOpen ? 'on' : ''}`} onClick={() => setLayersOpen(!layersOpen)} aria-expanded={layersOpen} aria-haspopup="dialog">
+            🗂️ Layers <span className="layer-count">{layerCount(show)}</span>
+          </button>
+          {layersOpen && <LayerPanel layers={show} feeds={feeds} signedIn={signedIn} onChange={setShow} onClose={() => setLayersOpen(false)} />}
+        </div>
         {!full && products.length > 1 && (
           <label className="radar-select">Show{' '}
             <select value={productId} onChange={(e) => setProductId(e.target.value)}>
@@ -442,8 +501,9 @@ export default function WeatherMap({ center, alerts, units = 'imperial' }) {
           {storms && (storms.length
             ? <button className="link" onClick={() => stormBounds.current && map.current?.flyToBounds(stormBounds.current.pad(0.1), { maxZoom: 6 })}>🌀 {storms.length} active storm{storms.length === 1 ? '' : 's'}</button>
             : 'No active tropical storms.')}
-          {buoyInfo && ` · ${buoyInfo}`}
-          {camInfo && ` · ${camInfo}`}
+          {show.buoys && buoyInfo && ` · ${buoyInfo}`}
+          {show.tides && tideInfo && ` · ${tideInfo}`}
+          {show.cams && camInfo && ` · ${camInfo}`}
         </span>
       </div>
       {windy && <WindyView center={windy} units={units} onClose={() => setWindy(null)} />}
@@ -565,6 +625,28 @@ function buoyPopup(b, units) {
   a.target = '_blank';
   a.rel = 'noopener noreferrer';
   div.append(a);
+  return div;
+}
+
+function tidePopup(s, units) {
+  const div = el('div', '', 'buoy-popup');
+  div.append(el('strong', `🌊 ${s.name}${s.state ? `, ${s.state}` : ''}`));
+  const body = el('p', 'Loading tides…', 'storm-kid');
+  const a = el('a', 'NOAA tide station');
+  a.href = `https://tidesandcurrents.noaa.gov/stationhome.html?id=${encodeURIComponent(s.id)}`;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  div.append(body, a);
+  api(`/api/tides?lat=${s.lat}&lon=${s.lon}&units=${units}`).then((t) => {
+    if (!t.next?.length) { body.textContent = 'No tide times right now.'; return; }
+    body.textContent = t.state ? `The tide is ${t.state}.` : '';
+    for (const e of t.next.slice(0, 3)) {
+      const r = el('div', '', 'buoy-row');
+      const when = new Date(e.time).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+      r.append(el('span', e.type === 'high' ? '⬆️ High' : '⬇️ Low'), el('b', `${when} · ${e.height} ${t.unit}`));
+      div.insertBefore(r, a);
+    }
+  }).catch(() => { body.textContent = 'Tide times are unavailable right now.'; });
   return div;
 }
 
