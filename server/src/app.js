@@ -20,6 +20,8 @@ import * as severe from './providers/severe.js';
 import * as tropics from './providers/tropics.js';
 import * as ocean from './providers/ocean.js';
 import * as models from './providers/models.js';
+import * as modelMaps from './providers/modelmaps.js';
+import { MAP_AREAS, MAP_MODELS, gridFor } from '../../shared/modelmap.js';
 import { kidReport } from './kid.js';
 import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
@@ -29,6 +31,7 @@ import { getOfficeProducts } from './providers/news.js';
 import { PushService, LEVELS } from './push.js';
 import { AiService, registerAi } from './ai.js';
 import { registerTts } from './tts.js';
+import { AiSettings, SettingsError, testConnection, previewVoice } from './aisettings.js';
 import { registerBriefing, buildBriefing } from './briefing.js';
 import { registerWindy } from './windy.js';
 import { StationService, registerStations } from './stations.js';
@@ -64,6 +67,9 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const appKeys = new AppKeys(db);
   const media = new MediaService(db, cache, fetchImpl);
   const push = cfg.push.enabled ? new PushService(db, cfg, { send: pushSend, log: app.log }) : null;
+  // Saved admin AI/voice settings win over the env vars; apply them before anything reads cfg.ai.
+  const aiSettings = new AiSettings(db, cfg);
+  aiSettings.apply();
   const ai = new AiService(cfg, { fetchImpl, log: app.log });
   const stations = new StationService(cfg, { fetchImpl, log: app.log });
   await auth.bootstrapAdmin();
@@ -180,7 +186,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     },
     user: publicUser(req.user),
     ai: ai.status(),
-    tts: { enabled: !!cfg.tts.url, voice: cfg.tts.url ? cfg.tts.voice : null },
+    tts: { enabled: !!cfg.tts.url, voice: cfg.tts.url ? cfg.tts.voice : null, fallback: cfg.tts.fallback },
   }));
 
   // ---- weather --------------------------------------------------------------
@@ -261,6 +267,28 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     return cache.wrap(key(`ens:${id}`, l), 60 * MIN, () => models.getEnsemble(l, id, fetchImpl));
   });
 
+  // Forecast model maps: a grid of points every 3 hours for one model (Models tab).
+  app.get('/api/modelmap', {
+    schema: {
+      querystring: {
+        ...latLonSchema.querystring,
+        properties: {
+          ...latLonSchema.querystring.properties,
+          model: { type: 'string', enum: MAP_MODELS.map((m) => m.id) },
+          area: { type: 'string', enum: MAP_AREAS.map((a) => a.id) },
+        },
+      },
+    },
+  }, async (req, reply) => {
+    const l = loc(req.query);
+    const model = req.query.model || MAP_MODELS[0].id;
+    const area = req.query.area || 'region';
+    const g = gridFor(l.lat, l.lon, area);
+    reply.header('cache-control', 'private, max-age=600');
+    return cache.wrap(`mmap:${model}:${area}:${g.center.lat},${g.center.lon},${l.units}`, 60 * MIN,
+      () => modelMaps.getModelMap({ ...l, model, area }, fetchImpl));
+  });
+
   // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----
   registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });
   registerDashboard(app, { db, requireUser, requireAdmin, cache, latLonSchema, loc });
@@ -271,7 +299,11 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
 
   // ---- AI weather expert, cloud photos, web search ---------------------------
   registerAi(app, { ai, forecast, alerts, air, settle, loc });
-  registerTts(app, { cfg, fetchImpl });
+  const tts = registerTts(app, { cfg, fetchImpl });
+  aiSettings.onChange(() => {
+    ai.configure(cfg.ai);
+    tts.reset();
+  });
   registerBriefing(app, { ai, forecast, alerts, air, settle, loc });
   registerWindy(app, { cfg });
 
@@ -507,6 +539,55 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   }, async (req, reply) => reply.code(201).send({ hidden: media.hide(req.body) }));
   app.delete('/api/admin/media-hidden/:id', { preHandler: requireAdmin }, async (req, reply) =>
     media.unhide(Number(req.params.id)) ? { ok: true } : reply.code(404).send({ error: 'Not found' }));
+  // AI helper and read-aloud settings. Keys are write-only.
+  const aiSettingsView = () => ({ settings: aiSettings.view(), ai: ai.status(), tts: { enabled: !!cfg.tts.url } });
+  app.get('/api/admin/ai-settings', { preHandler: requireAdmin }, async () => aiSettingsView());
+  app.put('/api/admin/ai-settings', {
+    preHandler: requireAdmin,
+    schema: { body: { type: 'object', required: ['values'], properties: { values: { type: 'object', additionalProperties: { type: ['string', 'null'], maxLength: 500 } } } } },
+  }, async (req, reply) => {
+    try {
+      aiSettings.update(req.body.values);
+    } catch (err) {
+      if (err instanceof SettingsError) return reply.code(err.statusCode).send({ error: err.message });
+      throw err;
+    }
+    req.log.info({ keys: Object.keys(req.body.values), by: req.user.username }, 'AI settings changed');
+    return aiSettingsView();
+  });
+  const draftOf = (req, reply) => {
+    try {
+      return aiSettings.draft(req.body?.values);
+    } catch (err) {
+      if (err instanceof SettingsError) reply.code(err.statusCode).send({ error: err.message });
+      else throw err;
+      return null;
+    }
+  };
+  const draftBody = { values: { type: 'object', additionalProperties: { type: ['string', 'null'], maxLength: 500 } } };
+  app.post('/api/admin/ai-settings/test', {
+    preHandler: requireAdmin,
+    schema: { body: { type: 'object', required: ['target'], properties: { target: { type: 'string', enum: ['anthropic', 'ollama', 'kokoro'] }, ...draftBody } } },
+  }, async (req, reply) => {
+    const draft = draftOf(req, reply);
+    if (!draft) return reply;
+    return testConnection(req.body.target, draft, fetchImpl);
+  });
+  app.post('/api/admin/ai-settings/preview-voice', {
+    preHandler: requireAdmin,
+    schema: { body: { type: 'object', properties: { text: { type: 'string', minLength: 1, maxLength: 300 }, ...draftBody } } },
+  }, async (req, reply) => {
+    const draft = draftOf(req, reply);
+    if (!draft) return reply;
+    try {
+      const audio = await previewVoice(draft, fetchImpl, req.body.text || "Hi! I'm Rocky. Let's check the sky together!");
+      return reply.header('content-type', 'audio/mpeg').header('cache-control', 'no-store').send(audio);
+    } catch (err) {
+      if (err instanceof SettingsError) return reply.code(err.statusCode).send({ error: err.message });
+      throw err;
+    }
+  });
+
   app.get('/api/admin/app-keys', { preHandler: requireAdmin }, async () => ({ keys: appKeys.list() }));
   app.post('/api/admin/app-keys', {
     preHandler: requireAdmin,

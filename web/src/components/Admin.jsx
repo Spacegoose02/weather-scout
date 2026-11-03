@@ -3,6 +3,8 @@ import { api } from '../api.js';
 import Modal from './Modal.jsx';
 import IntegrationsPanel from './stations/IntegrationsPanel.jsx';
 import ChaseStreamsAdmin from './kid/chaser/ChaseStreamsAdmin.jsx';
+import AiSettingsPanel from './AiSettingsPanel.jsx';
+import './ai-settings.css';
 
 export default function Admin({ me, onClose }) {
   const [users, setUsers] = useState([]);
@@ -99,6 +101,8 @@ export default function Admin({ me, onClose }) {
         <label><input type="checkbox" checked={form.isAdmin} onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })} /> admin</label>
         <button type="submit">Add</button>
       </form>
+
+      <AiSettingsPanel />
 
       <h3>Connected apps</h3>
       <p className="hint">Give Den-Duty (or Home Assistant) a key so it can show the weather card on kid boards and the family wall.</p>

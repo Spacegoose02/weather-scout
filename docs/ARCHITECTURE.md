@@ -69,6 +69,7 @@ server/src/
   push.js           Web Push: subscriptions, VAPID keys, alert loop
   ai.js             Ask an Expert / Rocky chat, cloud photos, web search (Claude or Ollama)
   tts.js            Kokoro read-aloud proxy and voice list
+  aisettings.js     Admin-saved AI/voice settings (win over env vars), Test connection, voice preview
   weathercodes.js   WMO codes with kid descriptions
   providers/        openmeteo, nws, radar, cameras, news (RSS/Atom/YouTube)
 web/src/
@@ -88,6 +89,7 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/radar` | Radar frame list (tile URL templates) |
 | `GET /api/push/key`, `POST /api/push/subscribe`, `/unsubscribe`, `/status`, `/test` | Web Push sign-up per device; a background loop (every `PUSH_POLL_SECONDS`) checks NWS for each subscribed place and sends each new alert once |
 | `GET /api/ai/status`, `POST /api/ai/chat`, `POST /api/ai/cloud` | AI helper (only with `ANTHROPIC_API_KEY`): chat with the live forecast as context, cloud photo identifier, optional web search |
+| `GET`/`PUT /api/admin/ai-settings`, `POST /api/admin/ai-settings/test`, `POST /api/admin/ai-settings/preview-voice` | Admin only: AI and read-aloud settings saved in the database (keys write-only), connection tests for Claude, Ollama and Kokoro, and a voice preview with unsaved values |
 | `GET /api/tts/voices`, `POST /api/tts` | Kokoro read-aloud (only with `KOKORO_URL`): English voice list, and MP3 speech for a text |
 | `GET/POST /api/stations/push[/:token]` | Personal weather station uploads (Ecowitt form POST, Ambient and Weather Underground GET). Token or home network only; no sign-in |
 | `GET /api/stations?units` | Latest reading from each station, converted, plus the primary station id |
