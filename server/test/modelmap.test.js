@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PointBudget, modelMapUrl, normalizeModelMap } from '../src/providers/modelmaps.js';
 import {
-  GRID_COLS, GRID_ROWS, MAP_MODELS, defaultArea, colorAt, gridFor, gridPos, legendFor, pressureCenters, sampleGrid, scaleValue,
+  GRID_COLS, GRID_ROWS, MAP_MODELS, defaultArea, inHrrr, pointsFor, colorAt, gridFor, gridPos, legendFor, pressureCenters, sampleGrid, scaleValue,
 } from '../../shared/modelmap.js';
 import { testApp, mockFetch } from './helpers.js';
 
@@ -139,10 +139,23 @@ test('US places get the whole lower 48 by default; elsewhere a wide area', async
   const uk = gridFor(51.5, -0.1, 'country');
   assert.ok(uk.lats[0] > 60 && uk.lats[uk.rows - 1] < 40);
 
-  const { app, fetchImpl } = await testApp({ fetchImpl: mockFetch({ 'models=gfs_hrrr': (u) => Response.json(fakeGrid(sizeOf(u))) }) });
+  // Like Open-Meteo: one point off HRRR's grid and the whole request is refused.
+  const hrrr = (u) => {
+    const q = new URL(u).searchParams;
+    const lats = q.get('latitude').split(',').map(Number);
+    const lons = q.get('longitude').split(',').map(Number);
+    if (lats.some((la, i) => !inHrrr(la, lons[i], 0))) return new Response('{"error":true,"reason":"No data is available for this location"}', { status: 400 });
+    return Response.json(fakeGrid({ rows: 1, cols: lats.length }));
+  };
+  const { app, fetchImpl } = await testApp({ fetchImpl: mockFetch({ 'models=gfs_hrrr': hrrr }) });
   const r = await app.inject({ url: '/api/modelmap?lat=37.55&lon=-77.46&model=gfs_hrrr' });
-  assert.equal(r.statusCode, 200);
+  assert.equal(r.statusCode, 200, r.body);
   const m = r.json();
+  // The corners off HRRR's grid stay empty; everything else is painted.
+  assert.equal(m.fields.temp[0][0], null);
+  assert.ok(m.coverage > 0.8 && m.coverage < 1);
+  const richmond = gridPos(m, 37.55, -77.46);
+  assert.notEqual(m.fields.temp[0][Math.round(richmond.r) * m.cols + Math.round(richmond.c)], null);
   assert.equal(m.area, 'country');
   assert.equal(m.fields.temp[0].length, m.rows * m.cols);
   assert.equal(m.lons[0], -126);
@@ -162,4 +175,14 @@ test('point budget makes a request wait when the minute is used up', async () =>
   assert.ok(t >= 60_000);
   await b.take(2000); // bigger than a minute's worth still goes, alone
   assert.ok(waits.length >= 2);
+});
+
+test('HRRR grid: the lower 48 is on it, the corners of the box and Europe are not', () => {
+  for (const [la, lo] of [[47.6, -122.3], [25.8, -80.2], [32.7, -117.2], [44.8, -68.8], [48.9, -95], [37.55, -77.46]]) assert.ok(inHrrr(la, lo), `${la},${lo}`);
+  for (const [la, lo] of [[50, -126], [23.5, -126], [23.5, -65.5], [50, -65.5], [51.5, -0.1]]) assert.ok(!inHrrr(la, lo), `${la},${lo}`);
+  const g = gridFor(37.55, -77.46, 'country');
+  const hrrr = MAP_MODELS.find((x) => x.id === 'gfs_hrrr');
+  assert.ok(pointsFor(hrrr, g).length > 0.8 * g.rows * g.cols);
+  assert.equal(pointsFor(MAP_MODELS[0], g).length, g.rows * g.cols);
+  assert.equal(pointsFor(hrrr, gridFor(51.5, -0.1, 'region')).length, 0);
 });

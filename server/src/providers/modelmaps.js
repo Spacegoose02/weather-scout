@@ -3,7 +3,7 @@
 // Open-Meteo answers many coordinates at once with a list of forecasts.
 import { UpstreamError, fetchJson } from '../cache.js';
 import { unitParams } from './openmeteo.js';
-import { MAP_MODELS, MAP_VARS, STEP_HOURS, gridFor } from '../../../shared/modelmap.js';
+import { MAP_MODELS, MAP_VARS, STEP_HOURS, gridFor, pointsFor } from '../../../shared/modelmap.js';
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const HOUR = 3600_000;
@@ -31,11 +31,11 @@ export class PointBudget {
 }
 const budget = new PointBudget();
 
-export function modelMapUrl(model, grid, units) {
-  // Every grid point, row by row (north to south, west to east).
-  const latitude = [];
-  const longitude = [];
-  for (const lat of grid.lats) for (const lon of grid.lons) { latitude.push(lat); longitude.push(lon); }
+export function modelMapUrl(model, grid, units, keep = pointsFor(model, grid)) {
+  // The grid points the model covers, row by row (north to south, west to east).
+  const cols = grid.lons.length;
+  const latitude = keep.map((k) => grid.lats[Math.floor(k / cols)]);
+  const longitude = keep.map((k) => grid.lons[k % cols]);
   const p = new URLSearchParams({
     latitude: latitude.join(','),
     longitude: longitude.join(','),
@@ -113,16 +113,27 @@ export async function getModelMap({ lat, lon, units, model: id, area }, fetchImp
     err.statusCode = 404;
     return err;
   };
+  // Only ask for points the model covers (HRRR stops short of the lower 48 box's corners).
+  const keep = pointsFor(model, grid);
+  if (!keep.length) throw noData();
   let raw;
-  await points.take(grid.rows * grid.cols);
+  await points.take(keep.length);
   try {
-    raw = await fetchJson(modelMapUrl(model, grid, units), { source: `Open-Meteo ${model.name} map`, fetchImpl, timeoutMs: 25000 });
+    raw = await fetchJson(modelMapUrl(model, grid, units, keep), { source: `Open-Meteo ${model.name} map`, fetchImpl, timeoutMs: 25000 });
   } catch (err) {
     // Open-Meteo answers 400 when a model has nothing for these points.
     if (err instanceof UpstreamError && err.status === 400) throw noData();
     throw err;
   }
-  const map = normalizeModelMap(raw, model, grid, units);
+  // Put the answers back on the full grid; points left out stay empty.
+  const answers = Array.isArray(raw) ? raw : [raw];
+  if (answers.length !== keep.length) throw new Error(`Expected ${keep.length} grid points, got ${answers.length}`);
+  const full = Array.from({ length: grid.rows * grid.cols }, () => ({ hourly: {} }));
+  keep.forEach((k, i) => { full[k] = answers[i]; });
+  // Every point needs the time axis; borrow it from one that has it.
+  const time = answers[0]?.hourly?.time;
+  for (const p of full) if (!p.hourly.time) p.hourly = { ...p.hourly, time };
+  const map = normalizeModelMap(full, model, grid, units);
   if (!map.times.length || map.coverage === 0) throw noData();
   return map;
 }
