@@ -17,6 +17,7 @@ import TimeMachine from './kid/TimeMachine.jsx';
 import Badges from './kid/Badges.jsx';
 import SpeakButton from './kid/SpeakButton.jsx';
 import Briefing from './kid/Briefing.jsx';
+import StormChaser from './kid/chaser/StormChaser.jsx';
 import VoicePicker from './VoicePicker.jsx';
 import '../kid/kid.css';
 import { openSafety } from '../safety/useSafetyPlan.js';
@@ -55,6 +56,7 @@ const KID_TABS = [
   ['today', 'Today', <RockyFace key="rocky" />],
   ['play', 'Play', '🎲'],
   ['explore', 'Explore', '🔭'],
+  ['chaser', 'Storm Chaser', '🌪️'],
   ['badges', 'Badges', '🏅'],
 ];
 
@@ -121,6 +123,7 @@ export default function KidMode({ weather, user, location, voice, onAlerts }) {
           )}
         </div>
       )}
+      {tab === 'chaser' && <StormChaser weather={weather} user={user} location={location} kid={kidData} today={today} />}
       {tab === 'badges' && <div className="kid-grid"><Badges kid={kidData} /></div>}
 
     </div>

@@ -8,6 +8,7 @@ import { registerStormPhoto } from './stormphoto.js';
 import { registerDashboard } from './dashboard.js';
 import { registerSafetyPlan } from './safetyplan.js';
 import { registerHistory } from './history.js';
+import { registerChaser } from './chaser.js';
 import { loadConfig, loadOrCreateSecret } from './config.js';
 import { TtlCache, UpstreamError, fetchJson } from './cache.js';
 import { openDb, publicUser } from './db.js';
@@ -329,6 +330,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   if (push) push.shelterFor = safety.shelterFor;
   const shelterFor = safety.shelterFor;
   registerHistory(app, { cache, fetchImpl, latLonSchema, loc, forecast, settle });
+  registerChaser(app, { cache, fetchImpl, latLonSchema, loc, chasers, nwsUserAgent: cfg.nwsUserAgent });
 
   // ---- AI weather expert, cloud photos, web search ---------------------------
   registerAi(app, { ai, forecast, alerts, air, settle, loc });
