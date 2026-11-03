@@ -3,6 +3,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { voiceLabel } from './tts.js';
 import { SettingsError } from './settings.js';
+import { testYoutubeKey } from './chasers.js';
 
 export const reach = (err, what, url) => (err?.name === 'TimeoutError' ? `${what} at ${url} took too long to answer.` : `Could not reach ${what} at ${url}. Is it running, and can this server reach that address?`);
 
@@ -61,6 +62,7 @@ export async function testConnection(target, draftCfg, fetchImpl) {
         message: ok ? `Connected. ${voices.length} English voices, including ${voiceLabel(tts.voice)}.` : `Connected, but Kokoro has no voice called "${tts.voice}". Pick one from the list.`,
       };
     }
+    if (target === 'youtube') return testYoutubeKey(draftCfg.youtube.apiKey, fetchImpl);
     return { ok: false, message: 'Unknown service.' };
   } catch (err) {
     return { ok: false, message: `Test failed: ${String(err.message || err).slice(0, 160)}` };

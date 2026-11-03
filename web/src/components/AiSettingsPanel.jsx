@@ -190,9 +190,27 @@ export default function AiSettingsPanel() {
         <Result ctx={ctx} target="kokoro" />
       </fieldset>
 
+      <fieldset>
+        <legend>Storm chaser live streams</legend>
+        <p className="hint">The Storm Center checks a trusted list of storm chaser channels with no setup. A free YouTube key adds viewer counts and, for grown-ups, a search for other live chasers. Kid Mode only ever shows the trusted list.</p>
+        <Secret ctx={ctx} k="YOUTUBE_API_KEY" label="YouTube Data API key" help={<>Optional. Create one in the <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener noreferrer">Google Cloud console</a> with the YouTube Data API v3 turned on. The free quota is plenty.</>} />
+        <Text ctx={ctx} k="STORM_CHASER_CHANNELS" label="Trusted chaser channels" placeholder="@RyanHallYall, @ReedTimmerWx, @PecosHank, @MaxVelocityWX, @LiveStormsMedia, @VinceWaelti" help="Comma-separated @handles or channel ids. Leave blank for the built-in list." />
+        <label>
+          <span>Search YouTube for more live chasers <Source ctx={ctx} k="STORM_CHASER_SEARCH" /></span>
+          <select value={form.STORM_CHASER_SEARCH || 'true'} onChange={set('STORM_CHASER_SEARCH')}>
+            <option value="true">Yes, for grown-ups (needs the key)</option>
+            <option value="false">No, trusted list only</option>
+          </select>
+        </label>
+        <div className="ai-actions">
+          <button type="button" className="ghost" disabled={tests.youtube?.pending} onClick={() => test('youtube')}>Test YouTube key</button>
+        </div>
+        <Result ctx={ctx} target="youtube" />
+      </fieldset>
+
       {error && <p className="error-text" role="alert">{error}</p>}
       <div className="ai-actions ai-save">
-        <button type="submit" disabled={!dirty || busy === 'save'}>{busy === 'save' ? 'Saving…' : 'Save AI settings'}</button>
+        <button type="submit" disabled={!dirty || busy === 'save'}>{busy === 'save' ? 'Saving…' : 'Save settings'}</button>
         {dirty && <button type="button" className="link" onClick={() => show(view)}>Undo changes</button>}
         {saved && !dirty && <span className="hint" role="status">✅ {saved}</span>}
       </div>
