@@ -38,7 +38,7 @@ from free, official data sources.
   from 26 sea animals; a depth explorer that dives from the waves to Challenger Deep through every zone;
   the nearest live NOAA buoys (waves, water temperature) and tides; and an ocean quiz. Five Ocean explorer
   badges. Change the news sources with `OCEAN_FEEDS`.
-- **Models**: what ECMWF, GFS, ICON, GEM, HRRR and the AI models GraphCast and AIFS each predict,
+- **Models**: what ECMWF, GFS, ICON, GEM, HRRR and the AI models AIGFS (NOAA's GraphCast-based model) and AIFS each predict,
   plotted together, with an ensemble confidence band (10th to 90th percentile), a High/Medium/Low
   confidence rating per day and a side-by-side table. Forecast maps show any one model (or two
   side by side) across the region for temperature, rain and snow, wind, clouds or pressure, every
@@ -399,6 +399,7 @@ names also work as environment variables (`LIGHTNING_GLM`, `LIGHTNING_GLM_SATELL
 | Buoys and tides | NOAA [NDBC](https://www.ndbc.noaa.gov/) and [Tides & Currents](https://tidesandcurrents.noaa.gov/) | none |
 | Model comparison and ensembles | Open-Meteo per-model forecasts and [ensemble API](https://open-meteo.com/en/docs/ensemble-api) | none |
 | Air quality (US AQI, PM2.5, PM10, ozone) | Open-Meteo Air Quality (CAMS) | none |
+| Pollen | Open-Meteo (CAMS) in Europe; [Google Pollen API](https://developers.google.com/maps/documentation/pollen) for the US and elsewhere | none in Europe; optional `GOOGLE_POLLEN_API_KEY` (set it in Family & settings) |
 | Watches, warnings, advisories | [api.weather.gov](https://www.weather.gov/documentation/services-web-api) | none, but set `NWS_USER_AGENT` |
 | Satellite | NASA [GIBS](https://earthdata.nasa.gov/gibs) GOES-East infrared | none |
 | Aurora (Kp forecast, OVATION) | NOAA [Space Weather Prediction Center](https://www.swpc.noaa.gov/) | none |

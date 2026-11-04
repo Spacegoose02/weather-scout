@@ -513,3 +513,18 @@ body.radar-full-open { overflow: hidden; }
 .offline-banner .offline-icon { font-size: 1.6rem; }
 .offline-banner > div { flex: 1; }
 .personal-alerts .rule-number select { margin: 2px 0 2px 4px; }
+/* Detailed forecast (NWS day/night text) */
+.textfc-list { margin: 4px 0 6px; }
+.textfc-row { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 14px; padding: 9px 10px; border-radius: 10px; }
+.textfc-row:nth-child(odd) { background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.textfc-row dt { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-weight: 800; }
+.textfc-row.night dt .textfc-name { color: var(--muted); }
+.textfc-emoji { font-size: 1.15rem; width: 1.4em; text-align: center; }
+.textfc-pop { font-size: 0.78rem; font-weight: 700; color: var(--brand); white-space: nowrap; }
+.textfc-row dd { margin: 0; line-height: 1.45; }
+.textfc.m .textfc-row, .textfc.kid .textfc-row { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+.textfc.m .textfc-row dd, .textfc.kid .textfc-row dd { padding-left: calc(1.4em + 8px); }
+@media (max-width: 760px) {
+  .textfc-row { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+  .textfc-row dd { padding-left: calc(1.4em + 8px); }
+}

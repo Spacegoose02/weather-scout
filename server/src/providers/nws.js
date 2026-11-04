@@ -74,5 +74,44 @@ export async function reverseGeocode({ lat, lon }, { userAgent, fetchImpl } = {}
     name: rel ? `${rel.city}, ${rel.state}` : null,
     office: raw?.properties?.cwa || null,
     radarStation: raw?.properties?.radarStation || null,
+    forecastUrl: raw?.properties?.forecast || null,
   };
+}
+
+// The forecaster-written day and night periods ("Tonight: Showers likely,
+// mainly between 10pm and 2am...") that weather.gov shows as its Detailed
+// Forecast. US only: `available` is false anywhere NWS does not forecast.
+export function normalizeTextForecast(raw) {
+  const p = raw?.properties || {};
+  const periods = (Array.isArray(p.periods) ? p.periods : [])
+    .filter((x) => x && x.name && (x.detailedForecast || x.shortForecast))
+    .map((x) => ({
+      name: x.name,
+      start: x.startTime || null,
+      end: x.endTime || null,
+      isDaytime: !!x.isDaytime,
+      temp: Number.isFinite(x.temperature) ? x.temperature : null,
+      tempUnit: x.temperatureUnit || null,
+      precipChance: Number.isFinite(x.probabilityOfPrecipitation?.value) ? x.probabilityOfPrecipitation.value : null,
+      wind: [x.windDirection, x.windSpeed].filter(Boolean).join(' ') || null,
+      short: x.shortForecast || '',
+      detailed: x.detailedForecast || x.shortForecast || '',
+    }));
+  return { available: periods.length > 0, periods, updatedAt: p.updateTime || p.generatedAt || null };
+}
+
+export async function getTextForecast({ lat, lon, units }, { userAgent, fetchImpl, point } = {}) {
+  const headers = { 'User-Agent': userAgent, Accept: 'application/geo+json' };
+  let place;
+  try {
+    place = point || (await reverseGeocode({ lat, lon }, { userAgent, fetchImpl }));
+  } catch (err) {
+    // NWS answers 404 for points outside the US and its waters.
+    if (err.status === 404) return { available: false, periods: [], updatedAt: null, source: 'National Weather Service' };
+    throw err;
+  }
+  if (!place?.forecastUrl) return { available: false, periods: [], updatedAt: null, source: 'National Weather Service' };
+  const url = `${place.forecastUrl}${units === 'metric' ? '?units=si' : ''}`;
+  const raw = await fetchJson(url, { source: 'nws', fetchImpl, headers, timeoutMs: 15000 });
+  return { ...normalizeTextForecast(raw), office: place.office || null, place: place.name || null, source: 'National Weather Service' };
 }

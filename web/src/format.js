@@ -37,7 +37,8 @@ export const ICONS = {
   clear: ['☀️', '🌙'],
   'partly-cloudy': ['⛅', '☁️'],
   cloudy: ['☁️', '☁️'],
-  fog: ['🌫️', '🌫️'],
+  // Not 🌫️: on Windows that emoji is a plain grey square that looks like a broken image.
+  fog: ['🌁', '🌁'],
   drizzle: ['🌦️', '🌧️'],
   rain: ['🌧️', '🌧️'],
   sleet: ['🧊', '🧊'],
