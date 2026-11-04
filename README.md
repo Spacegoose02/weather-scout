@@ -57,6 +57,12 @@ from free, official data sources.
   also open in Windy.
 - **Health & sky**: pressure-swing warnings for migraine-sensitive folks, wet-bulb globe temperature
   heat stress, moon phase and sunrise/sunset.
+- **Every hazard**: three new dashboard cards and map layers. 📣 **Weather reports** lets signed-in family
+  members say what is happening right now (rain, hail with a size, flooding, smoke and more), shown next to
+  National Weather Service storm reports from the last 24 hours. Locations are rounded to about half a mile
+  and only first names show. 🌊 **Flood & rivers** shows WPC's excessive rainfall outlook for today and
+  tomorrow and nearby river gauges with their flood stage and forecast. 🔥 **Wildfires & smoke** lists active
+  wildfires nearby, flags any that are upwind, and says when smoke may make the air unhealthy.
 - **NWS alerts** for your exact location, most severe first, with plain-language kid versions.
 - **Family safety plan** (🛡️ in the account menu, the Safety plan dashboard card, or the alerts banner):
   a shelter spot for tornadoes, severe thunderstorms, floods and hurricanes, meeting places, emergency
@@ -415,6 +421,10 @@ names also work as environment variables (`LIGHTNING_GLM`, `LIGHTNING_GLM_SATELL
 | Satellite | NASA [GIBS](https://earthdata.nasa.gov/gibs) GOES-East infrared | none |
 | Aurora (Kp forecast, OVATION) | NOAA [Space Weather Prediction Center](https://www.swpc.noaa.gov/) | none |
 | Forecast scorecard | Open-Meteo [Previous Runs API](https://open-meteo.com/en/docs/previous-runs-api), NWS station observations | none |
+| Storm reports | NWS local storm reports via [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/request/gis/lsrs.phtml) | none |
+| River gauges and flood stage | NOAA [National Water Prediction Service](https://water.noaa.gov/) | none |
+| Excessive rainfall outlook | NOAA [Weather Prediction Center](https://www.wpc.ncep.noaa.gov/qpf/excessive_rainfall_outlook_ero.php) | none |
+| Wildfires | [NIFC WFIGS](https://data-nifc.opendata.arcgis.com/) current incident locations | none |
 | Severe outlooks | NOAA [Storm Prediction Center](https://www.spc.noaa.gov/) | none |
 | Lightning | NOAA [GOES GLM](https://registry.opendata.aws/noaa-goes/) on AWS Open Data; optional [Blitzortung.org](https://www.blitzortung.org/) (private, non-commercial use) | none |
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |

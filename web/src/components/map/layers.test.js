@@ -31,10 +31,10 @@ describe('map layers', () => {
     expect(toggleFeed(['va'], 'sc', false)).toEqual(['va', 'sc']);
     expect(toggleFeed(['va'], 'va', false)).toEqual(['va']);
   });
-  it('counts groups that are on', () => {
-    expect(layerCount(DEFAULT_LAYERS)).toBe(9);
-    expect(layerCount(DEFAULT_LAYERS, { webcams: true })).toBe(10);
-    expect(layerCount({ ...DEFAULT_LAYERS, webcams: false }, { webcams: true })).toBe(9);
+  it('counts groups that are on (reports and wildfires are on by default)', () => {
+    expect(layerCount(DEFAULT_LAYERS)).toBe(11);
+    expect(layerCount(DEFAULT_LAYERS, { webcams: true })).toBe(12);
+    expect(layerCount({ ...DEFAULT_LAYERS, webcams: false }, { webcams: true })).toBe(11);
   });
   it('keeps the Windy webcams switch and shows distances in the family units', () => {
     expect(normalizeLayers({ webcams: false }).webcams).toBe(false);

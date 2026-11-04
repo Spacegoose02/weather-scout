@@ -583,3 +583,11 @@ body.radar-full-open { overflow: hidden; }
   .textfc-row { grid-template-columns: minmax(0, 1fr); gap: 3px; }
   .textfc-row dd { padding-left: calc(1.4em + 8px); }
 }
+
+/* ---- Hazard map pins (v0.7) ---- */
+.report-pin span { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #fff; border: 2px solid #5b6479; box-shadow: 0 1px 3px rgba(0,0,0,.35); font-size: 14px; }
+.report-pin.family span { border-color: #ffb703; background: #fff7e0; }
+.gauge-pin span { display: block; width: 14px; height: 14px; border-radius: 3px; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.45); transform: rotate(45deg); }
+.fire-pin span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #fff1e6; border: 2px solid #f47b20; box-shadow: 0 1px 3px rgba(0,0,0,.35); font-size: 13px; }
+.fire-pin.mid span { width: 28px; height: 28px; font-size: 15px; }
+.fire-pin.big span { width: 32px; height: 32px; font-size: 18px; border-color: #c4123a; }

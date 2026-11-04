@@ -64,6 +64,7 @@ server/src/
   db.js / auth.js   SQLite schema, users, sessions, SSO mapping
   kid.js            Kid Zone logic
   health.js         pressure swings, WBGT heat stress
+  hazards.js        crowd reports, NWS storm reports, river gauges, rainfall outlook, wildfires
   sky.js            moon phase
   media.js          admin news/YouTube lists
   stormphoto.js     storm picture of the day (Wikimedia Commons, live credit/license, admin hide)
@@ -117,5 +118,9 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/radar` | Radar products for the map (composite loop, single site, echo tops, rain totals, future radar) and the satellite layer |
 | `GET /api/radar/sites` | NEXRAD sites and which are reporting (10 min cache) |
 | `GET /api/alerts/national` | Every active NWS alert with a polygon, colored and ranked, plus counts (2 min cache) |
+| `GET /api/reports?south&west&north&east`, `GET /api/reports/near?lat&lon&miles` | Family weather reports plus NWS local storm reports (IEM, 10 min cache) from the last 24 hours, in view or nearby; parsing in `shared/hazards.js` |
+| `POST /api/reports`, `DELETE /api/reports/:id` | Signed in: post a report (kind, hail size, short note; lat/lon rounded to 2 decimals, one post per 2 minutes, kept 30 days). Remove: the poster or an admin |
+| `GET /api/rivers?south&west&north&east`, `GET /api/flood?lat&lon` | NWPS river gauges with flood category and forecast (15 min cache), and nearby gauges plus WPC's day 1 and 2 excessive rainfall outlook at the place |
+| `GET /api/fires?south&west&north&east`, `GET /api/fires/near?lat&lon` | Active wildfires from NIFC WFIGS (prescribed burns skipped), nearby ones flagged upwind using the forecast wind, plus a smoke outlook from the AQI forecast |
 | `GET /api/outlook?day=1-3` | SPC convective outlook categories (15 min cache) |
 | `GET /api/connect/summary` (Bearer app key) | Kid-safe summary for Den-Duty and other apps, see [CONNECT.md](CONNECT.md) |

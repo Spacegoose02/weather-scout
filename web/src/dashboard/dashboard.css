@@ -192,3 +192,43 @@
 .score-table td.close { color: var(--good); font-weight: 700; }
 .score-table td.far { color: var(--bad); }
 
+
+/* ---- Weather reports ---- */
+.dash-reports .card-title button.small { padding: 4px 12px; font-size: 0.85rem; }
+.report-form { display: grid; gap: 8px; margin-bottom: 10px; padding: 10px; border-radius: 14px; background: color-mix(in srgb, var(--brand) 6%, transparent); }
+.report-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.report-kinds button { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font-size: 0.88rem; }
+.report-kinds button.on { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+.report-note { display: grid; gap: 4px; font-size: 0.9rem; }
+.report-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.report-list li { display: grid; grid-template-columns: 28px 1fr; column-gap: 8px; align-items: start; padding: 6px 8px; border-radius: 12px; background: color-mix(in srgb, var(--line) 35%, transparent); }
+.report-list li.family { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.report-emoji { font-size: 1.2rem; grid-row: span 2; }
+.report-meta { font-size: 0.82rem; }
+.report-meta .link { margin-left: 6px; }
+
+/* ---- Flood & rivers ---- */
+.dash-flood.alarm { border-left: 5px solid #e0102b; }
+.ero-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.ero-chip { display: grid; padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--line) 40%, transparent); }
+.ero-chip .ero-day { font-size: 0.78rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.ero-chip small { color: var(--muted); }
+.ero-chip.r1 { background: #e6f5d0; color: #23400a; }
+.ero-chip.r2 { background: #fff3b0; color: #4d3d00; }
+.ero-chip.r3 { background: #ffc9c9; color: #6b0010; }
+.ero-chip.r4 { background: #f5c2ef; color: #57004a; }
+.ero-chip.r1 small, .ero-chip.r2 small, .ero-chip.r3 small, .ero-chip.r4 small, .ero-chip.r1 .ero-day, .ero-chip.r2 .ero-day, .ero-chip.r3 .ero-day, .ero-chip.r4 .ero-day { color: inherit; opacity: 0.8; }
+.gauge-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.gauge-list li { display: grid; grid-template-columns: 14px 1fr; column-gap: 8px; align-items: center; }
+.gauge-dot { width: 12px; height: 12px; border-radius: 50%; grid-row: span 2; }
+.gauge-name a { color: var(--ink); font-weight: 700; }
+.gauge-stage { font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+.gauge-rise { color: #e0102b; font-weight: 700; }
+
+/* ---- Wildfires & smoke ---- */
+.dash-fire.alarm { border-left: 5px solid #f47b20; }
+.fire-upwind { padding: 6px 10px; border-radius: 10px; background: color-mix(in srgb, #f47b20 15%, transparent); font-weight: 600; }
+.fire-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.fire-list li { display: grid; grid-template-columns: 22px 1fr; column-gap: 6px; }
+.fire-list li > span:first-child { grid-row: span 2; }
+.fire-meta { font-size: 0.85rem; }
