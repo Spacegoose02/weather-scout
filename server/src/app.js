@@ -226,6 +226,12 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   });
 
   app.get('/api/forecast', { schema: latLonSchema }, async (req) => forecast(loc(req.query)));
+  // The forecaster-written day/night text (weather.gov's "Detailed Forecast").
+  app.get('/api/forecast/text', { schema: latLonSchema }, async (req) => {
+    const l = loc(req.query);
+    const point = await settle(cache.wrap(`rgeo:${l.lat},${l.lon}`, 24 * 60 * MIN, () => nws.reverseGeocode(l, { userAgent: cfg.nwsUserAgent, fetchImpl })));
+    return cache.wrap(key('fctext', l), 30 * MIN, () => nws.getTextForecast(l, { userAgent: cfg.nwsUserAgent, fetchImpl, point }));
+  });
   app.get('/api/alerts', { schema: latLonSchema }, async (req) => alerts(loc(req.query)));
   app.get('/api/air', { schema: latLonSchema }, async (req) => air(loc(req.query)));
   app.get('/api/radar', async () => radarFrames());

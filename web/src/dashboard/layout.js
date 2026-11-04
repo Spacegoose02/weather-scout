@@ -11,6 +11,7 @@ export const SIZE_NAMES = { s: 'Small', m: 'Medium', l: 'Wide' };
 export const CARDS = [
   { id: 'current', title: 'Right now', emoji: '🌡️', sizes: ['m', 'l'], blurb: 'Temperature, feels like and the sky' },
   { id: 'forecast', title: '10-day forecast', emoji: '📅', sizes: ['s', 'm', 'l'], blurb: 'Highs, lows and rain chances' },
+  { id: 'textfc', title: 'Detailed forecast', emoji: '📝', sizes: ['m', 'l'], blurb: 'The National Weather Service forecast in words, day and night' },
   { id: 'hourly', title: '48-hour timeline', emoji: '⏱️', sizes: ['m', 'l'], blurb: 'Hour-by-hour chart with a scrubber' },
   { id: 'radar', title: 'Radar', emoji: '📡', sizes: ['s', 'm', 'l'], blurb: 'Live NEXRAD loop around you' },
   { id: 'cameras', title: 'Nearby cameras', emoji: '📷', sizes: ['s', 'm', 'l'], blurb: 'The closest road cameras, live when they can be' },
@@ -41,6 +42,7 @@ export const DEFAULT_LAYOUT = {
     { id: 'forecast', size: 'm' },
     { id: 'radar', size: 'm' },
     { id: 'rain', size: 'm' },
+    { id: 'textfc', size: 'l' },
     { id: 'gear', size: 'm' },
     { id: 'safety', size: 'm' },
     { id: 'wind', size: 's' },
