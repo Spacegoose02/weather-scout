@@ -25,6 +25,7 @@ It works even when `AUTH_REQUIRED=true`, because the key is the sign-in.
   "units": { "temp": "°F", "wind": "mph", "precip": "in", "pressure": "hPa" },
   "current": { "temp": 52, "feelsLike": 47, "icon": "rain", "label": "Rain", "kidLabel": "Rainy", "isDay": true, "windSpeed": 5, "uv": 3 },
   "today": { "high": 60, "low": 42, "precipChance": 80, "icon": "rain", "kidLabel": "Rainy" },
+  "nowcast": { "state": "starting", "minutes": 15, "word": "rain", "text": "Rain starting in about 15 minutes.", "short": "Rain in 15 min" },
   "raccoon": {
     "items": ["raincoat", "boots"], "mood": "happy", "maxPrecipChance": 80, "minFeelsLike": 47, "maxUv": 3,
     "art": { "full": "/rocky/rocky.png", "face": "/rocky/rocky-face.png", "icon": "/icon-192.png",

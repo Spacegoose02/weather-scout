@@ -30,6 +30,7 @@ import ChaserPopup from './components/chasers/ChaserPopup.jsx';
 import { popupMode } from './chasers/chasers.js';
 import { configureVoice } from './kid/speak.js';
 import { useTheme } from './theme/useTheme.js';
+import { useA11y } from './a11y.js';
 
 export default function App() {
   const [config, setConfig] = useState(null);
@@ -81,6 +82,7 @@ export default function App() {
   const lightningOn = !!config?.lightning?.enabled;
   const lightningMiles = lightningOn ? (prefs.lightningMiles ?? DEFAULT_ALERT_MILES) : 0;
   const theme = useTheme(prefs.theme, weather);
+  useA11y(prefs.a11y);
   const chasers = { mode: popupMode(prefs.chaserPopups), onChange: (m) => setPrefs({ chaserPopups: m }) };
 
   // Read-aloud uses the voice the admin picked in Family & settings (Kokoro when set up).
@@ -127,6 +129,8 @@ export default function App() {
 
   return (
     <div className={`app ${kidMode ? 'kid' : ''}`}>
+      {/* Keyboard and screen-reader users can jump past the header and tabs. */}
+      <button className="skip-link" onClick={() => document.getElementById('main')?.focus()}>Skip to the weather</button>
       <Header
         location={location}
         onLocation={(l) => setPrefs((p) => ({ location: l, saved: dedupe([l, ...(p.saved || [])]).slice(0, 8) }))}
@@ -171,7 +175,7 @@ export default function App() {
             />
           )}
 
-          <main>
+          <main id="main" tabIndex={-1}>
             {!weather && !error && ['today', 'play', 'explore', 'chaser', 'learn', 'school'].includes(tab) && !(tab !== 'today' && route.section === 'ocean') && <div className="card skeleton">Fetching the sky…</div>}
             {weather && kidMode && ['today', 'play', 'explore', 'chaser'].includes(tab) && (
               <KidMode tab={tab} weather={weather} user={user} location={location} kid={kidData} onAlerts={() => setModal('alerts')} />
@@ -227,6 +231,7 @@ export default function App() {
           units={units}
           onUnits={(u) => setPrefs({ units: u })}
           theme={{ value: prefs.theme || 'auto', why: theme.why, onChange: (t) => setPrefs({ theme: t }) }}
+          a11y={{ value: prefs.a11y, onChange: (a) => setPrefs({ a11y: a }) }}
           onProfile={() => setModal('profile')}
           onAlerts={() => setModal('alerts')}
           onAdmin={() => setModal('admin')}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widgetName">Weather Scout</string>
+    <string name="widgetDescription">Temperature, rain in the next two hours and alerts</string>
+    <string name="widgetLoading">Loading…</string>
+    <string name="widgetOffline">Could not refresh. Tap ↻ to try again.</string>
+    <string name="widgetNeedsKey">This server needs sign-in. Tap ⚙ to add an app key.</string>
+    <string name="widgetRefresh">Refresh</string>
+    <string name="widgetSetupTitle">Weather Scout widget</string>
+    <string name="widgetSetupHelp">If your Weather Scout server asks everyone to sign in, paste an app key here (Family &amp; settings, Connected apps, Make a key). Otherwise leave it blank and press Done.</string>
+    <string name="widgetSetupDone">Done</string>
+</resources>

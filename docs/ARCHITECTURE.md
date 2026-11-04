@@ -66,6 +66,7 @@ server/src/
   health.js         pressure swings, WBGT heat stress
   hazards.js        crowd reports, NWS storm reports, river gauges, rainfall outlook, wildfires
   stormcells.js     NEXRAD storm tracks and the rain/snow/mix/ice grid
+  trip.js           trip forecast along a driving route
   sky.js            moon phase
   media.js          admin news/YouTube lists
   stormphoto.js     storm picture of the day (Wikimedia Commons, live credit/license, admin hide)
@@ -125,5 +126,7 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/fires?south&west&north&east`, `GET /api/fires/near?lat&lon` | Active wildfires from NIFC WFIGS (prescribed burns skipped), nearby ones flagged upwind using the forecast wind, plus a smoke outlook from the AQI forecast |
 | `GET /api/cells?south&west&north&east`, `GET /api/cells/near?lat&lon&miles` | NEXRAD storm cells from IEM (2 min cache), deduplicated across radars, with a 60-minute projected track; near adds distance, direction and an arrival time for cells on course (`shared/stormcells.js`). Also feeds the *Storm heading your way* personal alert |
 | `GET /api/radar/ptype?south&west&north&east` | Rain, snow, mix or ice on a grid of up to 192 points over the view, one character per cell (view snapped to half degrees, 10 min cache) |
+| `GET /api/trip?fromLat&fromLon&toLat&toLon[&depart&units]` | Driving route (OSRM, 1 h cache) sampled about every 30 minutes of driving (up to 12 points), with each point's weather at its arrival hour and the worst hazard (ice, snow, storms, fog, heavy rain, gusts) |
+| `GET /api/connect/widget[?lat&lon&units]` | Short strings for the Android home-screen widget and `/watch.html` (same as `/api/widget/summary`, plus the rain countdown). Open like the app, or a Bearer app key when `AUTH_REQUIRED` |
 | `GET /api/outlook?day=1-3` | SPC convective outlook categories (15 min cache) |
 | `GET /api/connect/summary` (Bearer app key) | Kid-safe summary for Den-Duty and other apps, see [CONNECT.md](CONNECT.md) |

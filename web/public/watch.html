@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Weather Scout watch</title>
+<link rel="icon" href="/favicon.ico">
+<!--
+  Weather Scout on a watch (or any tiny screen): the temperature, the next two
+  hours of rain, today's high and low and the top alert, in big type on black
+  (kind to OLED batteries), sized for round and square faces. Add it to a Wear OS
+  watch's browser, or open it on a phone lock-screen shortcut. Refreshes every
+  5 minutes while open. Same sign-in as the app; ?key=wsk_... uses an app key
+  instead (Family & settings, Connected apps). ?lat=..&lon=.. picks a place.
+-->
+<style>
+  :root { color-scheme: dark; --ink: #fff; --dim: #a9b4c8; --alert: #ff5c5c; --rain: #5ab0ff; }
+  html, body { margin: 0; height: 100%; background: #000; color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { display: grid; place-items: center; }
+  main { box-sizing: border-box; width: min(100vw, 100vh); height: min(100vw, 100vh); padding: 14%; display: grid; align-content: center; justify-items: center; gap: .25em; text-align: center; font-size: clamp(11px, 5.2vmin, 28px); }
+  .temp { font-size: 3.4em; font-weight: 700; line-height: 1; letter-spacing: -.03em; }
+  .label { font-size: 1.05em; }
+  .rain { font-size: 1.05em; font-weight: 600; color: var(--rain); }
+  .rain.dry { color: var(--dim); font-weight: 400; }
+  .hilo, .updated { color: var(--dim); font-size: .85em; }
+  .alert { color: var(--alert); font-weight: 700; font-size: .95em; }
+  .alert:empty, .rain:empty { display: none; }
+  a { color: inherit; text-decoration: none; }
+  .err { color: var(--dim); font-size: .9em; }
+  @media (prefers-reduced-motion: no-preference) { main { transition: opacity .2s; } main.loading { opacity: .5; } }
+</style>
+</head>
+<body>
+<a href="/" aria-label="Open Weather Scout">
+<main id="w" class="loading" aria-live="polite">
+  <div class="temp" id="temp">--</div>
+  <div class="label" id="label">Loading…</div>
+  <div class="rain" id="rain"></div>
+  <div class="hilo" id="hilo"></div>
+  <div class="alert" id="alert"></div>
+  <div class="updated" id="updated"></div>
+</main>
+</a>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const q = new URLSearchParams(location.search);
+  const key = q.get('key');
+  let prefs = {};
+  try { prefs = JSON.parse(localStorage.getItem('weather-scout:prefs') || '{}'); } catch { prefs = {}; }
+
+  async function place() {
+    if (q.get('lat') && q.get('lon')) return { lat: q.get('lat'), lon: q.get('lon'), units: q.get('units') || prefs.units };
+    try {
+      const r = await fetch('/api/me/preferences', { credentials: 'same-origin' });
+      if (r.ok) { const p = await r.json(); if (p?.location) return { ...p.location, units: p.units }; }
+    } catch { /* guest */ }
+    if (prefs.location) return { ...prefs.location, units: prefs.units };
+    return { units: prefs.units };
+  }
+
+  async function load() {
+    $('w').classList.add('loading');
+    try {
+      const p = await place();
+      const s = new URLSearchParams();
+      if (p.lat != null && p.lon != null) { s.set('lat', p.lat); s.set('lon', p.lon); }
+      if (p.units) s.set('units', p.units);
+      const r = await fetch(`/api/connect/widget?${s}`, { credentials: 'same-origin', headers: key ? { authorization: `Bearer ${key}` } : {} });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Weather is unavailable.');
+      $('temp').textContent = d.temp;
+      $('label').textContent = d.label;
+      $('rain').textContent = d.rainSoon || '';
+      $('rain').className = `rain ${/^Dry/.test(d.rainSoon || '') ? 'dry' : ''}`;
+      $('hilo').textContent = d.hiLo.replace('High ', 'H ').replace('Low ', 'L ');
+      $('alert').textContent = d.hasAlert ? d.alert : '';
+      $('updated').textContent = new Date(d.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      document.title = `${d.temp} ${d.label} · Weather Scout`;
+    } catch (e) {
+      $('label').textContent = '';
+      $('updated').innerHTML = '';
+      $('updated').append(Object.assign(document.createElement('span'), { className: 'err', textContent: e.message }));
+    }
+    $('w').classList.remove('loading');
+  }
+  load();
+  setInterval(load, 5 * 60_000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+})();
+</script>
+</body>
+</html>

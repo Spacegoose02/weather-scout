@@ -304,7 +304,7 @@ h3 { font-size: 1rem; margin: 18px 0 8px; }
 .ok-text { color: var(--good); font-weight: 700; }
 .push-form fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; display: grid; gap: 8px; margin: 0; }
 .push-form legend { font-weight: 700; padding: 0 4px; }
-.push-form .check { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; }
+.push-form .check, .prefs-group .check { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; }
 .push-form .check input { margin-top: 4px; }
 .push-form select { padding: 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
 .push-form .row-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -600,3 +600,22 @@ body.radar-full-open { overflow: hidden; }
 .ptype-overlay { image-rendering: auto; filter: blur(6px); }
 .ptype-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .8rem; align-items: center; }
 .ptype-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: -2px; opacity: .8; }
+
+/* Easier to see (Settings › 👁️, see a11y.js) */
+html[data-text="large"] { font-size: 112.5%; }
+html[data-text="xlarge"] { font-size: 125%; }
+html[data-cb-radar="on"] .radar-tiles,
+html[data-cb-radar="on"] .map-foot .legend i,
+html[data-cb-radar="on"] .radar-legend .lg-bar { filter: url(#ws-cb); }
+html[data-motion="less"] *, html[data-motion="less"] *::before, html[data-motion="less"] *::after {
+  animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+.skip-link { position: absolute; left: 8px; top: -60px; z-index: 3000; padding: 8px 14px; border-radius: 10px; background: var(--accent); color: #fff; border: 0; font-weight: 700; }
+.skip-link:focus { top: 8px; }
+main:focus { outline: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.prefs-group .check { margin: 8px 0; }
+.trip-at { white-space: nowrap; }

@@ -1,10 +1,11 @@
 import Modal from './Modal.jsx';
 import { ThemeChoices } from './ThemeChoices.jsx';
 import { openSafety } from '../safety/useSafetyPlan.js';
+import EasierToSee from './EasierToSee.jsx';
 
 // The ⚙️ window: every setting a person can change, in one place. Alerts, the
 // safety plan and Family & settings open their own windows from here.
-export default function Settings({ user, sso, units, onUnits, theme, onProfile, onAlerts, onAdmin, onSignIn, onSignOut, onClose }) {
+export default function Settings({ user, sso, units, onUnits, theme, a11y, onProfile, onAlerts, onAdmin, onSignIn, onSignOut, onClose }) {
   return (
     <Modal title="Settings" onClose={onClose} wide>
       <div className="prefs">
@@ -59,6 +60,13 @@ export default function Settings({ user, sso, units, onUnits, theme, onProfile, 
           <section className="prefs-group" aria-labelledby="set-theme">
             <h3 id="set-theme">🎨 Colors</h3>
             <ThemeChoices value={theme.value} why={theme.why} onChange={theme.onChange} signedIn={!!user} />
+          </section>
+        )}
+
+        {a11y && (
+          <section className="prefs-group" aria-labelledby="set-a11y">
+            <h3 id="set-a11y">👁️ Easier to see</h3>
+            <EasierToSee value={a11y.value} onChange={a11y.onChange} />
           </section>
         )}
       </div>

@@ -13,6 +13,7 @@ import { webcamIcon, webcamPopup, WEBCAM_MIN_ZOOM, WEBCAM_REFRESH_MS } from './m
 import NearbyWebcams from './map/NearbyWebcams.jsx';
 import RadarGuide from './map/RadarGuide.jsx';
 import { useHazardLayers } from './map/hazardLayers.js';
+import { prefersLessMotion } from '../a11y.js';
 import { useStormLayers } from './map/stormLayers.js';
 import { PTYPES } from '../../../shared/stormcells.js';
 import { legendFor, productGroups, shortName } from './map/radarGuide.js';
@@ -68,7 +69,8 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   const [buoyInfo, setBuoyInfo] = useState('');
   const [frames, setFrames] = useState([]);
   const [frame, setFrame] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  // Less motion (Settings or the device's reduce-motion setting): the loop waits for ▶.
+  const [playing, setPlaying] = useState(() => !prefersLessMotion());
   const [opacity, setOpacity] = useState(0.7);
   // Which layers are on comes from saved preferences (account or this device).
   const [guestLayers, setGuestLayers] = useState(() => normalizeLayers(savedLayers));
@@ -331,7 +333,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
     const list = product.site ? [{ time: null, url: product.template.replace('{site}', site.id) }] : product.frames;
     const meta = radarMeta.current || {};
     radar.current.forEach((l) => l.remove());
-    radar.current = list.map((f, i) => L.tileLayer(f.url, { opacity: 0, maxNativeZoom: meta.maxNativeZoom || 12, maxZoom: 18, zIndex: 10, attribution: i === 0 ? meta.attribution : '' }).addTo(m));
+    radar.current = list.map((f, i) => L.tileLayer(f.url, { opacity: 0, className: 'radar-tiles', maxNativeZoom: meta.maxNativeZoom || 12, maxZoom: 18, zIndex: 10, attribution: i === 0 ? meta.attribution : '' }).addTo(m));
     setFrames(list);
     setFrame(product.future ? 0 : list.length - 1);
     return undefined;
@@ -639,7 +641,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
       </div>
       <div ref={el} className="map" role="application" aria-label="Radar and camera map" />
       <RadarGuide product={product} legend={legend} full={full} site={site} onPick={setProductId} products={products} />
-      <div className="map-foot">
+      <div className="map-foot" aria-live="polite">
         <span className="legend" aria-label="Radar colors from light to heavy" hidden={product && product.legend !== 'dbz'}><i /> light <i /> moderate <i /> heavy <i /> intense</span>
         <span>
           {storms && (storms.length

@@ -84,6 +84,26 @@ just like on the web. The app asks for Android's notification permission the fir
 `cd android && ./gradlew assembleDebug -PwsUrl=https://weather.example.com`. See the
 comments at the top of `android/app/build.gradle` for every option.
 
+### Home-screen widget
+
+The Android app comes with a **Weather Scout** home-screen widget: the temperature, the
+next two hours of rain or snow ("Rain in 15 min"), today's high and low and the top NWS
+alert. Long-press the home screen, pick *Widgets*, then *Weather Scout*. Android refreshes
+it about every 30 minutes (the shortest it allows); tap **↻** to refresh now, or the widget
+to open the app. It shows the server's home place (`DEFAULT_LAT`/`DEFAULT_LON`).
+
+If your server has `AUTH_REQUIRED=true`, the widget can't use your browser's sign-in. Make
+an app key (Family & settings → Connected apps → *Make a key*), tap **⚙** on the widget and
+paste it there.
+
+## Watch and tiny screens
+
+Open **`/watch.html`** on your server from a watch's browser (Wear OS), a car screen or a
+phone lock-screen shortcut: big temperature, the rain countdown, high and low and the top
+alert on black, refreshed every 5 minutes. It uses your sign-in and saved place like the app.
+Add `?lat=..&lon=..` for another place, or `?key=wsk_…` (an app key) on a device that can't
+sign in.
+
 ## Windows 11 widget
 
 Weather Scout's web app manifest defines a **Today** widget for the Windows 11 Widgets board

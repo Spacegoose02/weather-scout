@@ -68,6 +68,13 @@ from free, official data sources.
   arrives. The map draws each storm's next hour as a dotted track, and a 🌨️ **Rain, snow & ice** layer tints
   where it is raining, snowing, mixing or freezing. Turn on ⛈️ *Storm heading your way* in alerts for a push
   when a strong storm is about an hour out.
+- **Winter & travel**: a ❄️ *Winter & roads* card with snow in the next 24 and 48 hours, when roads
+  could ice over (freezing rain, or wet roads refreezing) and a rough snow day or delay chance for the
+  next school morning. A 🚗 *Trip forecast* card shows the weather along a drive at the time you'll be
+  at each stretch (routes from OpenStreetMap via OSRM).
+- **Easier to see** (⚙️ Settings): larger text, a color-blind friendly radar (red-green), and less
+  motion (no animations, the radar loop waits for ▶). A *Skip to the weather* link and live map
+  status help keyboard and screen-reader users.
 - **NWS alerts** for your exact location, most severe first, with plain-language kid versions.
 - **Family safety plan** (🛡️ in the account menu, the Safety plan dashboard card, or the alerts banner):
   a shelter spot for tornadoes, severe thunderstorms, floods and hurricanes, meeting places, emergency
@@ -228,7 +235,9 @@ Behind https, also set `SECURE_COOKIES=true`.
 ### Android app and Windows 11 widget
 
 Once you have https, GitHub Actions can build an **Android app** (APK) that opens your server
-full screen, and Windows 11 can show a **Weather Scout today** card on the Widgets board.
+full screen, with a **home-screen widget** (temperature, rain in the next 2 hours, alerts).
+Windows 11 can show a **Weather Scout today** card on the Widgets board, and **`/watch.html`**
+is a big-type view for watches and other tiny screens.
 Setup, signing keys and install steps are in [docs/APPS.md](docs/APPS.md).
 
 ## Keys and private data
@@ -431,6 +440,7 @@ names also work as environment variables (`LIGHTNING_GLM`, `LIGHTNING_GLM_SATELL
 | Excessive rainfall outlook | NOAA [Weather Prediction Center](https://www.wpc.ncep.noaa.gov/qpf/excessive_rainfall_outlook_ero.php) | none |
 | Storm cell tracks | NEXRAD storm tracking (SCIT) via [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
 | Rain / snow / mix / ice layer | Open-Meteo current weather on a grid (HRRR blend in the US) | none |
+| Driving routes (trip forecast) | [OSRM](https://project-osrm.org/) demo server, OpenStreetMap data (light use) | none |
 | Wildfires | [NIFC WFIGS](https://data-nifc.opendata.arcgis.com/) current incident locations | none |
 | Severe outlooks | NOAA [Storm Prediction Center](https://www.spc.noaa.gov/) | none |
 | Lightning | NOAA [GOES GLM](https://registry.opendata.aws/noaa-goes/) on AWS Open Data; optional [Blitzortung.org](https://www.blitzortung.org/) (private, non-commercial use) | none |

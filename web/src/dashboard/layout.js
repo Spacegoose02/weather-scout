@@ -26,6 +26,8 @@ export const CARDS = [
   { id: 'cells', group: 'weather', title: 'Storm tracker', emoji: '⛈️', sizes: ['s', 'm', 'l'], blurb: 'Storms on the radar near you, which way they are moving and when they could arrive' },
   { id: 'flood', group: 'weather', title: 'Flood & rivers', emoji: '🌊', sizes: ['s', 'm', 'l'], blurb: 'Flash flood risk today and tomorrow, and river gauges near you' },
   { id: 'fire', group: 'outdoors', title: 'Wildfires & smoke', emoji: '🔥', sizes: ['s', 'm', 'l'], blurb: 'Active wildfires within 200 miles and smoky-air hours ahead' },
+  { id: 'winter', group: 'weather', title: 'Winter & roads', emoji: '❄️', sizes: ['s', 'm', 'l'], blurb: 'Snow totals, road ice risk and the chance of a snow day or delay' },
+  { id: 'trip', group: 'family', title: 'Trip forecast', emoji: '🚗', sizes: ['m', 'l'], blurb: 'The weather along a drive, at the time you will be at each stretch' },
   { id: 'alerts', group: 'weather', title: 'Alerts', emoji: '⚠️', sizes: ['s', 'm', 'l'], blurb: 'Watches and warnings for this place' },
   { id: 'rain', group: 'weather', title: 'Next 2 hours', emoji: '☔', sizes: ['s', 'm', 'l'], blurb: 'Minute-by-minute rain and snow' },
   { id: 'wind', group: 'weather', title: 'Wind', emoji: '🌬️', sizes: ['s', 'm', 'l'], blurb: 'Compass, gusts and a 24-hour chart' },

@@ -48,6 +48,8 @@ import { LightningService, registerLightning } from './lightning.js';
 import { AuroraService } from './aurora.js';
 import { HazardService, registerHazards } from './hazards.js';
 import { StormCellService, registerStormCells } from './stormcells.js';
+import { TripService, registerTrip } from './trip.js';
+import { nextRain, nextRainText, nextRainShort } from '../../shared/glance.js';
 import { getScorecard } from './scorecard.js';
 import { cleanOutfit, rockySvg } from '../../shared/rocky-outfit.js';
 
@@ -190,6 +192,8 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       units: fc.units,
       current: { temp: c.temp, feelsLike: c.feelsLike, icon: c.icon, label: c.label, kidLabel: c.kidLabel, isDay: c.isDay, windSpeed: c.windSpeed, uv: c.uv },
       today: { high: today.high ?? null, low: today.low ?? null, precipChance: today.precipChance ?? null, icon: today.icon ?? null, kidLabel: today.kidLabel ?? null },
+      // The next 2 hours in 15-minute steps: "Rain starting in about 15 minutes."
+      nowcast: { ...(nextRain(fc.minutely) || { state: null, minutes: null, word: 'rain' }), text: nextRainText(fc.minutely), short: nextRainShort(fc.minutely) },
       // Paths are relative to this server, so connected apps can show the same Rocky.
       // `dressed` is Rocky in today's outfit and mood, one picture ready for an <img>.
       raccoon: { ...kid.raccoon, art: { full: '/rocky/rocky.png', face: '/rocky/rocky-face.png', icon: '/icon-192.png', dressed: rockyPath(kid.raccoon) } },
@@ -377,6 +381,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   const stormCells = new StormCellService(cache, fetchImpl, { log: app.log });
   registerStormCells(app, { cells: stormCells, latLonSchema, loc, boxSchema });
   if (push) push.cellsFor = (place) => stormCells.approaching(place);
+  registerTrip(app, { trips: new TripService(cache, fetchImpl, { userAgent: cfg.nwsUserAgent }), defaultUnits: cfg.units });
   // Northern lights tonight (NOAA SWPC Kp forecast and OVATION), with tonight's clouds.
   const aurora = new AuroraService(cache, fetchImpl);
   const auroraFor = (l, fc) => aurora.outlook(l, fc);
@@ -832,18 +837,17 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   // rules as the rest of the app; the service worker fetches it with the
   // family's cookie. Short, ready-to-show strings because Adaptive Cards can't
   // do much formatting, and absolute image URLs because the board needs them.
-  app.get('/api/widget/summary', {
-    schema: {
-      querystring: {
-        type: 'object',
-        properties: {
-          lat: { type: 'number', minimum: -90, maximum: 90 },
-          lon: { type: 'number', minimum: -180, maximum: 180 },
-          units: { type: 'string', enum: ['imperial', 'metric'] },
-        },
+  const widgetQuery = {
+    querystring: {
+      type: 'object',
+      properties: {
+        lat: { type: 'number', minimum: -90, maximum: 90 },
+        lon: { type: 'number', minimum: -180, maximum: 180 },
+        units: { type: 'string', enum: ['imperial', 'metric'] },
       },
     },
-  }, async (req) => {
+  };
+  const widgetSummary = async (req) => {
     const s = await summary(req.query);
     const origin = `${req.protocol}://${req.host}`;
     const deg = (v) => (v == null ? '--' : `${Math.round(v)}°`);
@@ -862,8 +866,22 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       alert: alert ? `⚠️ ${alert.event}${s.alerts.length > 1 ? ` (+${s.alerts.length - 1} more)` : ''}` : '',
       rockyUrl: `${origin}${s.raccoon.art.face}`,
       appUrl: `${origin}/`,
+      rainSoon: s.nowcast.short,
+      rainText: s.nowcast.text || '',
+      icon: s.current.icon,
+      isDay: s.current.isDay,
       updatedAt: s.updatedAt.replace(/\.\d+Z$/, 'Z'),
     };
+  };
+  app.get('/api/widget/summary', { schema: widgetQuery }, widgetSummary);
+  // The Android home-screen widget and the watch page can't share the browser's
+  // sign-in. When sign-in is required they send an app key (Family & settings,
+  // Connected apps) as a Bearer token; otherwise this is open like the rest.
+  app.get('/api/connect/widget', { schema: widgetQuery }, async (req, reply) => {
+    if (cfg.auth.required && !req.user && !appKeys.check(req.headers.authorization)) {
+      return reply.code(401).header('www-authenticate', 'Bearer').send({ error: 'This server needs sign-in. Add an app key from Family & settings, Connected apps.' });
+    }
+    return widgetSummary(req);
   });
 
   // ---- Android app ---------------------------------------------------------

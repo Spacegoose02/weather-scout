@@ -18,6 +18,8 @@ import GearChecklist from './GearChecklist.jsx';
 import BestTimes from './BestTimes.jsx';
 import Reports from '../hazards/Reports.jsx';
 import FloodCard from '../hazards/FloodCard.jsx';
+import WinterCard from '../winter/WinterCard.jsx';
+import TripCard from '../winter/TripCard.jsx';
 import StormTracker from '../hazards/StormTracker.jsx';
 import FireSmoke from '../hazards/FireSmoke.jsx';
 import Aurora from './Aurora.jsx';
@@ -56,6 +58,8 @@ function renderCard(id, size, ctx) {
     case 'gear': return <GearChecklist weather={weather} kidMode={kidMode} size={size} />;
     case 'reports': return location ? <Reports location={location} user={user} kidMode={kidMode} size={size} onSignIn={ctx.onSignIn} /> : null;
     case 'cells': return location ? <StormTracker location={location} kidMode={kidMode} size={size} /> : null;
+    case 'winter': return <WinterCard weather={weather} kidMode={kidMode} size={size} />;
+    case 'trip': return location ? <TripCard location={location} units={units} size={size} /> : null;
     case 'flood': return location ? <FloodCard location={location} kidMode={kidMode} size={size} /> : null;
     case 'fire': return location ? <FireSmoke weather={weather} location={location} kidMode={kidMode} size={size} /> : null;
     case 'plan': return <BestTimes weather={weather} units={units} kidMode={kidMode} size={size} />;

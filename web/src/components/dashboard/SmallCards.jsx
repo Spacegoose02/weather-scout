@@ -32,7 +32,7 @@ export function RadarCard({ location, size, onOpen }) {
     const load = () => api('/api/radar').then((r) => {
       if (!live) return;
       layers.current.forEach((x) => x.remove());
-      layers.current = r.frames.map((f, i) => L.tileLayer(f.url, { opacity: 0, maxNativeZoom: r.maxNativeZoom || 12, maxZoom: 18, zIndex: 10, attribution: i === 0 ? r.attribution : '' }).addTo(m));
+      layers.current = r.frames.map((f, i) => L.tileLayer(f.url, { opacity: 0, className: 'radar-tiles', maxNativeZoom: r.maxNativeZoom || 12, maxZoom: 18, zIndex: 10, attribution: i === 0 ? r.attribution : '' }).addTo(m));
       setFrames(r.frames);
       setFrame(r.frames.length - 1);
     }).catch(() => {});
