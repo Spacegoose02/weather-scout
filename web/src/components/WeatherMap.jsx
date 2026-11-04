@@ -12,6 +12,7 @@ import { normalizeLayers, alertVisible, anyAlerts, layerCount } from './map/laye
 import { webcamIcon, webcamPopup, WEBCAM_MIN_ZOOM, WEBCAM_REFRESH_MS } from './map/webcams.js';
 import NearbyWebcams from './map/NearbyWebcams.jsx';
 import RadarGuide from './map/RadarGuide.jsx';
+import { useHazardLayers } from './map/hazardLayers.js';
 import { legendFor, productGroups, shortName } from './map/radarGuide.js';
 
 window.L = L; // leaflet.markercluster is a classic plugin that extends the global L
@@ -433,6 +434,9 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
     else m.removeLayer(camLayer.current);
   }, [show.cams]);
 
+  // Storm reports, wildfires and river gauges (their own layer groups, after the map exists).
+  const hazardInfo = useHazardLayers(map, show, [center.lat, center.lon, units]);
+
   // Reload cameras when the layer or a state is switched; buoys and tides when switched on.
   const camsOffKey = show.camsOff.join(',');
   useEffect(() => { reload.current.cams?.(); }, [show.cams, camsOffKey]);
@@ -640,6 +644,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
           {show.lightning && boltInfo && ` · ${boltInfo}`}
           {show.buoys && buoyInfo && ` · ${buoyInfo}`}
           {show.tides && tideInfo && ` · ${tideInfo}`}
+          {hazardInfo && ` · ${hazardInfo}`}
           {show.cams && camInfo && ` · ${camInfo}`}
           {webcamsOn.current && webcamInfo && ` · ${webcamInfo}`}
         </span>

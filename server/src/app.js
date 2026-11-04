@@ -46,6 +46,7 @@ import { StationService, registerStations } from './stations.js';
 import { HomeAssistantService } from './homeassistant.js';
 import { LightningService, registerLightning } from './lightning.js';
 import { AuroraService } from './aurora.js';
+import { HazardService, registerHazards } from './hazards.js';
 import { getScorecard } from './scorecard.js';
 import { cleanOutfit, rockySvg } from '../../shared/rocky-outfit.js';
 
@@ -369,6 +370,9 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });
   registerStormPhoto(app, { db, cache, fetchImpl, requireAdmin });
   registerDashboard(app, { db, requireUser, requireAdmin, cache, latLonSchema, loc });
+  // Crowd reports, rivers and flash floods, wildfires (v0.7).
+  const hazards = new HazardService(db, cache, fetchImpl, { log: app.log });
+  registerHazards(app, { hazards, requireUser, latLonSchema, loc, boxSchema, forecast, settle });
   // Northern lights tonight (NOAA SWPC Kp forecast and OVATION), with tonight's clouds.
   const aurora = new AuroraService(cache, fetchImpl);
   const auroraFor = (l, fc) => aurora.outlook(l, fc);

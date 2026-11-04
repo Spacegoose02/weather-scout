@@ -17,6 +17,7 @@ const OFFLINE_API = [
   '/api/config', '/api/weather', '/api/me/dashboard', '/api/me/preferences', '/api/safety-plan',
   '/api/sky/tonight', '/api/sky/aurora', '/api/tides', '/api/models', '/api/ensemble', '/api/news',
   '/api/storm-photo', '/api/chaser/day', '/api/history', '/api/ocean/discoveries',
+  '/api/reports/near', '/api/flood', '/api/fires/near', '/api/models/scorecard',
 ];
 const API_WAIT_MS = 6000; // give up on a slow network after this, when a saved copy exists
 const PAGE_WAIT_MS = 4000;

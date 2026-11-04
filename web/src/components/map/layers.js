@@ -20,6 +20,14 @@ export const LAYER_GROUPS = [
     ],
   },
   {
+    title: 'Hazards & reports',
+    layers: [
+      { id: 'reports', icon: '📣', label: 'Weather reports', note: 'Family reports and NWS storm reports, last 24 hours' },
+      { id: 'fires', icon: '🔥', label: 'Wildfires', note: 'Active wildfires (NIFC)' },
+      { id: 'gauges', icon: '📏', label: 'River gauges', note: 'Colored by flood stage. Zoom in to see them' },
+    ],
+  },
+  {
     title: 'Ocean',
     layers: [
       { id: 'buoys', icon: '🛟', label: 'NOAA buoys', note: 'Waves and water temperature' },
@@ -41,6 +49,9 @@ export const DEFAULT_LAYERS = {
   watches: true,
   advisories: true,
   buoys: true,
+  reports: true,
+  fires: true,
+  gauges: false,
   tides: false,
   radarSites: true,
   cams: true,
