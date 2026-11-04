@@ -38,13 +38,20 @@ test('SPC outlook keeps the categories and only safe colors', () => {
 
 test('radar products: loops, single site, rain totals and future radar', () => {
   const p = radarProducts(Date.parse('2026-11-02T18:07:00Z'));
-  assert.deepEqual(p.map((x) => x.id), ['composite', 'site', 'echotops', 'rain1h', 'rain24h', 'future']);
-  assert.equal(p[0].frames.length, 11);
-  assert.match(p[1].template, /ridge::\{site\}-N0B-0/);
-  assert.match(p[2].frames.at(-1).url, /nexrad-eet-900913\//);
-  assert.match(p[5].frames[2].url, /hrrr::REFD-F0120-0/);
-  assert.equal(p[5].frames.length, 13);
-  assert.equal(radarFrames().products.length, 6);
+  assert.deepEqual(p.map((x) => x.id), ['composite', 'site', 'velocity', 'srv', 'cc', 'zdr', 'kdp', 'echotops', 'rain1h', 'rain24h', 'future']);
+  const by = Object.fromEntries(p.map((x) => [x.id, x]));
+  assert.equal(by.composite.frames.length, 11);
+  assert.match(by.site.template, /ridge::\{site\}-N0B-0/);
+  assert.match(by.velocity.template, /ridge::\{site\}-N0U-0/);
+  assert.match(by.srv.template, /ridge::\{site\}-N0S-0/);
+  assert.match(by.cc.template, /ridge::\{site\}-N0C-0/);
+  assert.match(by.zdr.template, /ridge::\{site\}-N0X-0/);
+  assert.match(by.kdp.template, /ridge::\{site\}-N0K-0/);
+  for (const id of ['site', 'velocity', 'srv', 'cc', 'zdr', 'kdp']) assert.equal(by[id].site, true);
+  assert.match(by.echotops.frames.at(-1).url, /nexrad-eet-900913\//);
+  assert.match(by.future.frames[2].url, /hrrr::REFD-F0120-0/);
+  assert.equal(by.future.frames.length, 13);
+  assert.equal(radarFrames().products.length, 11);
 });
 
 test('NEXRAD sites merge with which radars reported recently', async () => {
