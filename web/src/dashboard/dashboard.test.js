@@ -80,4 +80,35 @@ describe('packed grid', () => {
     expect(spanFor(100.2, 14)).toBe(115);
     expect(spanFor(0, 14)).toBe(14);
   });
+
+  it('gives each size its share of the columns', async () => {
+    const { columnsFor } = await import('./usePackedGrid.js');
+    expect([columnsFor('s', 6), columnsFor('m', 6), columnsFor('l', 6)]).toEqual([2, 3, 6]);
+    expect([columnsFor('s', 2), columnsFor('m', 2), columnsFor('l', 2)]).toEqual([1, 1, 2]);
+    expect([columnsFor('s', 1), columnsFor('m', 1), columnsFor('l', 1)]).toEqual([1, 1, 1]);
+  });
+
+  it('lines cards up on their own column lines and fills the shortest column', async () => {
+    const { placeCards } = await import('./usePackedGrid.js');
+    // Two medium cards side by side, then small cards under them (the board screenshot).
+    const out = placeCards([
+      { span: 3, height: 300 }, // gear checklist, tall
+      { span: 3, height: 100 }, // short card on the right
+      { span: 2, height: 400 }, // details
+      { span: 2, height: 300 }, // wind
+      { span: 2, height: 250 }, // stargazing
+    ], 6, 14);
+    expect(out.map((p) => p.col)).toEqual([0, 3, 4, 0, 2]);
+    // Small cards only ever start on columns 1, 3 or 5.
+    for (const p of out.slice(2)) expect(p.col % 2).toBe(0);
+    expect(out[2].row).toBe(114); // right under the short card
+    expect(out[3].row).toBe(314); // under the tall card, not floating halfway
+    expect(out[4].row).toBe(314);
+  });
+
+  it('skips hidden cards and stacks everything on phones', async () => {
+    const { placeCards } = await import('./usePackedGrid.js');
+    const out = placeCards([{ span: 1, height: 50 }, { span: 1, height: 0 }, { span: 1, height: 20 }], 1, 10);
+    expect(out).toEqual([{ col: 0, span: 1, row: 0, rows: 60 }, null, { col: 0, span: 1, row: 60, rows: 30 }]);
+  });
 });

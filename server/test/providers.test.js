@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeForecast, aqiCategory, forecastUrl } from '../src/providers/openmeteo.js';
 import { normalizeAlerts, kidSummary } from '../src/providers/nws.js';
 import { radarFrames } from '../src/providers/radar.js';
-import { parseIbi511, parseGeoJson, DEFAULT_FEEDS } from '../src/providers/cameras/index.js';
+import { parseIbi511, parseGeoJson, DEFAULT_FEEDS, playableVideo } from '../src/providers/cameras/index.js';
 import { fakeForecast, fakeAlerts, fakeIbiCameras } from './helpers.js';
 
 test('forecast normalizes to 48 hours and 10 days', () => {
@@ -70,4 +70,13 @@ test('511 Virginia GeoJSON parses with the built-in feed mapping', () => {
   const c = parseGeoJson(raw, DEFAULT_FEEDS[0]);
   assert.equal(c.length, 1);
   assert.deepEqual([c[0].id, c[0].name, c[0].lat, c[0].lon, c[0].video], ['3958', 'University Drive and Sager Avenue', 38.84519, -77.3055, 'https://media.example/3958.m3u8']);
+});
+
+test('live video from stream servers that ask for a login is dropped (NCDOT), so the popup shows snapshots', () => {
+  assert.equal(playableVideo('https://cfsse05.services.ncdot.gov:8887/rtplive/CCTV11-US321-N/playlist.m3u8'), null);
+  assert.equal(playableVideo('https://services.ncdot.gov/live/1.m3u8'), null);
+  assert.equal(playableVideo('http://plain.example/1.m3u8'), null);
+  assert.equal(playableVideo('not a url'), null);
+  const ok = 'https://s70.us-east-1.skyvdn.com/rtplive/R2_020/playlist.m3u8';
+  assert.equal(playableVideo(ok), ok);
 });

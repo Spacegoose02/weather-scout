@@ -237,6 +237,21 @@ export function parseGeoJson(raw, feed) {
 
 const isHttps = (u) => typeof u === 'string' && u.startsWith('https://');
 
+// Stream servers that answer with a username/password prompt instead of video.
+// DriveNC's API lists NCDOT's own stream servers (cfsse05.services.ncdot.gov:8887 and
+// friends), which are for NCDOT staff only, so the browser pops a login box. Those
+// cameras still have snapshots, which refresh on their own in the popup.
+const LOGIN_VIDEO_HOSTS = [/(^|\.)services\.ncdot\.gov$/i];
+export function playableVideo(u) {
+  if (!isHttps(u)) return null;
+  try {
+    const { hostname } = new URL(u);
+    return LOGIN_VIDEO_HOSTS.some((re) => re.test(hostname)) ? null : u;
+  } catch {
+    return null;
+  }
+}
+
 // ArcGIS MapServer/FeatureServer layers cap results per request, so page through.
 // Some servers fail on f=geojson but still answer f=json (Esri JSON), so fall back to that.
 async function fetchArcgis(feed, fetchImpl, opts) {
@@ -445,7 +460,7 @@ export class CameraService {
       cameras: inside.slice(0, limit).map(({ image, video, embed, ...c }) => ({
         ...c,
         hasImage: !!image,
-        video: isHttps(video) ? video : null,
+        video: playableVideo(video),
         embed: isHttps(embed) ? embed : null,
       })),
       total: inside.length,

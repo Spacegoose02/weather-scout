@@ -90,6 +90,7 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/weather?lat&lon&units` | Everything the Today and Kid views need in one call |
 | `GET /api/forecast`, `/api/alerts`, `/api/air` | The pieces, individually |
 | `GET /api/radar` | Radar frame list (tile URL templates) |
+| Personal alerts | `POST /api/push/subscribe` also takes `rules` (rain, freeze, gust, heat, snow, aurora, quiet) and `units`; a 5-minute loop checks them against the cached forecast (`shared/thresholds.js`) and sends each event once |
 | `GET /api/push/key`, `POST /api/push/subscribe`, `/unsubscribe`, `/status`, `/test` | Web Push sign-up per device; a background loop (every `PUSH_POLL_SECONDS`) checks NWS for each subscribed place and sends each new alert once |
 | `GET /api/lightning?south&west&north&east[&since]`, `GET /api/lightning/near?lat&lon&miles` | Live strikes from the last 30 minutes as compact `[time, lat, lon, source]` rows, and a nearby summary (count, nearest, direction, 30-30 all-clear time). Sources run only while someone is watching or has lightning alerts on; strike math is shared in `shared/lightning.js` |
 | `GET /api/ai/status`, `POST /api/ai/chat`, `POST /api/ai/cloud` | AI helper (only with `ANTHROPIC_API_KEY`): chat with the live forecast as context, cloud photo identifier, optional web search |
@@ -109,7 +110,9 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/tropics` | Active NHC storms plus their forecast cones and tracks as GeoJSON (15 min cache) |
 | `GET /api/buoys?south&west&north&east&units` | Latest NDBC buoy observations in view (15 min cache) |
 | `GET /api/tides?lat&lon&units` | Nearest tide station within 60 miles and its next highs and lows (60 min cache) |
-| `GET /api/models?lat&lon&units` | Daily and 72-hour forecasts from each model (ECMWF, GFS, ICON, GEM, HRRR, GraphCast, AIFS) plus day-by-day agreement (30 min cache) |
+| `GET /api/models/scorecard?lat&lon&units` | Each model's day-before forecast vs what happened over the last 7 days (NWS station in the US, else Open-Meteo's record), ranked (3 h cache) |
+| `GET /api/sky/aurora?lat&lon` | Northern lights tonight: Kp forecast, the Kp this place needs, chance, OVATION, tonight's clouds (30 min cache) |
+| `GET /api/models?lat&lon&units` | Daily and 72-hour forecasts from each model (ECMWF, GFS, ICON, GEM, HRRR, AIGFS, AIFS) plus day-by-day agreement (30 min cache) |
 | `GET /api/ensemble?lat&lon&units&model=ecmwf_ifs025\|gfs_seamless` | Ensemble 10th/50th/90th percentiles, confidence and rain chance (60 min cache) |
 | `GET /api/radar` | Radar products for the map (composite loop, single site, echo tops, rain totals, future radar) and the satellite layer |
 | `GET /api/radar/sites` | NEXRAD sites and which are reporting (10 min cache) |

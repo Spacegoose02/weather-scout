@@ -74,6 +74,7 @@ const ADDED_COLUMNS = {
     ['lightning_miles', 'INTEGER'], // alert when lightning strikes this close, or NULL for off
     ['lightning_alert_at', 'INTEGER'], // ms: when the current "lightning nearby" alert went out (NULL = all clear)
     ['lightning_last_strike', 'INTEGER'], // ms: newest strike inside the circle since that alert
+    ['rules', 'TEXT'], // personal alerts (shared/thresholds.js cleanRules) as JSON, or NULL for none
   ],
   media_feeds: [
     ['scope', "TEXT NOT NULL DEFAULT 'national'"], // local | national

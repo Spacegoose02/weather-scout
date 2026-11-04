@@ -10,12 +10,13 @@ const GEO_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 const CURRENT = [
   'temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 'is_day', 'precipitation',
   'weather_code', 'cloud_cover', 'pressure_msl', 'wind_speed_10m', 'wind_direction_10m',
-  'wind_gusts_10m', 'dew_point_2m', 'uv_index', 'visibility',
+  'wind_gusts_10m', 'dew_point_2m', 'uv_index', 'visibility', 'shortwave_radiation',
 ];
 const HOURLY = [
   'temperature_2m', 'apparent_temperature', 'precipitation_probability', 'precipitation', 'rain',
   'snowfall', 'weather_code', 'wind_speed_10m', 'wind_gusts_10m', 'wind_direction_10m',
   'dew_point_2m', 'relative_humidity_2m', 'pressure_msl', 'uv_index', 'cloud_cover', 'is_day',
+  'shortwave_radiation',
 ];
 const DAILY = [
   'weather_code', 'temperature_2m_max', 'temperature_2m_min', 'apparent_temperature_max',
@@ -66,6 +67,7 @@ const RENAME = {
   apparent_temperature_min: 'feelsLikeLow', precipitation_probability_max: 'precipChance',
   precipitation_sum: 'precipTotal', snowfall_sum: 'snowTotal', uv_index_max: 'uvMax',
   wind_speed_10m_max: 'windMax', wind_gusts_10m_max: 'gustMax', snowfall: 'snow',
+  shortwave_radiation: 'solar',
 };
 
 export function normalizeForecast(raw, units, now = Date.now()) {
@@ -88,6 +90,7 @@ export function normalizeForecast(raw, units, now = Date.now()) {
     cloudCover: c.cloud_cover,
     visibility: c.visibility,
     precip: c.precipitation,
+    solar: c.shortwave_radiation ?? null,
     isDay: !!c.is_day,
     ...describeCode(c.weather_code),
   };
@@ -113,6 +116,8 @@ export function normalizeForecast(raw, units, now = Date.now()) {
     recent: {
       precipLast24h: +past.reduce((s, h) => s + (h.precip || 0), 0).toFixed(2),
       precipLast6h: +past.filter((h) => h.epoch >= now - 6 * 3600_000).reduce((s, h) => s + (h.precip || 0), 0).toFixed(2),
+      // The last day of sea-level pressure, so the health card can chart where it has been.
+      pressure: past.filter((h) => h.pressure != null).map(({ time, epoch, pressure }) => ({ time, epoch, pressure })),
     },
     source: 'Open-Meteo (best-match blend of GFS, HRRR, ECMWF, ICON and other national models)',
   };
@@ -144,6 +149,16 @@ export function aqiCategory(aqi) {
 }
 
 const POLLEN = ['alder_pollen', 'birch_pollen', 'olive_pollen', 'grass_pollen', 'mugwort_pollen', 'ragweed_pollen'];
+// Which plant group each pollen type belongs to, and its everyday name.
+export const POLLEN_SPECIES = {
+  alder_pollen: { id: 'alder', name: 'Alder', group: 'tree' },
+  birch_pollen: { id: 'birch', name: 'Birch', group: 'tree' },
+  olive_pollen: { id: 'olive', name: 'Olive', group: 'tree' },
+  grass_pollen: { id: 'grass', name: 'Grasses', group: 'grass' },
+  mugwort_pollen: { id: 'mugwort', name: 'Mugwort', group: 'weed' },
+  ragweed_pollen: { id: 'ragweed', name: 'Ragweed', group: 'weed' },
+};
+const POLLEN_GROUPS = { tree: ['alder_pollen', 'birch_pollen', 'olive_pollen'], grass: ['grass_pollen'], weed: ['mugwort_pollen', 'ragweed_pollen'] };
 const SUB = { pm25: 'us_aqi_pm2_5', pm10: 'us_aqi_pm10', ozone: 'us_aqi_ozone', no2: 'us_aqi_nitrogen_dioxide' };
 export const POLLUTANTS = {
   pm25: { name: 'Fine particles (PM2.5)', kid: 'Tiny bits of smoke and dust, small enough to get deep into your lungs.' },
@@ -162,6 +177,27 @@ export function pollenLevel(v, type) {
   return 'Very high';
 }
 
+// The worst hour of each pollen group for each local day ahead (up to 3 days).
+function pollenByDay(hours, groupAt) {
+  const days = new Map();
+  for (const { time, i } of hours) {
+    const date = time.slice(0, 10);
+    if (!days.has(date)) {
+      if (days.size === 3) break;
+      days.set(date, { date, tree: null, grass: null, weed: null });
+    }
+    const d = days.get(date);
+    for (const g of ['tree', 'grass', 'weed']) {
+      const v = groupAt(POLLEN_GROUPS[g], i);
+      if (v != null && (d[g] == null || v > d[g])) d[g] = v;
+    }
+  }
+  return [...days.values()].map((d) => ({
+    date: d.date,
+    ...Object.fromEntries(['tree', 'grass', 'weed'].map((g) => [g, { value: d[g], level: pollenLevel(d[g], g) }])),
+  }));
+}
+
 export function normalizeAir(raw, now = Date.now()) {
   const c = raw.current || {};
   const h = raw.hourly || {};
@@ -176,12 +212,27 @@ export function normalizeAir(raw, now = Date.now()) {
     const vals = keys.map((k) => c[k] ?? pick(k)).filter((v) => v != null);
     return vals.length ? Math.max(...vals) : null;
   };
-  const tree = maxOf(['alder_pollen', 'birch_pollen', 'olive_pollen']);
-  const grass = maxOf(['grass_pollen']);
-  const weed = maxOf(['mugwort_pollen', 'ragweed_pollen']);
+  const tree = maxOf(POLLEN_GROUPS.tree);
+  const grass = maxOf(POLLEN_GROUPS.grass);
+  const weed = maxOf(POLLEN_GROUPS.weed);
+  const species = POLLEN.map((k) => ({ ...POLLEN_SPECIES[k], value: c[k] ?? pick(k) }))
+    .filter((x) => x.value != null)
+    .map((x) => ({ ...x, level: pollenLevel(x.value, x.group) }));
   const pollen = [tree, grass, weed].some((v) => v != null)
-    ? { tree: { value: tree, level: pollenLevel(tree, 'tree') }, grass: { value: grass, level: pollenLevel(grass, 'grass') }, weed: { value: weed, level: pollenLevel(weed, 'weed') } }
+    ? {
+      tree: { value: tree, level: pollenLevel(tree, 'tree') },
+      grass: { value: grass, level: pollenLevel(grass, 'grass') },
+      weed: { value: weed, level: pollenLevel(weed, 'weed') },
+      species,
+      unit: 'grains/m³',
+      source: 'Open-Meteo (CAMS Europe)',
+    }
     : null;
+  // Highest pollen in one group for one hour (null when the source has none there).
+  const groupAt = (keys, i) => {
+    const vals = keys.map((k) => h[k]?.[i]).filter((v) => v != null);
+    return vals.length ? Math.max(...vals) : null;
+  };
   return {
     aqi: c.us_aqi ?? null,
     category: aqiCategory(c.us_aqi),
@@ -192,8 +243,23 @@ export function normalizeAir(raw, now = Date.now()) {
     uv: c.uv_index ?? null,
     subIndex,
     main: ranked[0] ? { id: ranked[0][0], ...POLLUTANTS[ranked[0][0]] } : null,
-    hourly: hours.slice(0, 48).map(({ time, i }) => ({ time, aqi: h.us_aqi?.[i] ?? null, uv: h.uv_index?.[i] ?? null, uvClear: h.uv_index_clear_sky?.[i] ?? null })),
+    hourly: hours.slice(0, 48).map(({ time, i }) => {
+      const row = {
+        time,
+        aqi: h.us_aqi?.[i] ?? null,
+        uv: h.uv_index?.[i] ?? null,
+        uvClear: h.uv_index_clear_sky?.[i] ?? null,
+        pm25: h.pm2_5?.[i] ?? null,
+        pm10: h.pm10?.[i] ?? null,
+        ozone: h.ozone?.[i] ?? null,
+        sub: Object.fromEntries(Object.entries(SUB).map(([k, v]) => [k, h[v]?.[i] ?? null])),
+      };
+      const p = { tree: groupAt(POLLEN_GROUPS.tree, i), grass: groupAt(POLLEN_GROUPS.grass, i), weed: groupAt(POLLEN_GROUPS.weed, i) };
+      if (Object.values(p).some((v) => v != null)) row.pollen = p;
+      return row;
+    }),
     pollen,
+    pollenDaily: pollen ? pollenByDay(hours, groupAt) : [],
     source: 'Open-Meteo Air Quality (CAMS)',
   };
 }
@@ -203,7 +269,7 @@ export async function getAirQuality({ lat, lon }, fetchImpl) {
     latitude: lat.toFixed(4),
     longitude: lon.toFixed(4),
     current: ['us_aqi', 'pm2_5', 'pm10', 'ozone', 'nitrogen_dioxide', 'uv_index', ...POLLEN].join(','),
-    hourly: ['us_aqi', ...Object.values(SUB), 'uv_index', 'uv_index_clear_sky'].join(','),
+    hourly: ['us_aqi', ...Object.values(SUB), 'uv_index', 'uv_index_clear_sky', 'pm2_5', 'pm10', 'ozone', ...POLLEN].join(','),
     forecast_days: '3',
     timezone: 'auto',
   });

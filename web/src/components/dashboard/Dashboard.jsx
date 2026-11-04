@@ -5,6 +5,7 @@ import DailyForecast from '../DailyForecast.jsx';
 import TextForecast from '../TextForecast.jsx';
 import Details from '../Details.jsx';
 import HealthSky from '../HealthSky.jsx';
+import Allergy from '../Allergy.jsx';
 import Coast from '../Coast.jsx';
 import WhyNow from '../learn/WhyNow.jsx';
 import { RainNext, AirUv, Wind } from '../NowCards.jsx';
@@ -14,6 +15,9 @@ import Stargazing from './Stargazing.jsx';
 import SafetyCard from '../safety/SafetyCard.jsx';
 import OnThisDay from '../history/OnThisDay.jsx';
 import GearChecklist from './GearChecklist.jsx';
+import BestTimes from './BestTimes.jsx';
+import Aurora from './Aurora.jsx';
+import Scorecard from './Scorecard.jsx';
 import StormPhoto from '../kid/StormPhoto.jsx';
 import { useDashboard } from '../../dashboard/useDashboard.js';
 import { CARD, CARD_GROUPS, SIZE_NAMES, hidden, addCard, removeCard, moveCard, nudgeCard, resizeCard } from '../../dashboard/layout.js';
@@ -32,6 +36,7 @@ function renderCard(id, size, ctx) {
     case 'wind': return <Wind forecast={weather.forecast} />;
     case 'air': return <AirUv air={weather.air} forecast={weather.forecast} />;
     case 'health': return <HealthSky weather={weather} />;
+    case 'allergy': return <Allergy weather={weather} />;
     case 'tides': return location ? <Coast location={location} units={units} onMap={() => ctx.onTab('map')} /> : null;
     case 'radar': return location ? <RadarCard location={location} size={size} onOpen={() => ctx.onTab('map')} /> : null;
     case 'cameras': return location ? <CamerasCard location={location} size={size} onOpen={() => ctx.onTab('map')} /> : null;
@@ -45,6 +50,9 @@ function renderCard(id, size, ctx) {
     case 'stars': return location ? <Stargazing weather={weather} location={location} kidMode={kidMode} size={size} /> : null;
     case 'stormpic': return <StormPhoto date={weather.kid?.date} isAdmin={!!user?.isAdmin} compact size={size} onKids={() => ctx.onTab('kids')} />;
     case 'gear': return <GearChecklist weather={weather} kidMode={kidMode} size={size} />;
+    case 'plan': return <BestTimes weather={weather} units={units} kidMode={kidMode} size={size} />;
+    case 'aurora': return location ? <Aurora location={location} kidMode={kidMode} size={size} /> : null;
+    case 'scorecard': return location ? <Scorecard location={location} units={units} kidMode={kidMode} size={size} /> : null;
     default: return null;
   }
 }

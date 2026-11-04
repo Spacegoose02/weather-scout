@@ -24,6 +24,7 @@ import { parseRoute, routeHash, tabsFor } from './nav.js';
 import Briefing from './components/kid/Briefing.jsx';
 import Modal from './components/Modal.jsx';
 import LightningBanner from './components/LightningBanner.jsx';
+import OfflineBanner from './components/OfflineBanner.jsx';
 import { DEFAULT_ALERT_MILES } from '../../shared/lightning.js';
 import ChaserPopup from './components/chasers/ChaserPopup.jsx';
 import { popupMode } from './chasers/chasers.js';
@@ -151,6 +152,7 @@ export default function App() {
             ))}
           </nav>
 
+          <OfflineBanner onRetry={load} />
           {error && (
             <div className="error card" role="alert">
               {error} <button onClick={load}>Try again</button>

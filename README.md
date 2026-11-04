@@ -49,7 +49,7 @@ from free, official data sources.
   from 26 sea animals; a depth explorer that dives from the waves to Challenger Deep through every zone;
   the nearest live NOAA buoys (waves, water temperature) and tides; and an ocean quiz. Five Ocean explorer
   badges. Change the news sources with `OCEAN_FEEDS`.
-- **Models**: what ECMWF, GFS, ICON, GEM, HRRR and the AI models GraphCast and AIFS each predict,
+- **Models**: what ECMWF, GFS, ICON, GEM, HRRR and the AI models AIGFS (NOAA's GraphCast-based model) and AIFS each predict,
   plotted together, with an ensemble confidence band (10th to 90th percentile), a High/Medium/Low
   confidence rating per day and a side-by-side table. Forecast maps show any one model (or two
   side by side) across the region for temperature, rain and snow, wind, clouds or pressure, every
@@ -102,6 +102,22 @@ from free, official data sources.
 - **Severe weather alerts on your phone**: tap 🔔 to get a push notification when the NWS issues a
   warning, watch or advisory for your place, even with the app closed. Needs an https address
   (behind your reverse proxy); on iPhone, add Weather Scout to the Home Screen first.
+- **Personal alerts** (in 🔔 alerts, per device): rain or snow starting in the next hour, frost or freeze
+  tonight, strong gusts, dangerous heat, snow on the way and the northern lights, each with your own
+  number (for example gusts at 40 mph or a low at or below 32°F). Each one is sent once, and quiet hours
+  hold them from 9 PM to 7 AM (NWS warnings still come through).
+- **Offline mode**: the app and the last weather it showed are kept on each device, so Weather Scout
+  still opens with "You're offline, showing the weather saved at 2:40 PM" when the internet or the server
+  drops. The safety plan and shelter spot keep working. Needs https (or localhost), like push alerts.
+- **Best times outside** (dashboard card): the best stretch in the next day and a half for a walk, a bike
+  ride, the playground, a kite, a picnic, the pool, snow play or a rainbow hunt, rated Great, OK or Not today.
+- **Northern lights** (dashboard card and personal alert): tonight's Kp forecast from NOAA's Space Weather
+  Prediction Center against the Kp your place needs (from its geomagnetic latitude, an approximation of
+  NOAA's view line), OVATION aurora chances, and tonight's cloud cover.
+- **Forecast scorecard** (Models tab and a dashboard card): each model's forecast from the day before
+  (Open-Meteo Previous Runs) checked against what really happened over the last 7 days, using the nearest
+  NWS observation station in the US. Ranks the models by how far off their highs and lows were, and how
+  often they got rain right.
 - **Rocky's morning briefing**: a short kid-friendly rundown of the day (temperature, rain chance,
   what to wear, recess, any alerts, plus a fun fact) at the top of the Kid Zone, with a 🔊 button that
   reads it in the Kokoro voice. In 🔔 alerts, tick *Rocky's morning briefing* and pick a time to get it
@@ -394,8 +410,11 @@ names also work as environment variables (`LIGHTNING_GLM`, `LIGHTNING_GLM_SATELL
 | Buoys and tides | NOAA [NDBC](https://www.ndbc.noaa.gov/) and [Tides & Currents](https://tidesandcurrents.noaa.gov/) | none |
 | Model comparison and ensembles | Open-Meteo per-model forecasts and [ensemble API](https://open-meteo.com/en/docs/ensemble-api) | none |
 | Air quality (US AQI, PM2.5, PM10, ozone) | Open-Meteo Air Quality (CAMS) | none |
+| Pollen | Open-Meteo (CAMS) in Europe; [Google Pollen API](https://developers.google.com/maps/documentation/pollen) for the US and elsewhere | none in Europe; optional `GOOGLE_POLLEN_API_KEY` (set it in Family & settings) |
 | Watches, warnings, advisories | [api.weather.gov](https://www.weather.gov/documentation/services-web-api) | none, but set `NWS_USER_AGENT` |
 | Satellite | NASA [GIBS](https://earthdata.nasa.gov/gibs) GOES-East infrared | none |
+| Aurora (Kp forecast, OVATION) | NOAA [Space Weather Prediction Center](https://www.swpc.noaa.gov/) | none |
+| Forecast scorecard | Open-Meteo [Previous Runs API](https://open-meteo.com/en/docs/previous-runs-api), NWS station observations | none |
 | Severe outlooks | NOAA [Storm Prediction Center](https://www.spc.noaa.gov/) | none |
 | Lightning | NOAA [GOES GLM](https://registry.opendata.aws/noaa-goes/) on AWS Open Data; optional [Blitzortung.org](https://www.blitzortung.org/) (private, non-commercial use) | none |
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
