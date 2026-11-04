@@ -13,7 +13,10 @@ export const MODELS = [
   { id: 'icon_seamless', name: 'ICON', from: 'Germany (DWD)', note: 'Strong on fronts and temperatures' },
   { id: 'gem_seamless', name: 'GEM', from: 'Canada (ECCC)', note: 'Good on winter storms' },
   { id: 'gfs_hrrr', name: 'HRRR', from: 'USA (NOAA), 3 km', note: 'Short-range storm detail, next 2 days', shortRange: true },
-  { id: 'gfs_graphcast025', name: 'GraphCast', from: 'Google DeepMind', note: 'AI model trained on decades of weather', ai: true },
+  // NOAA stopped running GraphCast in December 2025, so Open-Meteo has no new GraphCast
+  // forecasts. AIGFS is its replacement: NOAA's own AI model, built on GraphCast.
+  // It predicts temperature and wind but not rain.
+  { id: 'ncep_aigfs025', name: 'AIGFS', from: 'USA (NOAA)', note: "NOAA's AI model, built on Google DeepMind's GraphCast", ai: true },
   { id: 'ecmwf_aifs025_single', name: 'AIFS', from: 'ECMWF', note: "ECMWF's AI model", ai: true },
 ];
 
