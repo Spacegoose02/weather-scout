@@ -157,7 +157,7 @@ export function windWord(mph) {
   return 'Dangerous winds';
 }
 
-function useWidth(initial = 600) {
+export function useWidth(initial = 600) {
   const ref = useRef(null);
   const [w, setW] = useState(initial);
   useEffect(() => {

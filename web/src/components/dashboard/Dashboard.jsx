@@ -4,6 +4,7 @@ import HourlyTimeline from '../HourlyTimeline.jsx';
 import DailyForecast from '../DailyForecast.jsx';
 import Details from '../Details.jsx';
 import HealthSky from '../HealthSky.jsx';
+import Allergy from '../Allergy.jsx';
 import Coast from '../Coast.jsx';
 import WhyNow from '../learn/WhyNow.jsx';
 import { RainNext, AirUv, Wind } from '../NowCards.jsx';
@@ -30,6 +31,7 @@ function renderCard(id, size, ctx) {
     case 'wind': return <Wind forecast={weather.forecast} />;
     case 'air': return <AirUv air={weather.air} forecast={weather.forecast} />;
     case 'health': return <HealthSky weather={weather} />;
+    case 'allergy': return <Allergy weather={weather} />;
     case 'tides': return location ? <Coast location={location} units={units} onMap={() => ctx.onTab('map')} /> : null;
     case 'radar': return location ? <RadarCard location={location} size={size} onOpen={() => ctx.onTab('map')} /> : null;
     case 'cameras': return location ? <CamerasCard location={location} size={size} onOpen={() => ctx.onTab('map')} /> : null;
