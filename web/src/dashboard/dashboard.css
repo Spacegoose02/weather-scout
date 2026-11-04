@@ -232,3 +232,32 @@
 .fire-list li { display: grid; grid-template-columns: 22px 1fr; column-gap: 6px; }
 .fire-list li > span:first-child { grid-row: span 2; }
 .fire-meta { font-size: 0.85rem; }
+
+/* Storm tracker */
+.dash-cells.alarm { border-left: 5px solid #e0322b; }
+.cells-headline { font-weight: 600; }
+.cell-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cell-list li { display: grid; grid-template-columns: 18px 1fr; column-gap: 6px; padding: 4px 6px; border-radius: 10px; }
+.cell-list li.coming { background: color-mix(in srgb, #e0322b 10%, transparent); }
+.cell-list .cell-dot { grid-row: span 2; width: 12px; height: 12px; margin-top: 4px; border-radius: 50%; border: 1.5px solid rgba(0,0,0,.35); }
+
+/* Winter & roads */
+.dash-winter.alarm { border-left: 5px solid #3d7dff; }
+.winter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.winter-tile { display: grid; gap: 2px; padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, #3d7dff 8%, transparent); }
+.winter-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; opacity: .75; }
+.winter-big { font-size: 1.5rem; line-height: 1.2; }
+.snowday-meter { display: block; height: 8px; border-radius: 4px; background: color-mix(in srgb, currentColor 12%, transparent); overflow: hidden; }
+.snowday-meter i { display: block; height: 100%; background: linear-gradient(90deg, #8fb8ff, #3d7dff); }
+
+/* Trip forecast */
+.dash-trip.alarm { border-left: 5px solid #c4123a; }
+.trip-form { display: flex; gap: 6px; }
+.trip-form input { flex: 1; min-width: 0; }
+.trip-places { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; }
+.trip-leave { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+.trip-stops { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.trip-stops li { display: grid; grid-template-columns: 56px 76px 1fr auto; gap: 6px; padding: 4px 8px; border-radius: 8px; align-items: baseline; }
+.trip-stops li.bad { background: color-mix(in srgb, #f08a24 14%, transparent); }
+.trip-stops li.bad.r4, .trip-stops li.bad.r5 { background: color-mix(in srgb, #c4123a 14%, transparent); font-weight: 600; }
+.trip-mile { font-variant-numeric: tabular-nums; }

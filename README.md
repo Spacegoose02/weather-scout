@@ -63,6 +63,18 @@ from free, official data sources.
   and only first names show. 🌊 **Flood & rivers** shows WPC's excessive rainfall outlook for today and
   tomorrow and nearby river gauges with their flood stage and forecast. 🔥 **Wildfires & smoke** lists active
   wildfires nearby, flags any that are upwind, and says when smoke may make the air unhealthy.
+  ⛈️ **Storm tracker** follows every storm cell the NEXRAD radars are tracking within 100 miles: how strong
+  it is (hail size, rotation, echo tops), which way it is moving and, when one is on course, about when it
+  arrives. The map draws each storm's next hour as a dotted track, and a 🌨️ **Rain, snow & ice** layer tints
+  where it is raining, snowing, mixing or freezing. Turn on ⛈️ *Storm heading your way* in alerts for a push
+  when a strong storm is about an hour out.
+- **Winter & travel**: a ❄️ *Winter & roads* card with snow in the next 24 and 48 hours, when roads
+  could ice over (freezing rain, or wet roads refreezing) and a rough snow day or delay chance for the
+  next school morning. A 🚗 *Trip forecast* card shows the weather along a drive at the time you'll be
+  at each stretch (routes from OpenStreetMap via OSRM).
+- **Easier to see** (⚙️ Settings): larger text, a color-blind friendly radar (red-green), and less
+  motion (no animations, the radar loop waits for ▶). A *Skip to the weather* link and live map
+  status help keyboard and screen-reader users.
 - **NWS alerts** for your exact location, most severe first, with plain-language kid versions.
 - **Family safety plan** (🛡️ in the account menu, the Safety plan dashboard card, or the alerts banner):
   a shelter spot for tornadoes, severe thunderstorms, floods and hurricanes, meeting places, emergency
@@ -109,7 +121,7 @@ from free, official data sources.
   warning, watch or advisory for your place, even with the app closed. Needs an https address
   (behind your reverse proxy); on iPhone, add Weather Scout to the Home Screen first.
 - **Personal alerts** (in 🔔 alerts, per device): rain or snow starting in the next hour, frost or freeze
-  tonight, strong gusts, dangerous heat, snow on the way and the northern lights, each with your own
+  tonight, strong gusts, dangerous heat, snow on the way, the northern lights and a strong storm on the radar heading your way, each with your own
   number (for example gusts at 40 mph or a low at or below 32°F). Each one is sent once, and quiet hours
   hold them from 9 PM to 7 AM (NWS warnings still come through).
 - **Offline mode**: the app and the last weather it showed are kept on each device, so Weather Scout
@@ -223,7 +235,9 @@ Behind https, also set `SECURE_COOKIES=true`.
 ### Android app and Windows 11 widget
 
 Once you have https, GitHub Actions can build an **Android app** (APK) that opens your server
-full screen, and Windows 11 can show a **Weather Scout today** card on the Widgets board.
+full screen, with a **home-screen widget** (temperature, rain in the next 2 hours, alerts).
+Windows 11 can show a **Weather Scout today** card on the Widgets board, and **`/watch.html`**
+is a big-type view for watches and other tiny screens.
 Setup, signing keys and install steps are in [docs/APPS.md](docs/APPS.md).
 
 ## Keys and private data
@@ -424,6 +438,9 @@ names also work as environment variables (`LIGHTNING_GLM`, `LIGHTNING_GLM_SATELL
 | Storm reports | NWS local storm reports via [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/request/gis/lsrs.phtml) | none |
 | River gauges and flood stage | NOAA [National Water Prediction Service](https://water.noaa.gov/) | none |
 | Excessive rainfall outlook | NOAA [Weather Prediction Center](https://www.wpc.ncep.noaa.gov/qpf/excessive_rainfall_outlook_ero.php) | none |
+| Storm cell tracks | NEXRAD storm tracking (SCIT) via [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
+| Rain / snow / mix / ice layer | Open-Meteo current weather on a grid (HRRR blend in the US) | none |
+| Driving routes (trip forecast) | [OSRM](https://project-osrm.org/) demo server, OpenStreetMap data (light use) | none |
 | Wildfires | [NIFC WFIGS](https://data-nifc.opendata.arcgis.com/) current incident locations | none |
 | Severe outlooks | NOAA [Storm Prediction Center](https://www.spc.noaa.gov/) | none |
 | Lightning | NOAA [GOES GLM](https://registry.opendata.aws/noaa-goes/) on AWS Open Data; optional [Blitzortung.org](https://www.blitzortung.org/) (private, non-commercial use) | none |

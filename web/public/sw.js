@@ -131,7 +131,8 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (req.mode === 'navigate') return event.respondWith(page(event));
+  // The watch page is its own small page, not the app shell.
+  if (req.mode === 'navigate' && url.pathname !== '/watch.html') return event.respondWith(page(event));
   if (url.pathname.startsWith('/assets/')) return event.respondWith(asset(event));
   if (url.pathname.startsWith('/api/')) {
     if (OFFLINE_API.some((p) => url.pathname === p || url.pathname.startsWith(`${p}/`))) event.respondWith(api(event));

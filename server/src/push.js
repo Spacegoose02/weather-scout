@@ -357,8 +357,17 @@ export class PushService {
           aurora = null;
         }
       }
+      // A storm cell on the radar heading for this place (optional).
+      let cell = null;
+      if (this.cellsFor && list.some((x) => x.rules.cell)) {
+        try {
+          cell = await this.cellsFor(place);
+        } catch {
+          cell = null;
+        }
+      }
       for (const { sub, rules } of list) {
-        for (const ev of evaluateRules(fc, rules, { now, aurora })) {
+        for (const ev of evaluateRules(fc, rules, { now, aurora, cell })) {
           const id = `rule:${ev.key}`;
           if (sentBefore.get(sub.id, id)) continue;
           markSent.run(sub.id, id);

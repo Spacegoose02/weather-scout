@@ -56,13 +56,4 @@ export function pressureWord(trend) {
   return 'steady';
 }
 
-export function nextRainText(minutely, units) {
-  if (!minutely?.length) return null;
-  const idx = minutely.findIndex((m) => (m.precip ?? 0) > 0);
-  if (idx === -1) return 'No rain expected in the next 2 hours.';
-  if (idx === 0) {
-    const stop = minutely.findIndex((m) => (m.precip ?? 0) === 0);
-    return stop === -1 ? 'Rain continuing for at least 2 hours.' : `Rain stopping in about ${stop * 15} minutes.`;
-  }
-  return `Rain starting in about ${idx * 15} minutes.`;
-}
+export { nextRainText } from '../../shared/glance.js';

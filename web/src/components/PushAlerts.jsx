@@ -25,7 +25,7 @@ export default function PushAlerts({ location, saved, onClose, lightningMiles = 
   const [briefingTime, setBriefingTime] = useState('07:00');
   const [boltPush, setBoltPush] = useState(false);
   const ruleUnits = units === 'metric' ? 'metric' : 'imperial';
-  const [rules, setRules] = useState(() => ({ units: ruleUnits, rain: false, freeze: null, gust: null, heat: null, snow: false, aurora: false, quiet: true }));
+  const [rules, setRules] = useState(() => ({ units: ruleUnits, rain: false, freeze: null, gust: null, heat: null, snow: false, aurora: false, cell: false, quiet: true }));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -156,7 +156,7 @@ export default function PushAlerts({ location, saved, onClose, lightningMiles = 
   );
 }
 
-// Personal alerts: rain soon, frost, gusts, heat, snow and the northern lights,
+// Personal alerts: rain soon, frost, gusts, heat, snow, the northern lights and storms on the radar,
 // each with its own number. Saved with the rest of this device's alerts.
 function PersonalAlerts({ rules, onChange }) {
   const choices = RULE_CHOICES[rules.units] || RULE_CHOICES.imperial;
@@ -195,6 +195,7 @@ function PersonalAlerts({ rules, onChange }) {
       {number('heat', 'feels like')}
       {flag('snow')}
       {flag('aurora')}
+      {flag('cell')}
       <label className="check">
         <input type="checkbox" checked={rules.quiet !== false} onChange={(e) => set({ quiet: e.target.checked })} />
         <span><strong>🌙 Quiet hours</strong> <span className="tile-note">Hold these from 9 PM to 7 AM. NWS warnings still come through.</span></span>

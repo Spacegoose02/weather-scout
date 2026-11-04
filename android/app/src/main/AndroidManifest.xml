@@ -8,6 +8,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The home-screen widget fetches the forecast from your server itself. -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -62,5 +64,24 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
+
+        <!-- Home-screen widget: temperature, rain in the next 2 hours, alerts. -->
+        <receiver
+            android:name=".WeatherWidget"
+            android:label="@string/widgetName"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="app.weatherscout.android.WIDGET_REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/weather_widget_info" />
+        </receiver>
+        <activity
+            android:name=".WidgetSetupActivity"
+            android:label="@string/widgetSetupTitle"
+            android:theme="@android:style/Theme.Material.Light.Dialog"
+            android:exported="false" />
     </application>
 </manifest>
