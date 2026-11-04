@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { round, dayLabel, hourLabel } from '../format.js';
 import ModelMap from './ModelMap.jsx';
+import Scorecard from './dashboard/Scorecard.jsx';
 
 // Fixed slot per model (color follows the model, never its rank or what's toggled).
 const SLOT = {
@@ -150,6 +151,8 @@ export default function ModelsView({ location, units }) {
           {data.models.map((m) => <li key={m.id}><strong>{m.name}</strong>{m.ai ? ' 🤖' : ''}: {m.from}. {m.note}.</li>)}
         </ul>
       </section>
+
+      <Scorecard location={location} units={units} size="l" full />
     </div>
   );
 }

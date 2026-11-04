@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import Modal from './Modal.jsx';
 import { pushSupported, secureContext, currentSubscription, enablePush, disablePush } from '../push.js';
 import { ALERT_MILES, DEFAULT_ALERT_MILES, milesToKm } from '../../../shared/lightning.js';
+import { RULE_CHOICES, RULE_INFO, anyRule } from '../../../shared/thresholds.js';
 
 const KINDS = [
   ['warning', 'Warnings', 'Tornado, severe thunderstorm, flash flood, high wind, winter storm…'],
@@ -23,6 +24,8 @@ export default function PushAlerts({ location, saved, onClose, lightningMiles = 
   const [briefing, setBriefing] = useState(false);
   const [briefingTime, setBriefingTime] = useState('07:00');
   const [boltPush, setBoltPush] = useState(false);
+  const ruleUnits = units === 'metric' ? 'metric' : 'imperial';
+  const [rules, setRules] = useState(() => ({ units: ruleUnits, rain: false, freeze: null, gust: null, heat: null, snow: false, aurora: false, quiet: true }));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -39,6 +42,7 @@ export default function PushAlerts({ location, saved, onClose, lightningMiles = 
         setBriefing(!!s.briefingTime);
         if (s.briefingTime) setBriefingTime(s.briefingTime);
         setBoltPush(!!s.lightningMiles);
+        if (s.rules) setRules(s.rules);
         if (s.lightningMiles && onLightningMiles && s.lightningMiles !== lightningMiles) onLightningMiles(s.lightningMiles);
         const i = places.findIndex((p) => Math.abs(p.lat - s.place.lat) < 0.01 && Math.abs(p.lon - s.place.lon) < 0.01);
         if (i >= 0) setPlaceIdx(i);
@@ -61,8 +65,8 @@ export default function PushAlerts({ location, saved, onClose, lightningMiles = 
   };
 
   const save = () => run(
-    async () => setStatus(await enablePush({ place: places[placeIdx], levels, briefingTime: briefing ? briefingTime : null, lightningMiles: boltPush && lightningMiles ? lightningMiles : null })),
-    levels.length || boltPush ? 'Alerts are on for this device.' : "Rocky's morning briefing is on for this device.",
+    async () => setStatus(await enablePush({ place: places[placeIdx], levels, briefingTime: briefing ? briefingTime : null, lightningMiles: boltPush && lightningMiles ? lightningMiles : null, rules: anyRule(rules) ? rules : null, units: rules.units })),
+    levels.length || boltPush || anyRule(rules) ? 'Alerts are on for this device.' : "Rocky's morning briefing is on for this device.",
   );
   const off = () => run(async () => { await disablePush(); setStatus({ subscribed: false }); }, 'Alerts are off for this device.');
   const test = () => run(async () => {
@@ -123,6 +127,7 @@ export default function PushAlerts({ location, saved, onClose, lightningMiles = 
               </label>
             </fieldset>
           )}
+          <PersonalAlerts rules={rules} onChange={setRules} />
           <fieldset>
             <legend>Every morning</legend>
             <label className="check">
@@ -137,7 +142,7 @@ export default function PushAlerts({ location, saved, onClose, lightningMiles = 
             )}
           </fieldset>
           <div className="row-actions">
-            <button onClick={save} disabled={busy || (!levels.length && !briefing && !(boltPush && lightningMiles)) || (briefing && !briefingTime)}>{status.subscribed ? 'Save' : '🔔 Turn on'}</button>
+            <button onClick={save} disabled={busy || (!levels.length && !briefing && !(boltPush && lightningMiles) && !anyRule(rules)) || (briefing && !briefingTime)}>{status.subscribed ? 'Save' : '🔔 Turn on'}</button>
             {status.subscribed && <button className="ghost" onClick={test} disabled={busy}>Send a test</button>}
             {status.subscribed && status.briefingTime && <button className="ghost" onClick={testBriefing} disabled={busy}>Try the briefing</button>}
             {status.subscribed && <button className="link danger" onClick={off} disabled={busy}>Turn off</button>}
@@ -148,6 +153,53 @@ export default function PushAlerts({ location, saved, onClose, lightningMiles = 
       {msg && <p className="ok-text" role="status">{msg}</p>}
       {error && <p className="error-text" role="alert">{error}</p>}
     </Modal>
+  );
+}
+
+// Personal alerts: rain soon, frost, gusts, heat, snow and the northern lights,
+// each with its own number. Saved with the rest of this device's alerts.
+function PersonalAlerts({ rules, onChange }) {
+  const choices = RULE_CHOICES[rules.units] || RULE_CHOICES.imperial;
+  const set = (patch) => onChange({ ...rules, ...patch });
+  const flag = (id) => (
+    <label key={id} className="check">
+      <input type="checkbox" checked={!!rules[id]} onChange={(e) => set({ [id]: e.target.checked })} />
+      <span><strong>{RULE_INFO[id].emoji} {RULE_INFO[id].name}</strong> <span className="tile-note">{RULE_INFO[id].note}</span></span>
+    </label>
+  );
+  const number = (id, word) => {
+    const c = choices[id];
+    const on = rules[id] != null;
+    return (
+      <div key={id} className="check rule-number">
+        <input type="checkbox" id={`rule-${id}`} checked={on} onChange={(e) => set({ [id]: e.target.checked ? c.default : null })} />
+        <span>
+          <label htmlFor={`rule-${id}`}><strong>{RULE_INFO[id].emoji} {RULE_INFO[id].name}</strong></label>{' '}
+          {on && (
+            <select aria-label={`${RULE_INFO[id].name}: ${word}`} value={rules[id]} onChange={(e) => set({ [id]: Number(e.target.value) })}>
+              {[...new Set([...c.options, rules[id]])].sort((a, b) => a - b).map((v) => <option key={v} value={v}>{word} {v}{c.unit === '°F' || c.unit === '°C' ? c.unit : ` ${c.unit}`}</option>)}
+            </select>
+          )}
+          <span className="tile-note"> {RULE_INFO[id].note}</span>
+        </span>
+      </div>
+    );
+  };
+  return (
+    <fieldset className="personal-alerts">
+      <legend>Personal alerts</legend>
+      <p className="hint">Heads-ups from the forecast for this place, each sent once. Pick your own numbers.</p>
+      {flag('rain')}
+      {number('freeze', 'at or below')}
+      {number('gust', 'at')}
+      {number('heat', 'feels like')}
+      {flag('snow')}
+      {flag('aurora')}
+      <label className="check">
+        <input type="checkbox" checked={rules.quiet !== false} onChange={(e) => set({ quiet: e.target.checked })} />
+        <span><strong>🌙 Quiet hours</strong> <span className="tile-note">Hold these from 9 PM to 7 AM. NWS warnings still come through.</span></span>
+      </label>
+    </fieldset>
   );
 }
 
