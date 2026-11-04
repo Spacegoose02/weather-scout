@@ -7,6 +7,18 @@ import AiSettingsPanel from './AiSettingsPanel.jsx';
 import AppSettingsPanel from './AppSettingsPanel.jsx';
 import './ai-settings.css';
 
+// The jump bar at the top of this long window.
+const ADMIN_SECTIONS = [
+  ['people', '👪 People'],
+  ['ai', '🤖 AI & voice'],
+  ['app', '⚙️ App'],
+  ['apps', '🔑 Connected apps'],
+  ['news', '📰 News'],
+  ['photos', '⚡ Storm photos'],
+  ['stations', '🏡 Stations'],
+  ['cameras', '📷 Cameras'],
+];
+
 export default function Admin({ me, onClose }) {
   const [users, setUsers] = useState([]);
   const [feeds, setFeeds] = useState([]);
@@ -77,7 +89,13 @@ export default function Admin({ me, onClose }) {
 
   return (
     <Modal title="Family & settings" onClose={onClose} wide>
+      <nav className="admin-jump" aria-label="Family & settings sections">
+        {ADMIN_SECTIONS.map(([id, label]) => (
+          <button key={id} className="ghost" onClick={() => document.getElementById(`fam-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{label}</button>
+        ))}
+      </nav>
       {error && <p className="error-text" role="alert">{error}</p>}
+      <span id="fam-people" className="admin-anchor" />
       <h3>People</h3>
       <table className="users">
         <thead><tr><th>Name</th><th>Username</th><th>SSO link</th><th>Role</th><th /></tr></thead>
@@ -109,10 +127,13 @@ export default function Admin({ me, onClose }) {
         <button type="submit">Add</button>
       </form>
 
+      <span id="fam-ai" className="admin-anchor" />
       <AiSettingsPanel />
 
+      <span id="fam-app" className="admin-anchor" />
       <AppSettingsPanel />
 
+      <span id="fam-apps" className="admin-anchor" />
       <h3>Connected apps</h3>
       <p className="hint">Give Den-Duty (or Home Assistant) a key so it can show the weather card on kid boards and the family wall.</p>
       {keys.length > 0 && (
@@ -140,6 +161,7 @@ export default function Admin({ me, onClose }) {
         <button type="submit">Make a key</button>
       </form>
 
+      <span id="fam-news" className="admin-anchor" />
       <h3>News & videos</h3>
       <p className="hint">
         Your local NWS office shows up on its own. Add more: RSS or Atom news feeds (local TV, NOAA, NASA) and YouTube channels,
@@ -232,10 +254,13 @@ export default function Admin({ me, onClose }) {
         </>
       )}
 
+      <span id="fam-photos" className="admin-anchor" />
       <StormPhotoAdmin />
 
+      <span id="fam-stations" className="admin-anchor" />
       <IntegrationsPanel />
 
+      <span id="fam-cameras" className="admin-anchor" />
       <h3>Camera feeds</h3>
       {feeds.length === 0 ? (
         <p className="hint">No feeds configured. Copy <code>cameras.example.json</code> to <code>/data/cameras.json</code> and put API keys in environment variables.</p>

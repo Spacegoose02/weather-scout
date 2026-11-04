@@ -15,3 +15,6 @@
 .chaser-toast-text { display: grid; gap: 2px; flex: 1; min-width: 0; }
 .chaser-toast-text .hint { margin: 0; font-size: 0.85rem; }
 @media (max-width: 520px) { .chaser-toast { left: 16px; right: 16px; max-width: none; } }
+
+/* Sit above the phone tab bar. */
+@media (max-width: 640px) { .chaser-toast { bottom: calc(80px + env(safe-area-inset-bottom)); } }

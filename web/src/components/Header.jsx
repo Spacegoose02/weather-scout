@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 import RockyFace from './RockyFace.jsx';
-import ThemePicker from './ThemePicker.jsx';
-import { openSafety } from '../safety/useSafetyPlan.js';
 
-export default function Header({ location, onLocation, saved, kidMode, onKidMode, units, onUnits, user, onSignIn, onSignOut, onAdmin, onProfile, onAlerts, sso, theme }) {
+// Grown-ups get search, saved places, Kids, units and ⚙️ Settings. In the kid
+// view the header is just the place, the badge counter and a way back.
+export default function Header({ location, onLocation, saved, kidMode, onKidMode, units, onUnits, onSettings, badges = 0, onBadges }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
   const [busy, setBusy] = useState(false);
-  const [menu, setMenu] = useState(false);
 
   const search = async (e) => {
     e.preventDefault();
@@ -88,66 +87,54 @@ export default function Header({ location, onLocation, saved, kidMode, onKidMode
         </div>
       </div>
 
-      <form className="search" onSubmit={search} role="search">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a city or ZIP" aria-label="Search location" />
-        <button type="submit" disabled={busy}>{busy ? '…' : 'Go'}</button>
-        <button type="button" onClick={locate} title="Use my location" aria-label="Use my location">🎯</button>
-        {locMsg && (
-          <div className="locate-msg" role="alert">
-            <p>
-              {locMsg === 'insecure'
-                ? <>Browsers only share your exact location with <strong>https://</strong> sites, and this page is plain http. Search your city or ZIP above, or use an approximate location from your internet connection.</>
-                : locMsg}
-            </p>
-            <div className="row-actions">
-              <button type="button" onClick={approximate} disabled={busy}>📍 Use approximate location</button>
-              <button type="button" className="ghost" onClick={() => setLocMsg('')}>Close</button>
-            </div>
-          </div>
-        )}
-        {results.length > 0 && (
-          <ul className="results">
-            {results.map((r) => (
-              <li key={`${r.lat},${r.lon}`}><button type="button" onClick={() => pick(r)}>{r.name}</button></li>
-            ))}
-          </ul>
-        )}
-      </form>
-
-      <div className="header-actions">
-        {saved.length > 1 && (
-          <select aria-label="Saved places" value="" onChange={(e) => e.target.value && pick(saved[Number(e.target.value)])}>
-            <option value="">Saved places</option>
-            {saved.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
-          </select>
-        )}
-        <button className="ghost" onClick={onAlerts} title="Weather alerts on this device" aria-label="Weather alerts on this device">🔔</button>
-        {theme && <ThemePicker {...theme} signedIn={!!user} />}
-        <label className="switch" title="Big, simple, friendly view for kids">
-          <input type="checkbox" checked={kidMode} onChange={(e) => onKidMode(e.target.checked)} />
-          <span><RockyFace /> Kid mode</span>
-        </label>
-        <button className="ghost" onClick={() => onUnits(units === 'imperial' ? 'metric' : 'imperial')} title="Switch units">
-          {units === 'imperial' ? '°F' : '°C'}
-        </button>
-        {user ? (
-          <div className="user">
-            <button className="ghost" onClick={() => setMenu(menu === 'user' ? false : 'user')} aria-expanded={menu === 'user'}>
-              👤 {user.displayName}
-            </button>
-            {menu === 'user' && (
-              <div className="menu" onClick={() => setMenu(false)}>
-                <button onClick={onProfile}>✏️ Change my name</button>
-                <button onClick={() => openSafety('plan')}>🛡️ Family safety plan</button>
-                {user.isAdmin && <button onClick={onAdmin}>Family & settings</button>}
-                <button onClick={onSignOut}>Sign out</button>
+      {!kidMode && (
+        <form className="search" onSubmit={search} role="search">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a city or ZIP" aria-label="Search location" />
+          <button type="submit" disabled={busy}>{busy ? '…' : 'Go'}</button>
+          <button type="button" onClick={locate} title="Use my location" aria-label="Use my location">🎯</button>
+          {locMsg && (
+            <div className="locate-msg" role="alert">
+              <p>
+                {locMsg === 'insecure'
+                  ? <>Browsers only share your exact location with <strong>https://</strong> sites, and this page is plain http. Search your city or ZIP above, or use an approximate location from your internet connection.</>
+                  : locMsg}
+              </p>
+              <div className="row-actions">
+                <button type="button" onClick={approximate} disabled={busy}>📍 Use approximate location</button>
+                <button type="button" className="ghost" onClick={() => setLocMsg('')}>Close</button>
               </div>
-            )}
-          </div>
-        ) : (
-          !sso && <button className="ghost" onClick={onSignIn}>Sign in</button>
-        )}
-      </div>
+            </div>
+          )}
+          {results.length > 0 && (
+            <ul className="results">
+              {results.map((r) => (
+                <li key={`${r.lat},${r.lon}`}><button type="button" onClick={() => pick(r)}>{r.name}</button></li>
+              ))}
+            </ul>
+          )}
+        </form>
+      )}
+
+      {kidMode ? (
+        <div className="header-actions">
+          <button className="ghost kid-badges" onClick={onBadges} aria-label={`My badges: ${badges}`}>🏅 {badges}</button>
+          <button className="ghost" onClick={() => onKidMode(false)} title="Back to the grown-up view">🧑 Grown-ups</button>
+        </div>
+      ) : (
+        <div className="header-actions">
+          {saved.length > 1 && (
+            <select aria-label="Saved places" value="" onChange={(e) => e.target.value && pick(saved[Number(e.target.value)])}>
+              <option value="">Saved places</option>
+              {saved.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
+            </select>
+          )}
+          <button className="ghost kids-switch" onClick={() => onKidMode(true)} title="Big, simple, friendly view for kids"><RockyFace /> Kids</button>
+          <button className="ghost" onClick={() => onUnits(units === 'imperial' ? 'metric' : 'imperial')} title="Switch units">
+            {units === 'imperial' ? '°F' : '°C'}
+          </button>
+          <button className="ghost" onClick={onSettings} title="Settings" aria-label="Settings">⚙️</button>
+        </div>
+      )}
     </header>
   );
 }

@@ -77,7 +77,7 @@ export default function StormPhoto({ date, kid, isAdmin, compact = false, size =
           {!(compact && size === 's') && photo.fact && <p className="storm-fact">💡 {photo.fact}</p>}
           <div className="storm-actions">
             <SpeakButton text={() => stormPhotoSpeech(photo)} label="Hear Rocky" onSpeak={heard} />
-            {compact && onKids && <button className="link" onClick={onKids}>More in the Kid Zone →</button>}
+            {compact && onKids && <button className="link" onClick={onKids}>More in the kids view →</button>}
             {isAdmin && <button className="link storm-hide" onClick={() => hidePhoto(photo, sp.reload)}>Hide this picture</button>}
           </div>
           <Credit credit={photo.credit} />

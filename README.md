@@ -12,6 +12,17 @@ A self-hosted, kid-friendly weather station for the whole family. It runs in one
 Docker container (Unraid friendly), keeps every API key on your server, and pulls
 from free, official data sources.
 
+**How the app is laid out**
+
+- **Grown-ups** get six tabs: Today, Radar & Cams, Learn & Explore (Lessons, Storm Center and Ocean),
+  Models, News & Videos and Ask (when AI is on). Every setting lives in the ⚙️ Settings window: your
+  name, units, colors, alerts on this device, the family safety plan and, for admins, Family & settings.
+- **Kids** (the 🦝 Kids button) get their own tab row instead: Today, Play, Explore, Storm Chaser,
+  Weather School and Ask Rocky, with a 🏅 badge counter and a 🧑 Grown-ups button to switch back.
+  Alerts, storm-safe mode and the lightning banner always show, in kid wording.
+- The tab is kept in the address (`#map`, `#learn/ocean`), so refresh, back and bookmarks work.
+  On phones the tabs sit in a bar along the bottom.
+
 **What's in this first release (MVP)**
 
 - **Today**: current conditions, feels-like, dew point, pressure trend, UV, air quality,
@@ -24,7 +35,7 @@ from free, official data sources.
   high, low, wettest and snowiest for today's date, where today ranks, notable past years, a chart and
   table of every year since 1940, and how the date has warmed or cooled. In the US the records come from
   the nearest NOAA ThreadEx city station (via ACIS, often back to the 1800s); elsewhere from Open-Meteo's
-  free ERA5 archive. Kids get a **weather time machine** in Kid Zone › Explore: slide back through the
+  free ERA5 archive. Kids get a **weather time machine** in the kids view › Explore: slide back through the
   years, play "warmer or colder than today?", hear Rocky's record book and earn the Time Traveler badge.
 - **Next 2 hours, wind, air & UV**: a 15-minute rain chart for the next 2 hours, a wind compass
   with a 24-hour wind and gust chart, and an air quality breakdown by pollutant with 48-hour AQI and
@@ -32,7 +43,7 @@ from free, official data sources.
 - **Hurricanes & ocean**: active storms from the National Hurricane Center with forecast cones and
   tracks on the map, NOAA buoys (waves, water temperature, wind), and today's tides when you're near
   the coast.
-- **Ocean** (🌊 tab, made for kids with a grown-up view too): the latest ocean discoveries from NOAA Ocean
+- **Ocean** (in Learn & Explore, made for kids with a grown-up view too): the latest ocean discoveries from NOAA Ocean
   Exploration, Schmidt Ocean Institute, MBARI and ScienceDaily, with kid-sized summaries, topic tags, "wow
   word" meanings and read-aloud (and "Rocky, explain it!" when the AI helper is on); a creature of the week
   from 26 sea animals; a depth explorer that dives from the waves to Challenger Deep through every zone;

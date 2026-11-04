@@ -16,7 +16,7 @@ import OnThisDay from '../history/OnThisDay.jsx';
 import GearChecklist from './GearChecklist.jsx';
 import StormPhoto from '../kid/StormPhoto.jsx';
 import { useDashboard } from '../../dashboard/useDashboard.js';
-import { CARD, SIZE_NAMES, hidden, addCard, removeCard, moveCard, nudgeCard, resizeCard } from '../../dashboard/layout.js';
+import { CARD, CARD_GROUPS, SIZE_NAMES, hidden, addCard, removeCard, moveCard, nudgeCard, resizeCard } from '../../dashboard/layout.js';
 import { usePackedGrid } from '../../dashboard/usePackedGrid.js';
 import '../../dashboard/dashboard.css';
 
@@ -41,7 +41,7 @@ function renderCard(id, size, ctx) {
     case 'safety': return <SafetyCard weather={weather} user={user} kidMode={kidMode} />;
     case 'denduty': return <DenDutyCard weather={weather} isAdmin={!!user?.isAdmin} onAdmin={ctx.onAdmin} />;
     case 'journal': return <Journal weather={weather} user={user} size={size} onSignIn={ctx.onSignIn} />;
-    case 'history': return location ? <OnThisDay location={location} units={units} kidMode={kidMode} size={size} onKids={() => ctx.onTab('kids')} /> : null;
+    case 'history': return location ? <OnThisDay location={location} units={units} kidMode={kidMode} size={size} onKids={() => ctx.onTab('kids', 'explore')} /> : null;
     case 'stars': return location ? <Stargazing weather={weather} location={location} kidMode={kidMode} size={size} /> : null;
     case 'stormpic': return <StormPhoto date={weather.kid?.date} isAdmin={!!user?.isAdmin} compact size={size} onKids={() => ctx.onTab('kids')} />;
     case 'gear': return <GearChecklist weather={weather} kidMode={kidMode} size={size} />;
@@ -130,18 +130,25 @@ export default function Dashboard({ weather, location, units, kidMode, user, loa
       {isEditing && adding && (
         <div className="card dash-add">
           <h2>Add a card</h2>
-          {offList.length === 0 ? <p className="hint">Every card is already on your page.</p> : (
-            <ul>
-              {offList.map((c) => (
-                <li key={c.id}>
-                  <button className="ghost" onClick={() => update((l) => addCard(l, c.id, 0))}>
-                    <span className="dash-add-emoji" aria-hidden>{c.emoji}</span>
-                    <span><strong>{c.title}</strong><small>{c.blurb}</small></span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          {offList.length === 0 ? <p className="hint">Every card is already on your page.</p> : CARD_GROUPS.map(([g, label]) => {
+            const list = offList.filter((c) => (c.group || 'weather') === g);
+            if (!list.length) return null;
+            return (
+              <div key={g} className="dash-add-group">
+                <h3>{label}</h3>
+                <ul>
+                  {list.map((c) => (
+                    <li key={c.id}>
+                      <button className="ghost" onClick={() => update((l) => addCard(l, c.id, 0))}>
+                        <span className="dash-add-emoji" aria-hidden>{c.emoji}</span>
+                        <span><strong>{c.title}</strong><small>{c.blurb}</small></span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </div>
       )}
 

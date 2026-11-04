@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CARDS, DEFAULT_LAYOUT, normalize, addCard, removeCard, moveCard, nudgeCard, resizeCard, hidden } from './layout.js';
+import { CARDS, CARD_GROUPS, DEFAULT_LAYOUT, normalize, addCard, removeCard, moveCard, nudgeCard, resizeCard, hidden } from './layout.js';
 import { streak, compareForecast } from './journal.js';
 import { skyVerdict } from './stars.js';
 
@@ -9,6 +9,12 @@ describe('dashboard layout', () => {
   it('has a default that only uses known cards at allowed sizes', () => {
     expect(normalize(DEFAULT_LAYOUT)).toEqual(DEFAULT_LAYOUT);
     expect(new Set(CARDS.map((c) => c.id)).size).toBe(CARDS.length);
+  });
+
+  it('keeps the default short and files every card under an Add cards group', () => {
+    expect(DEFAULT_LAYOUT.cards.length).toBeLessThanOrEqual(10);
+    const groups = CARD_GROUPS.map(([g]) => g);
+    for (const c of CARDS) expect(groups).toContain(c.group);
   });
 
   it('normalize drops unknown and duplicate cards and fits sizes', () => {

@@ -126,15 +126,9 @@ html[data-theme] body { background: var(--sky), var(--bg); background-attachment
 }
 @keyframes ws-flash { 0%, 93%, 100% { opacity: 0; } 94% { opacity: 1; } 95% { opacity: 0; } 96.5% { opacity: 0.7; } }
 
-/* Theme picker */
-.theme-picker { position: relative; }
-.theme-panel {
-  position: absolute; right: 0; top: 44px; z-index: 1001; width: min(380px, calc(100vw - 32px));
-  max-height: min(70vh, 620px); overflow: auto; padding: 12px; background: var(--card); color: var(--ink);
-  border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-}
-.theme-panel h3 { margin: 12px 0 6px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-.theme-panel h3:first-child { margin-top: 0; }
+/* Theme choices (in Settings) */
+.theme-choices h3 { margin: 12px 0 6px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.theme-choices h3:first-child { margin-top: 0; }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
 .theme-grid button {
   display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px; min-height: 76px;
@@ -146,5 +140,5 @@ html[data-theme] body { background: var(--sky), var(--bg); background-attachment
 .theme-why { margin: 10px 0 0; padding: 8px 10px; border-radius: 12px; background: var(--bg); font-weight: 600; font-size: 0.9rem; display: flex; gap: 8px; align-items: center; }
 .theme-hint { margin: 8px 0 0; color: var(--muted); font-size: 0.82rem; }
 .theme-buddy { position: fixed; right: 14px; bottom: 10px; z-index: 5; pointer-events: none; opacity: 0.95; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.25)); }
-@media (max-width: 640px) { .theme-buddy { display: none; } .theme-panel { position: fixed; left: 16px; right: 16px; top: 70px; width: auto; max-height: calc(100dvh - 90px); } }
+@media (max-width: 640px) { .theme-buddy { display: none; } }
 @media print { .theme-buddy { display: none; } }
