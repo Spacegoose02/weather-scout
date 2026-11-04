@@ -79,7 +79,7 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Weather expert that answers like a kid would understand | ✅ Ask an Expert tab (Ask Rocky in Kid Mode): Claude or a self-hosted Ollama with the live forecast, alerts and air quality as context. Hidden when neither is set up. Optional Kokoro voice for all of Rocky's read-aloud |
 | Take a picture of a cloud, AI tells you about it | ✅ Snap or upload a sky photo in the Ask tab: cloud type, confidence, what it means for the weather, a fun fact. Photos aren't stored |
 | AI-enabled web search | ✅ *Search the web* toggle with cited sources; Kid Mode searches only NOAA/NWS/NASA-style science sites |
-| AI-assisted ensembles (GraphCast, WeatherNext) with confidence intervals | ✅ Models tab shows Google DeepMind GraphCast and ECMWF AIFS next to the physics models, with ensemble confidence bands. WeatherNext has no free source yet |
+| AI-assisted ensembles (GraphCast, WeatherNext) with confidence intervals | ✅ Models tab shows NOAA AIGFS (built on Google DeepMind's GraphCast, which NOAA retired in December 2025) and ECMWF AIFS next to the physics models, with ensemble confidence bands. WeatherNext has no free source yet |
 | ECMWF, GFS, ICON side-by-side model comparison | ✅ Models tab: ECMWF, GFS, ICON and GEM plotted together (daily highs and next 72 hours), a side-by-side table and a day-by-day agreement rating |
 | HRRR & NAM for short-fuse storms | 🚧 HRRR (3 km, 2 days) is in the Models tab. Next: NAM and a model radar loop |
 | Confidence & spread metrics (10th/50th/90th percentile) | ✅ ECMWF (51 runs) or GFS (31 runs) ensemble: 10th-90th percentile band, median, High/Medium/Low confidence and the share of runs that bring rain, per day |

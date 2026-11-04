@@ -22,6 +22,7 @@ import * as tropics from './providers/tropics.js';
 import * as ocean from './providers/ocean.js';
 import * as discoveries from './providers/discoveries.js';
 import * as models from './providers/models.js';
+import { getGooglePollen } from './providers/pollen.js';
 import * as modelMaps from './providers/modelmaps.js';
 import { MAP_AREAS, MAP_MODELS, defaultArea, gridFor } from '../../shared/modelmap.js';
 import { kidReport } from './kid.js';
@@ -144,7 +145,22 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
 
   const forecast = (l) => cache.wrap(key('fc', l), 10 * MIN, () => openMeteo.getForecast(l, fetchImpl));
   const alerts = (l) => cache.wrap(key('al', { ...l, units: '' }), 2 * MIN, () => nws.getAlerts(l, { userAgent: cfg.nwsUserAgent, fetchImpl }));
-  const air = (l) => cache.wrap(key('aq', { ...l, units: '' }), 30 * MIN, () => openMeteo.getAirQuality(l, fetchImpl));
+  // Pollen outside Europe comes from Google (needs GOOGLE_POLLEN_API_KEY). It's a daily
+  // forecast, so a 3-hour cache keeps one home server far inside the free allowance.
+  const pollenKey = () => cfg.env.GOOGLE_POLLEN_API_KEY || '';
+  const googlePollen = (l) => cache.wrap(key('pollen', { ...l, units: '' }) + `:${pollenKey().slice(-4)}`, 180 * MIN, () => getGooglePollen(l, pollenKey(), fetchImpl));
+  const air = (l) => cache.wrap(key('aq', { ...l, units: '' }) + `:${pollenKey() ? 'p' : ''}`, 30 * MIN, async () => {
+    const aq = await openMeteo.getAirQuality(l, fetchImpl);
+    if (aq.pollen) return aq;
+    if (!pollenKey()) return { ...aq, pollenMissing: 'needs-key' };
+    try {
+      const pollen = await googlePollen(l);
+      return pollen ? { ...aq, pollen } : { ...aq, pollenMissing: 'no-data' };
+    } catch (err) {
+      app.log.warn({ err: err.message }, 'Google pollen failed');
+      return { ...aq, pollenMissing: 'failed' };
+    }
+  });
   const settle = async (p) => {
     try {
       return await p;

@@ -65,7 +65,7 @@ test('/api/models compares models and reports missing ones; /api/ensemble works'
   const r = (await app.inject({ url: '/api/models?lat=37.55&lon=-77.46' })).json();
   assert.equal(r.models.length, MODELS.length - 1);
   assert.equal(r.missing[0].id, 'gfs_hrrr');
-  assert.ok(r.models.find((m) => m.id === 'gfs_graphcast025').ai);
+  assert.ok(r.models.find((m) => m.id === 'ncep_aigfs025').ai);
   assert.equal(r.agreement[1].label, 'Models agree');
   const e = await app.inject({ url: '/api/ensemble?lat=37.55&lon=-77.46&model=gfs_seamless' });
   assert.equal(e.statusCode, 200);

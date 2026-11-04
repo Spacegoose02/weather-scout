@@ -58,6 +58,9 @@ export const SETTINGS = [
   { key: 'WINDY_MAP_KEY', group: 'maps', label: 'Windy Map Forecast key', secret: true, signup: 'https://api.windy.com/keys', help: 'Optional. Blank uses the free Windy embed.' },
   { key: 'WINDY_WEBCAMS_KEY', group: 'maps', label: 'Windy Webcams key', secret: true, test: 'webcams', signup: 'https://api.windy.com/keys', help: 'Optional, and a different key from the map one (pick Webcams API when you make it). Adds public webcams from around the world to the Radar & Cams map. Stays on the server.' },
 
+  // ---- pollen ----
+  { key: 'GOOGLE_POLLEN_API_KEY', group: 'pollen', label: 'Google Pollen API key', secret: true, signup: 'https://developers.google.com/maps/documentation/pollen/get-api-key', help: 'Optional. Adds tree, grass and weed pollen for the US and other places outside Europe (Europe works with no key). Make a Google Maps Platform key with the Pollen API turned on; checked about 8 times a day per place, well inside the free monthly allowance. Stays on the server.' },
+
   // ---- live lightning ----
   { key: 'LIGHTNING_GLM', group: 'lightning', label: 'NOAA GOES satellite lightning', options: ['true', 'false'], choices: ['On (free, no key)', 'Off'], help: 'Strikes across the Americas about a minute after they happen. Only downloaded (about 1 MB a minute) while someone is watching or a device has lightning alerts on.' },
   { key: 'LIGHTNING_GLM_SATELLITE', group: 'lightning', label: 'Satellite', options: ['goes19', 'goes18'], choices: ['GOES-East (most of the US)', 'GOES-West (Alaska, Hawaii, Pacific)'] },

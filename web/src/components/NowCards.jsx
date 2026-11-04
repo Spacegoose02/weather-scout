@@ -6,6 +6,13 @@ import { clockLabel, compass, hourLabel, nextRainText, round } from '../format.j
 const RAIN_BANDS = { imperial: [0.1, 0.3], metric: [2.5, 7.6] }; // light < 0.1 in/h <= moderate < 0.3 <= heavy
 const SNOW_CODES = new Set([71, 73, 75, 77, 85, 86]);
 
+// Why there are no pollen tiles (set by the server when Europe's free data has none).
+const POLLEN_MISSING = {
+  'needs-key': 'Pollen counts: the free data only covers Europe. An admin can add a Google Pollen key under Family & settings, 🌼 Pollen counts, to get US pollen.',
+  failed: "Pollen counts: Google's pollen service didn't answer just now. Try again later.",
+  'no-data': 'Pollen counts: there are none for this place yet.',
+};
+
 export function rainWord(rate, units) {
   const [light, heavy] = RAIN_BANDS[units] || RAIN_BANDS.imperial;
   if (!rate) return 'Dry';
@@ -138,11 +145,12 @@ export function AirUv({ air, forecast }) {
           <div className="tile" key={k}>
             <div className="tile-label">{k === 'tree' ? '🌳' : k === 'grass' ? '🌾' : '🌼'} {k[0].toUpperCase() + k.slice(1)} pollen</div>
             <div className="tile-value">{air.pollen[k].level || '–'}</div>
-            <div className="tile-note">{air.pollen[k].value != null ? `${round(air.pollen[k].value)} grains/m³` : ''}</div>
+            <div className="tile-note">{air.pollen[k].value == null ? '' : air.pollen.unit === 'index' ? `Index ${round(air.pollen[k].value)} of ${air.pollen.scaleMax || 5}` : `${round(air.pollen[k].value)} grains/m³`}</div>
           </div>
         ))}
       </div>
-      {!air.pollen && <p className="hint">Pollen counts: the free data only covers Europe, so there are none for this place.</p>}
+      {air.pollen?.source && air.pollen.unit === 'index' && <p className="hint">Pollen: {air.pollen.source}, today's index from 0 (none) to {air.pollen.scaleMax || 5} (very high).</p>}
+      {!air.pollen && <p className="hint">{POLLEN_MISSING[air.pollenMissing] || POLLEN_MISSING['no-data']}</p>}
     </section>
   );
 }
