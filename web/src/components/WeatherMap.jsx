@@ -11,6 +11,8 @@ import LayerPanel from './map/LayerPanel.jsx';
 import { normalizeLayers, alertVisible, anyAlerts, layerCount } from './map/layers.js';
 import { webcamIcon, webcamPopup, WEBCAM_MIN_ZOOM, WEBCAM_REFRESH_MS } from './map/webcams.js';
 import NearbyWebcams from './map/NearbyWebcams.jsx';
+import RadarGuide from './map/RadarGuide.jsx';
+import { legendFor, productGroups, shortName } from './map/radarGuide.js';
 
 window.L = L; // leaflet.markercluster is a classic plugin that extends the global L
 
@@ -27,12 +29,6 @@ const stormIcon = (s) => L.divIcon({
   iconSize: [36, 36], iconAnchor: [18, 18],
 });
 
-const LEGENDS = {
-  dbz: { label: 'Rain & snow', stops: ['#04e9e7', '#019ff4', '#0300f4', '#02fd02', '#01c501', '#008e00', '#fdf802', '#e5bc00', '#fd9500', '#fd0000', '#d40000', '#bc0000', '#f800fd', '#9854c6'], ends: ['light', 'heavy', 'hail'] },
-  eet: { label: 'Storm tops', stops: ['#5ebaff', '#00d1c1', '#26d000', '#f4f400', '#ff9900', '#ff0000', '#c0007f'], ends: ['10k ft', '30k', '50k+ ft'] },
-  rain1: { label: 'Rain in the last hour', stops: ['#cbe4ff', '#6bb6ff', '#2a78d6', '#1baf7a', '#eda100', '#e34948', '#9b2fae'], ends: ['a little', '', 'a lot'] },
-  rain24: { label: 'Rain in the last 24 hours', stops: ['#cbe4ff', '#6bb6ff', '#2a78d6', '#1baf7a', '#eda100', '#e34948', '#9b2fae'], ends: ['a little', '', 'a lot'] },
-};
 const siteIcon = (s, selected) => L.divIcon({
   className: `site-pin ${selected ? 'sel' : ''} ${s.online === false ? 'off' : ''}`,
   html: `<span>${s.id}</span>`, iconSize: [46, 20], iconAnchor: [23, 10],
@@ -358,7 +354,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
     if (!m) return;
     siteLayer.current?.remove();
     siteLayer.current = null;
-    if (productId !== 'site' || !sites.length || !show.radarSites) return;
+    if (!product?.site || !sites.length || !show.radarSites) return;
     const g = L.layerGroup();
     for (const x of sites) {
       L.marker([x.lat, x.lon], { icon: siteIcon(x, x.id === site?.id), title: `${x.name} radar`, zIndexOffset: x.id === site?.id ? 900 : 0 })
@@ -367,7 +363,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
         .addTo(g);
     }
     siteLayer.current = g.addTo(m);
-  }, [productId, sites, site, show.radarSites]);
+  }, [product?.site, sites, site, show.radarSites]);
 
   // Base map
   useEffect(() => {
@@ -535,7 +531,8 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
         : product?.future ? `${frames[frame].lead ? `+${frames[frame].lead} h · ` : 'Now · '}${new Date(t).toLocaleTimeString([], { hour: 'numeric' })}`
           : `${new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}${frame === frames.length - 1 ? ' (latest)' : ''}`;
   const warnings = (national?.features || []).filter((f) => f.properties.rank >= 70).slice().reverse();
-  const legend = LEGENDS[product?.legend] || LEGENDS.dbz;
+  const legend = legendFor(product);
+  const siteProducts = products.filter((p) => p.site);
   const openWindy = () => {
     const c = map.current?.getCenter();
     setWindy(c ? { lat: c.lat, lon: c.lng, zoom: Math.min(map.current.getZoom(), 9) } : { lat: center.lat, lon: center.lon, zoom: 7 });
@@ -551,9 +548,17 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
       {full && (
         <div className="radar-bar" role="toolbar" aria-label="Radar products">
           <span className="radar-brand">🦝 Weather Scout radar</span>
-          {products.map((p) => (
+          {products.filter((p) => !p.site).map((p) => (
             <button key={p.id} className={p.id === productId ? 'on' : ''} aria-pressed={p.id === productId} onClick={() => setProductId(p.id)} title={p.note}>{p.name}</button>
           ))}
+          {siteProducts.length > 0 && (
+            <label className={`radar-select ${product?.site ? 'on' : ''}`} title="One radar up close: reflectivity, velocity and dual-pol products">📡 One radar{' '}
+              <select value={product?.site ? productId : ''} onChange={(e) => setProductId(e.target.value)}>
+                {!product?.site && <option value="" disabled>Pick…</option>}
+                {siteProducts.map((p) => <option key={p.id} value={p.id}>{shortName(p)}</option>)}
+              </select>
+            </label>
+          )}
           <button className={show.satellite ? 'on' : ''} aria-pressed={show.satellite} onClick={() => setShow({ ...show, satellite: !show.satellite })}>Satellite</button>
           <button className={show.lightning ? 'on' : ''} aria-pressed={show.lightning} onClick={() => setShow({ ...show, lightning: !show.lightning })}>⚡ Lightning</button>
           <label className="radar-select">Outlook{' '}
@@ -602,7 +607,11 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
         {!full && products.length > 1 && (
           <label className="radar-select">Show{' '}
             <select value={productId} onChange={(e) => setProductId(e.target.value)}>
-              {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {productGroups(products).map((g) => (
+                <optgroup key={g.label} label={g.label}>
+                  {g.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </optgroup>
+              ))}
             </select>
           </label>
         )}
@@ -621,6 +630,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
         {full && product?.note && <span className="radar-note">{product.note}{outlook?.features && outlookDay ? ` · SPC Day ${outlookDay} outlook: ${outlook.features.length ? [...new Set(outlook.features.map((f) => f.properties.name))].join(', ') : 'no severe risk'}` : ''}</span>}
       </div>
       <div ref={el} className="map" role="application" aria-label="Radar and camera map" />
+      <RadarGuide product={product} legend={legend} full={full} site={site} onPick={setProductId} products={products} />
       <div className="map-foot">
         <span className="legend" aria-label="Radar colors from light to heavy" hidden={product && product.legend !== 'dbz'}><i /> light <i /> moderate <i /> heavy <i /> intense</span>
         <span>
