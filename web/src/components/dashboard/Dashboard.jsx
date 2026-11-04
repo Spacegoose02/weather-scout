@@ -2,6 +2,7 @@ import { Component, useRef, useState } from 'react';
 import CurrentConditions from '../CurrentConditions.jsx';
 import HourlyTimeline from '../HourlyTimeline.jsx';
 import DailyForecast from '../DailyForecast.jsx';
+import TextForecast from '../TextForecast.jsx';
 import Details from '../Details.jsx';
 import HealthSky from '../HealthSky.jsx';
 import Allergy from '../Allergy.jsx';
@@ -25,6 +26,7 @@ function renderCard(id, size, ctx) {
   switch (id) {
     case 'current': return <CurrentConditions weather={weather} kidMode={kidMode} />;
     case 'forecast': return <DailyForecast daily={weather.forecast.daily} units={weather.forecast.units} />;
+    case 'textfc': return location ? <TextForecast location={location} units={units} kidMode={kidMode} size={size} /> : null;
     case 'hourly': return <HourlyTimeline hourly={weather.forecast.hourly} units={weather.forecast.units} />;
     case 'details': return <Details weather={weather} />;
     case 'rain': return <RainNext forecast={weather.forecast} />;
