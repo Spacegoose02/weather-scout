@@ -112,7 +112,6 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/tides?lat&lon&units` | Nearest tide station within 60 miles and its next highs and lows (60 min cache) |
 | `GET /api/models/scorecard?lat&lon&units` | Each model's day-before forecast vs what happened over the last 7 days (NWS station in the US, else Open-Meteo's record), ranked (3 h cache) |
 | `GET /api/sky/aurora?lat&lon` | Northern lights tonight: Kp forecast, the Kp this place needs, chance, OVATION, tonight's clouds (30 min cache) |
-| `GET /api/models?lat&lon&units` | Daily and 72-hour forecasts from each model (ECMWF, GFS, ICON, GEM, HRRR, GraphCast, AIFS) plus day-by-day agreement (30 min cache) |
 | `GET /api/models?lat&lon&units` | Daily and 72-hour forecasts from each model (ECMWF, GFS, ICON, GEM, HRRR, AIGFS, AIFS) plus day-by-day agreement (30 min cache) |
 | `GET /api/ensemble?lat&lon&units&model=ecmwf_ifs025\|gfs_seamless` | Ensemble 10th/50th/90th percentiles, confidence and rain chance (60 min cache) |
 | `GET /api/radar` | Radar products for the map (composite loop, single site, echo tops, rain totals, future radar) and the satellite layer |
