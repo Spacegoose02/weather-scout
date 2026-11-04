@@ -43,6 +43,8 @@ import { registerWebcams, testWebcamsKey } from './webcams.js';
 import { StationService, registerStations } from './stations.js';
 import { HomeAssistantService } from './homeassistant.js';
 import { LightningService, registerLightning } from './lightning.js';
+import { AuroraService } from './aurora.js';
+import { getScorecard } from './scorecard.js';
 import { cleanOutfit, rockySvg } from '../../shared/rocky-outfit.js';
 
 const MIN = 60_000;
@@ -299,6 +301,12 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   });
 
   // ---- model comparison & ensemble confidence ---------------------------------
+  // Which model was right at this place over the last week (Open-Meteo Previous Runs + NWS station).
+  app.get('/api/models/scorecard', { schema: latLonSchema }, async (req) => {
+    const l = loc(req.query);
+    return cache.wrap(key('scorecard', l), 3 * 60 * MIN, () => getScorecard(l, { fetchImpl, userAgent: cfg.nwsUserAgent }));
+  });
+
   app.get('/api/models', { schema: latLonSchema }, async (req) => {
     const l = loc(req.query);
     return cache.wrap(key('models', l), 30 * MIN, () => models.getModels(l, fetchImpl));
@@ -337,6 +345,14 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });
   registerStormPhoto(app, { db, cache, fetchImpl, requireAdmin });
   registerDashboard(app, { db, requireUser, requireAdmin, cache, latLonSchema, loc });
+  // Northern lights tonight (NOAA SWPC Kp forecast and OVATION), with tonight's clouds.
+  const aurora = new AuroraService(cache, fetchImpl);
+  const auroraFor = (l, fc) => aurora.outlook(l, fc);
+  app.get('/api/sky/aurora', { schema: latLonSchema }, async (req) => {
+    const l = loc(req.query);
+    const fc = await settle(forecast(l));
+    return auroraFor(l, fc);
+  });
   const safety = registerSafetyPlan(app, { db, requireUser, requireAdmin });
   if (push) push.shelterFor = safety.shelterFor;
   const shelterFor = safety.shelterFor;
@@ -388,7 +404,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.get('/api/push/key', async (req, reply) => (push ? { publicKey: push.publicKey, levels: LEVELS } : pushOff(reply)));
   app.post('/api/push/status', { schema: { body: subSchema } }, async (req, reply) => (push ? push.status(req.body.endpoint) : pushOff(reply)));
   app.post('/api/push/subscribe', {
-    schema: { body: { type: 'object', required: ['subscription', 'place'], properties: { subscription: { type: 'object' }, place: { type: 'object' }, levels: { type: 'array', items: { type: 'string' }, maxItems: 3 }, briefingTime: { type: ['string', 'null'], maxLength: 5 }, lightningMiles: { type: ['integer', 'null'], minimum: 0, maximum: 100 } } } },
+    schema: { body: { type: 'object', required: ['subscription', 'place'], properties: { subscription: { type: 'object' }, place: { type: 'object' }, levels: { type: 'array', items: { type: 'string' }, maxItems: 3 }, briefingTime: { type: ['string', 'null'], maxLength: 5 }, lightningMiles: { type: ['integer', 'null'], minimum: 0, maximum: 100 }, rules: { type: ['object', 'null'] }, units: { type: 'string', enum: ['imperial', 'metric'] } } } },
   }, async (req, reply) => (push ? reply.code(201).send(push.subscribe(req.body, req.user?.id ?? null)) : pushOff(reply)));
   app.post('/api/push/unsubscribe', { schema: { body: subSchema } }, async (req, reply) => (push ? { ok: push.unsubscribe(req.body.endpoint) } : pushOff(reply)));
   app.post('/api/push/test', {
@@ -412,7 +428,10 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
 
   // ---- background work (started from index.js, so tests stay quiet) ---------
   let started = false;
-  const startPush = () => push?.start(pushAlerts, cfg.push.pollSeconds * 1000, pushBriefing, lightning);
+  const pushForecast = (l) => forecast(loc(l));
+  app.decorate('pushForecast', pushForecast);
+  app.decorate('auroraFor', auroraFor);
+  const startPush = () => push?.start(pushAlerts, cfg.push.pollSeconds * 1000, pushBriefing, lightning, pushForecast, auroraFor);
   app.decorate('startBackground', () => {
     started = true;
     startPush();

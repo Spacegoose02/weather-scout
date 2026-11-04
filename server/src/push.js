@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import webpush from 'web-push';
 import { WINDOW_MIN, dirWord } from '../../shared/lightning.js';
+import { cleanRules, evaluateRules, anyRule } from '../../shared/thresholds.js';
 
 export const LEVELS = ['warning', 'watch', 'advisory'];
 const MAX_SUBSCRIPTIONS = 200;
@@ -105,6 +106,15 @@ function vapidSubject(cfg) {
   return email ? `mailto:${email}` : 'mailto:weather-scout@localhost';
 }
 
+function parseRules(s) {
+  if (!s) return null;
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
 // Tapping the briefing opens the app on that device's briefing place.
 export const briefingLink = (row) => `/?${new URLSearchParams({ briefing: '1', lat: row.lat, lon: row.lon, place: row.place_name || '' })}`;
 
@@ -122,14 +132,15 @@ export class PushService {
     return this.vapid.publicKey;
   }
 
-  subscribe({ subscription, place, levels, briefingTime, lightningMiles }, userId = null) {
+  subscribe({ subscription, place, levels, briefingTime, lightningMiles, rules, units }, userId = null) {
     const { endpoint, keys } = subscription || {};
     if (!/^https:\/\//.test(endpoint || '') || !keys?.p256dh || !keys?.auth) throw Object.assign(new Error('That is not a valid push subscription.'), { statusCode: 400 });
     const lv = (levels || ['warning']).filter((l) => LEVELS.includes(l));
     const briefing = briefingTime ? (TIME.test(briefingTime) ? briefingTime : null) : null;
     if (briefingTime && !briefing) throw Object.assign(new Error('Pick a time for the morning briefing, like 07:00.'), { statusCode: 400 });
     const lightning = Number.isInteger(lightningMiles) && lightningMiles > 0 ? Math.min(100, lightningMiles) : null;
-    if (!lv.length && !briefing && !lightning) throw Object.assign(new Error('Pick at least one kind of alert, or the morning briefing.'), { statusCode: 400 });
+    const personal = cleanRules(rules, units);
+    if (!lv.length && !briefing && !lightning && !personal) throw Object.assign(new Error('Pick at least one kind of alert, or the morning briefing.'), { statusCode: 400 });
     const lat = Math.round(Number(place?.lat) * 100) / 100;
     const lon = Math.round(Number(place?.lon) * 100) / 100;
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) throw Object.assign(new Error('Pick a place for alerts.'), { statusCode: 400 });
@@ -139,22 +150,22 @@ export class PushService {
     // Changing the place or time clears the stored offset and "sent today" mark,
     // so a new time later today still gets its briefing.
     this.db.prepare(`
-      INSERT INTO push_subscriptions (endpoint, p256dh, auth, user_id, lat, lon, place_name, levels, briefing_time, lightning_miles)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO push_subscriptions (endpoint, p256dh, auth, user_id, lat, lon, place_name, levels, briefing_time, lightning_miles, rules)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, user_id = excluded.user_id,
         utc_offset = CASE WHEN lat = excluded.lat AND lon = excluded.lon THEN utc_offset ELSE NULL END,
         briefing_sent = CASE WHEN briefing_time IS excluded.briefing_time AND lat = excluded.lat AND lon = excluded.lon THEN briefing_sent ELSE NULL END,
         lightning_alert_at = CASE WHEN lat = excluded.lat AND lon = excluded.lon AND lightning_miles IS excluded.lightning_miles THEN lightning_alert_at ELSE NULL END,
         lat = excluded.lat, lon = excluded.lon, place_name = excluded.place_name, levels = excluded.levels, briefing_time = excluded.briefing_time,
-        lightning_miles = excluded.lightning_miles
-    `).run(endpoint, keys.p256dh, keys.auth, userId, lat, lon, name, JSON.stringify(lv), briefing, lightning);
+        lightning_miles = excluded.lightning_miles, rules = excluded.rules
+    `).run(endpoint, keys.p256dh, keys.auth, userId, lat, lon, name, JSON.stringify(lv), briefing, lightning, personal ? JSON.stringify(personal) : null);
     return this.status(endpoint);
   }
 
   status(endpoint) {
-    const r = this.db.prepare('SELECT lat, lon, place_name, levels, last_sent_at, briefing_time, lightning_miles FROM push_subscriptions WHERE endpoint = ?').get(endpoint);
+    const r = this.db.prepare('SELECT lat, lon, place_name, levels, last_sent_at, briefing_time, lightning_miles, rules FROM push_subscriptions WHERE endpoint = ?').get(endpoint);
     return r
-      ? { subscribed: true, place: { lat: r.lat, lon: r.lon, name: r.place_name }, levels: JSON.parse(r.levels), lastSentAt: r.last_sent_at, briefingTime: r.briefing_time || null, lightningMiles: r.lightning_miles || null }
+      ? { subscribed: true, place: { lat: r.lat, lon: r.lon, name: r.place_name }, levels: JSON.parse(r.levels), lastSentAt: r.last_sent_at, briefingTime: r.briefing_time || null, lightningMiles: r.lightning_miles || null, rules: parseRules(r.rules) }
       : { subscribed: false };
   }
 
@@ -312,7 +323,60 @@ export class PushService {
     return { sent };
   }
 
-  start(getAlerts, everyMs, getBriefing, lightning) {
+  // Personal alerts (rain soon, frost, gusts, heat, snow, aurora). getForecast({ lat, lon, units })
+  // is the server's cached forecast; getAurora(place, fc) the aurora outlook (optional).
+  // Each event goes out once per device, keyed in push_sent like NWS alerts.
+  async checkRules(getForecast, getAurora, now = Date.now()) {
+    const rows = this.db.prepare('SELECT * FROM push_subscriptions WHERE rules IS NOT NULL').all();
+    const groups = new Map();
+    for (const r of rows) {
+      const rules = parseRules(r.rules);
+      if (!anyRule(rules)) continue;
+      const k = `${r.lat},${r.lon},${rules.units}`;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push({ sub: r, rules });
+    }
+    const sentBefore = this.db.prepare('SELECT 1 FROM push_sent WHERE subscription_id = ? AND alert_id = ?');
+    const markSent = this.db.prepare('INSERT OR IGNORE INTO push_sent (subscription_id, alert_id) VALUES (?, ?)');
+    let sent = 0;
+    for (const [k, list] of groups) {
+      const [lat, lon, units] = k.split(',');
+      const place = { lat: Number(lat), lon: Number(lon), units };
+      let fc;
+      try {
+        fc = await getForecast(place);
+      } catch (err) {
+        this.log.warn?.({ err: err.message, place: k }, 'push: could not fetch the forecast for personal alerts');
+        continue;
+      }
+      let aurora = null;
+      if (getAurora && list.some((x) => x.rules.aurora)) {
+        try {
+          aurora = await getAurora(place, fc);
+        } catch {
+          aurora = null;
+        }
+      }
+      for (const { sub, rules } of list) {
+        for (const ev of evaluateRules(fc, rules, { now, aurora })) {
+          const id = `rule:${ev.key}`;
+          if (sentBefore.get(sub.id, id)) continue;
+          markSent.run(sub.id, id);
+          const payload = {
+            title: ev.title,
+            body: ev.body.replace('{place}', sub.place_name || 'you'),
+            tag: `rule:${ev.rule}`,
+            url: ev.url || '/',
+            requireInteraction: false,
+          };
+          if (await this.deliver(sub, payload)) sent++;
+        }
+      }
+    }
+    return { places: groups.size, sent };
+  }
+
+  start(getAlerts, everyMs, getBriefing, lightning, getForecast, getAurora) {
     const run = () => this.check(getAlerts).catch((err) => this.log.error?.(err, 'push check failed'));
     this.timer = setInterval(run, everyMs);
     this.timer.unref?.();
@@ -322,6 +386,12 @@ export class PushService {
       this.briefTimer = setInterval(brief, 60_000);
       this.briefTimer.unref?.();
       setTimeout(brief, 8000).unref?.();
+    }
+    if (getForecast) {
+      const rules = () => this.checkRules(getForecast, getAurora).catch((err) => this.log.error?.(err, 'personal alert check failed'));
+      this.rulesTimer = setInterval(rules, 5 * 60_000);
+      this.rulesTimer.unref?.();
+      setTimeout(rules, 12_000).unref?.();
     }
     if (lightning) {
       const bolt = () => this.checkLightning(lightning).catch((err) => this.log.error?.(err, 'lightning alert check failed'));
@@ -334,5 +404,6 @@ export class PushService {
     clearInterval(this.timer);
     clearInterval(this.briefTimer);
     clearInterval(this.boltTimer);
+    clearInterval(this.rulesTimer);
   }
 }
