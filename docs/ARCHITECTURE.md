@@ -65,6 +65,7 @@ server/src/
   kid.js            Kid Zone logic
   health.js         pressure swings, WBGT heat stress
   hazards.js        crowd reports, NWS storm reports, river gauges, rainfall outlook, wildfires
+  stormcells.js     NEXRAD storm tracks and the rain/snow/mix/ice grid
   sky.js            moon phase
   media.js          admin news/YouTube lists
   stormphoto.js     storm picture of the day (Wikimedia Commons, live credit/license, admin hide)
@@ -91,7 +92,7 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/weather?lat&lon&units` | Everything the Today and Kid views need in one call |
 | `GET /api/forecast`, `/api/alerts`, `/api/air` | The pieces, individually |
 | `GET /api/radar` | Radar frame list (tile URL templates) |
-| Personal alerts | `POST /api/push/subscribe` also takes `rules` (rain, freeze, gust, heat, snow, aurora, quiet) and `units`; a 5-minute loop checks them against the cached forecast (`shared/thresholds.js`) and sends each event once |
+| Personal alerts | `POST /api/push/subscribe` also takes `rules` (rain, freeze, gust, heat, snow, aurora, cell, quiet) and `units`; a 5-minute loop checks them against the cached forecast (`shared/thresholds.js`) and sends each event once |
 | `GET /api/push/key`, `POST /api/push/subscribe`, `/unsubscribe`, `/status`, `/test` | Web Push sign-up per device; a background loop (every `PUSH_POLL_SECONDS`) checks NWS for each subscribed place and sends each new alert once |
 | `GET /api/lightning?south&west&north&east[&since]`, `GET /api/lightning/near?lat&lon&miles` | Live strikes from the last 30 minutes as compact `[time, lat, lon, source]` rows, and a nearby summary (count, nearest, direction, 30-30 all-clear time). Sources run only while someone is watching or has lightning alerts on; strike math is shared in `shared/lightning.js` |
 | `GET /api/ai/status`, `POST /api/ai/chat`, `POST /api/ai/cloud` | AI helper (only with `ANTHROPIC_API_KEY`): chat with the live forecast as context, cloud photo identifier, optional web search |
@@ -122,5 +123,7 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `POST /api/reports`, `DELETE /api/reports/:id` | Signed in: post a report (kind, hail size, short note; lat/lon rounded to 2 decimals, one post per 2 minutes, kept 30 days). Remove: the poster or an admin |
 | `GET /api/rivers?south&west&north&east`, `GET /api/flood?lat&lon` | NWPS river gauges with flood category and forecast (15 min cache), and nearby gauges plus WPC's day 1 and 2 excessive rainfall outlook at the place |
 | `GET /api/fires?south&west&north&east`, `GET /api/fires/near?lat&lon` | Active wildfires from NIFC WFIGS (prescribed burns skipped), nearby ones flagged upwind using the forecast wind, plus a smoke outlook from the AQI forecast |
+| `GET /api/cells?south&west&north&east`, `GET /api/cells/near?lat&lon&miles` | NEXRAD storm cells from IEM (2 min cache), deduplicated across radars, with a 60-minute projected track; near adds distance, direction and an arrival time for cells on course (`shared/stormcells.js`). Also feeds the *Storm heading your way* personal alert |
+| `GET /api/radar/ptype?south&west&north&east` | Rain, snow, mix or ice on a grid of up to 192 points over the view, one character per cell (view snapped to half degrees, 10 min cache) |
 | `GET /api/outlook?day=1-3` | SPC convective outlook categories (15 min cache) |
 | `GET /api/connect/summary` (Bearer app key) | Kid-safe summary for Den-Duty and other apps, see [CONNECT.md](CONNECT.md) |

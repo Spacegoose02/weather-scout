@@ -591,3 +591,12 @@ body.radar-full-open { overflow: hidden; }
 .fire-pin span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #fff1e6; border: 2px solid #f47b20; box-shadow: 0 1px 3px rgba(0,0,0,.35); font-size: 13px; }
 .fire-pin.mid span { width: 28px; height: 28px; font-size: 15px; }
 .fire-pin.big span { width: 32px; height: 32px; font-size: 18px; border-color: #c4123a; }
+
+/* Storm tracks and the rain/snow tint */
+.cell-pin span { display: block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.55), 0 1px 3px rgba(0,0,0,.4); }
+.cell-pin.tornado span, .cell-pin.rotation span { width: 16px; height: 16px; animation: cell-pulse 1.6s ease-in-out infinite; }
+@keyframes cell-pulse { 50% { box-shadow: 0 0 0 5px rgba(224,50,43,.35), 0 1px 3px rgba(0,0,0,.4); } }
+@media (prefers-reduced-motion: reduce) { .cell-pin span { animation: none !important; } }
+.ptype-overlay { image-rendering: auto; filter: blur(6px); }
+.ptype-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .8rem; align-items: center; }
+.ptype-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: -2px; opacity: .8; }

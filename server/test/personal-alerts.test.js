@@ -29,7 +29,7 @@ test('cleanRules keeps only known rules and sane numbers', () => {
   assert.equal(cleanRules(null), null);
   assert.equal(cleanRules({}), null, 'nothing on');
   const r = cleanRules({ rain: 1, freeze: '30', gust: 500, heat: false, junk: 'x' }, 'imperial');
-  assert.deepEqual(r, { units: 'imperial', rain: true, freeze: 30, gust: 120, heat: null, snow: false, aurora: false, quiet: true });
+  assert.deepEqual(r, { units: 'imperial', rain: true, freeze: 30, gust: 120, heat: null, snow: false, aurora: false, cell: false, quiet: true });
   assert.equal(cleanRules({ freeze: -50 }, 'metric').freeze, -30);
 });
 

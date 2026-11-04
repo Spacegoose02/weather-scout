@@ -47,6 +47,7 @@ import { HomeAssistantService } from './homeassistant.js';
 import { LightningService, registerLightning } from './lightning.js';
 import { AuroraService } from './aurora.js';
 import { HazardService, registerHazards } from './hazards.js';
+import { StormCellService, registerStormCells } from './stormcells.js';
 import { getScorecard } from './scorecard.js';
 import { cleanOutfit, rockySvg } from '../../shared/rocky-outfit.js';
 
@@ -373,6 +374,9 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   // Crowd reports, rivers and flash floods, wildfires (v0.7).
   const hazards = new HazardService(db, cache, fetchImpl, { log: app.log });
   registerHazards(app, { hazards, requireUser, latLonSchema, loc, boxSchema, forecast, settle });
+  const stormCells = new StormCellService(cache, fetchImpl, { log: app.log });
+  registerStormCells(app, { cells: stormCells, latLonSchema, loc, boxSchema });
+  if (push) push.cellsFor = (place) => stormCells.approaching(place);
   // Northern lights tonight (NOAA SWPC Kp forecast and OVATION), with tonight's clouds.
   const aurora = new AuroraService(cache, fetchImpl);
   const auroraFor = (l, fc) => aurora.outlook(l, fc);
@@ -494,6 +498,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       else {
         push ||= makePush();
         push.shelterFor = shelterFor;
+        push.cellsFor = (place) => stormCells.approaching(place);
         if (started) startPush();
       }
     }

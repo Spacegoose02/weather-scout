@@ -23,6 +23,7 @@ export const CARDS = [
   { id: 'radar', group: 'weather', title: 'Radar', emoji: '📡', sizes: ['s', 'm', 'l'], blurb: 'Live NEXRAD loop around you' },
   { id: 'cameras', group: 'weather', title: 'Nearby cameras', emoji: '📷', sizes: ['s', 'm', 'l'], blurb: 'The closest road cameras, live when they can be' },
   { id: 'reports', group: 'weather', title: 'Weather reports', emoji: '📣', sizes: ['s', 'm', 'l'], blurb: 'Report what is falling, and see family and NWS spotter reports nearby' },
+  { id: 'cells', group: 'weather', title: 'Storm tracker', emoji: '⛈️', sizes: ['s', 'm', 'l'], blurb: 'Storms on the radar near you, which way they are moving and when they could arrive' },
   { id: 'flood', group: 'weather', title: 'Flood & rivers', emoji: '🌊', sizes: ['s', 'm', 'l'], blurb: 'Flash flood risk today and tomorrow, and river gauges near you' },
   { id: 'fire', group: 'outdoors', title: 'Wildfires & smoke', emoji: '🔥', sizes: ['s', 'm', 'l'], blurb: 'Active wildfires within 200 miles and smoky-air hours ahead' },
   { id: 'alerts', group: 'weather', title: 'Alerts', emoji: '⚠️', sizes: ['s', 'm', 'l'], blurb: 'Watches and warnings for this place' },

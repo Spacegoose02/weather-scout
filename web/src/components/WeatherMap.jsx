@@ -13,6 +13,8 @@ import { webcamIcon, webcamPopup, WEBCAM_MIN_ZOOM, WEBCAM_REFRESH_MS } from './m
 import NearbyWebcams from './map/NearbyWebcams.jsx';
 import RadarGuide from './map/RadarGuide.jsx';
 import { useHazardLayers } from './map/hazardLayers.js';
+import { useStormLayers } from './map/stormLayers.js';
+import { PTYPES } from '../../../shared/stormcells.js';
 import { legendFor, productGroups, shortName } from './map/radarGuide.js';
 
 window.L = L; // leaflet.markercluster is a classic plugin that extends the global L
@@ -436,6 +438,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
 
   // Storm reports, wildfires and river gauges (their own layer groups, after the map exists).
   const hazardInfo = useHazardLayers(map, show, [center.lat, center.lon, units]);
+  const stormLayers = useStormLayers(map, show, [center.lat, center.lon]);
 
   // Reload cameras when the layer or a state is switched; buoys and tides when switched on.
   const camsOffKey = show.camsOff.join(',');
@@ -631,6 +634,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
           </div>
         )}
         {full && show.lightning && <LightningLegend miles={lightningMiles} units={units} />}
+        {show.ptype && stormLayers.counts && <PtypeLegend />}
         {full && product?.note && <span className="radar-note">{product.note}{outlook?.features && outlookDay ? ` · SPC Day ${outlookDay} outlook: ${outlook.features.length ? [...new Set(outlook.features.map((f) => f.properties.name))].join(', ') : 'no severe risk'}` : ''}</span>}
       </div>
       <div ref={el} className="map" role="application" aria-label="Radar and camera map" />
@@ -645,6 +649,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
           {show.buoys && buoyInfo && ` · ${buoyInfo}`}
           {show.tides && tideInfo && ` · ${tideInfo}`}
           {hazardInfo && ` · ${hazardInfo}`}
+          {stormLayers.info && ` · ${stormLayers.info}`}
           {show.cams && camInfo && ` · ${camInfo}`}
           {webcamsOn.current && webcamInfo && ` · ${webcamInfo}`}
         </span>
@@ -655,6 +660,15 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
       {nearby && <NearbyWebcams center={center} units={units} attribution={webcams?.attribution} onClose={() => setNearby(false)} />}
       {windy && <WindyView center={windy} units={units} onClose={() => setWindy(null)} />}
     </section>
+  );
+}
+
+// Colors of the rain / snow / mix / ice tint.
+function PtypeLegend() {
+  return (
+    <div className="ptype-legend" aria-label="Rain and snow colors">
+      {Object.entries(PTYPES).map(([k, t]) => <span key={k}><i style={{ background: t.color }} />{t.label}</span>)}
+    </div>
   );
 }
 

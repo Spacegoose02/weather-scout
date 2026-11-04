@@ -1,11 +1,13 @@
 // Personal weather alerts: "rain starts in 20 minutes", frost tonight, strong
-// gusts, dangerous heat, snow on the way and a chance of the northern lights.
+// gusts, dangerous heat, snow on the way, a chance of the northern lights and a
+// strong storm on the radar heading your way.
 // Each device picks the ones it wants (and its own numbers). The server checks
 // them against the cached forecast every few minutes and sends each one once.
 //
 // Pure functions only, shared by the server (push loop) and the web app (form).
+import { CELL_LEVELS, cellSummary, etaText } from './stormcells.js';
 
-export const RULE_IDS = ['rain', 'freeze', 'gust', 'heat', 'snow', 'aurora'];
+export const RULE_IDS = ['rain', 'freeze', 'gust', 'heat', 'snow', 'aurora', 'cell'];
 
 // Default numbers, and what each person can pick from.
 export const RULE_CHOICES = {
@@ -28,6 +30,7 @@ export const RULE_INFO = {
   heat: { emoji: '🥵', name: 'Dangerous heat', note: 'When it will feel this hot in the next 12 hours.' },
   snow: { emoji: '❄️', name: 'Snow on the way', note: 'When snow will pile up in the next 12 hours.' },
   aurora: { emoji: '🌌', name: 'Northern lights possible', note: 'When the space weather forecast says the aurora may reach your sky tonight and it is not too cloudy.' },
+  cell: { emoji: '⛈️', name: 'Storm heading your way', note: 'When a strong storm on the radar is on track to reach you within about an hour (US radar only).' },
 };
 
 // Wet enough to count as "it's raining" in one 15-minute slot.
@@ -54,12 +57,13 @@ export function cleanRules(input, units = 'imperial') {
     heat: input.heat === false ? null : clamp(num(input.heat), u === 'metric' ? 25 : 80, u === 'metric' ? 55 : 130),
     snow: !!input.snow,
     aurora: !!input.aurora,
+    cell: !!input.cell,
     quiet: input.quiet !== false,
   };
   return anyRule(r) ? r : null;
 }
 
-export const anyRule = (r) => !!r && (r.rain || r.freeze != null || r.gust != null || r.heat != null || r.snow || r.aurora);
+export const anyRule = (r) => !!r && (r.rain || r.freeze != null || r.gust != null || r.heat != null || r.snow || r.aurora || r.cell);
 
 // Local wall-clock helpers. Open-Meteo times are local strings like 2026-11-04T17:00.
 const localIso = (epoch, offsetSec) => new Date(epoch + offsetSec * 1000).toISOString().slice(0, 16);
@@ -80,7 +84,7 @@ const amount = (v, units) => (units === 'metric' ? `${Math.round(v)} cm` : `${v 
 // What should go out right now? `fc` is a normalized forecast (providers/openmeteo.js)
 // fetched in the rules' units. `aurora` is the aurora outlook for the place, or null.
 // Each event has a `key` that is the same for the same event, so it is sent once.
-export function evaluateRules(fc, rules, { now = Date.now(), aurora = null } = {}) {
+export function evaluateRules(fc, rules, { now = Date.now(), aurora = null, cell = null } = {}) {
   if (!fc || !anyRule(rules)) return [];
   const units = rules.units || 'imperial';
   const off = fc.utcOffsetSeconds || 0;
@@ -172,6 +176,19 @@ export function evaluateRules(fc, rules, { now = Date.now(), aurora = null } = {
       title: `🌌 ${aurora.chance === 'likely' ? 'Northern lights likely' : 'Northern lights possible'} tonight`,
       body: `${aurora.text} Look ${aurora.look || 'north'}, away from city lights, after it gets dark.`,
       url: '/?aurora=1',
+    });
+  }
+
+  // Only strong storms (hail, rotation or 55+ dBZ cores), so a passing shower stays quiet.
+  if (rules.cell && cell?.threat && cell.level && cell.level !== 'storm') {
+    const lvl = CELL_LEVELS[cell.level];
+    const block = Math.floor(now / (3 * 3600_000)); // once per storm per 3 hours
+    out.push({
+      rule: 'cell',
+      key: `cell:${cell.id}:${block}`,
+      title: `⛈️ ${lvl.label} ${cell.threat.overhead ? 'over you now' : `heading your way, ${etaText(cell.threat.eta)}`}`,
+      body: `${cell.miles} miles ${cell.dir}${cell.mph ? `, moving ${cell.moving} at ${cell.mph} mph` : ''}${cellSummary(cell) ? ` (${cellSummary(cell)})` : ''}. Head indoors before it arrives.`,
+      url: '/#map',
     });
   }
 
