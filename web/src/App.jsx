@@ -14,10 +14,13 @@ import PushAlerts from './components/PushAlerts.jsx';
 import RockyFace from './components/RockyFace.jsx';
 import AskExpert from './components/AskExpert.jsx';
 import Learn from './components/learn/Learn.jsx';
-import Ocean from './components/ocean/Ocean.jsx';
 import Dashboard from './components/dashboard/Dashboard.jsx';
 import SafetyCenter from './components/safety/SafetyCenter.jsx';
-import { BadgeCelebration } from './components/kid/Badges.jsx';
+import Badges, { BadgeCelebration } from './components/kid/Badges.jsx';
+import Settings from './components/Settings.jsx';
+import { ThemeBuddy } from './components/ThemeChoices.jsx';
+import { useKidData } from './kid/useKidData.js';
+import { parseRoute, routeHash, tabsFor } from './nav.js';
 import Briefing from './components/kid/Briefing.jsx';
 import Modal from './components/Modal.jsx';
 import LightningBanner from './components/LightningBanner.jsx';
@@ -28,16 +31,6 @@ import { popupMode } from './chasers/chasers.js';
 import { configureVoice } from './kid/speak.js';
 import { useTheme } from './theme/useTheme.js';
 
-const TABS = [
-  ['today', 'Today', '🌤️'],
-  ['map', 'Radar & Cams', '🗺️'],
-  ['kids', 'Kid Zone', <RockyFace key="rocky" />],
-  ['learn', 'Learn', '🎓'],
-  ['ocean', 'Ocean', '🌊'],
-  ['models', 'Models', '📊'],
-  ['news', 'News & Videos', '📰'],
-];
-
 export default function App() {
   const [config, setConfig] = useState(null);
   const [user, setUser] = useState(null);
@@ -45,9 +38,8 @@ export default function App() {
   const [weather, setWeather] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  // Tapping a lightning notification opens the map.
-  const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).has('lightning') ? 'map' : 'today'));
-  const [modal, setModal] = useState(null); // 'signin' | 'admin' | 'alerts' | 'briefing' | 'profile'
+  const [hash, setHash] = useState(() => window.location.hash);
+  const [modal, setModal] = useState(null); // 'signin' | 'settings' | 'admin' | 'alerts' | 'briefing' | 'profile' | 'badges'
 
   useEffect(() => {
     api('/api/config')
@@ -63,6 +55,29 @@ export default function App() {
   const location = prefs.location || config?.defaultLocation;
   const units = prefs.units || config?.units || 'imperial';
   const kidMode = !!prefs.kidMode;
+  const aiOn = !!config?.ai?.enabled;
+  // The tab lives in the address (#map, #learn/ocean) so refresh, back and
+  // bookmarks work. Tapping a lightning notification (/?lightning=1) opens the map.
+  const lightningLink = new URLSearchParams(window.location.search).has('lightning');
+  const route = parseRoute(hash || (lightningLink ? '#map' : ''), { kidMode, aiOn });
+  const { tab } = route;
+  const go = useCallback((next, section = null) => {
+    const h = routeHash({ tab: next, section });
+    if (window.location.hash !== h) window.history.pushState(null, '', `${window.location.pathname}${window.location.search}${h}`);
+    setHash(h);
+  }, []);
+  const setTab = go;
+  useEffect(() => {
+    const sync = () => setHash(window.location.hash);
+    window.addEventListener('popstate', sync);
+    window.addEventListener('hashchange', sync);
+    return () => {
+      window.removeEventListener('popstate', sync);
+      window.removeEventListener('hashchange', sync);
+    };
+  }, []);
+  const kidData = useKidData(user, weather?.kid?.date || new Date().toISOString().slice(0, 10));
+  const badgeCount = Object.keys(kidData.data.badges || {}).length;
   const lightningOn = !!config?.lightning?.enabled;
   const lightningMiles = lightningOn ? (prefs.lightningMiles ?? DEFAULT_ALERT_MILES) : 0;
   const theme = useTheme(prefs.theme, weather);
@@ -94,8 +109,12 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.kid = kidMode ? 'on' : 'off';
-    if (kidMode && tab === 'today') setTab('kids');
-  }, [kidMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [kidMode]);
+  // Switching views starts on that view's Today.
+  const switchView = (on, start = 'today') => {
+    setPrefs({ kidMode: on });
+    go(start);
+  };
 
   const signOut = async () => {
     const r = await api('/api/auth/logout', { method: 'POST' });
@@ -113,25 +132,22 @@ export default function App() {
         onLocation={(l) => setPrefs((p) => ({ location: l, saved: dedupe([l, ...(p.saved || [])]).slice(0, 8) }))}
         saved={prefs.saved || []}
         kidMode={kidMode}
-        onKidMode={(v) => setPrefs({ kidMode: v })}
+        onKidMode={switchView}
         units={units}
         onUnits={(u) => setPrefs({ units: u })}
-        user={user}
-        onSignIn={() => setModal('signin')}
-        onSignOut={signOut}
-        onAdmin={() => setModal('admin')}
-        onProfile={() => setModal('profile')}
-        onAlerts={() => setModal('alerts')}
-        sso={config.auth.sso}
-        theme={{ value: prefs.theme || 'auto', active: theme.id, why: theme.why, onChange: (t) => setPrefs({ theme: t }) }}
+        onSettings={() => setModal('settings')}
+        badges={badgeCount}
+        onBadges={() => setModal('badges')}
       />
 
       {!blocked && (
         <>
-          <nav className="tabs" aria-label="Sections">
-            {[...TABS, ...(config.ai?.enabled ? [['ask', kidMode ? 'Ask Rocky' : 'Ask an Expert', '💬']] : [])].map(([id, label, emoji]) => (
-              <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)} aria-current={tab === id}>
-                <span aria-hidden>{emoji}</span> {label}
+          <nav className={`tabs${kidMode ? ' kid-tabs' : ''}`} aria-label={kidMode ? 'Kid sections' : 'Sections'}>
+            {tabsFor(kidMode, aiOn).map((t) => (
+              <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)} aria-current={tab === t.id ? 'page' : undefined}>
+                <span className="tab-emoji" aria-hidden>{t.emoji === 'rocky' ? <RockyFace /> : t.emoji}</span>
+                <span className="tab-label">{t.label}</span>
+                <span className="tab-short" aria-hidden>{t.short}</span>
               </button>
             ))}
           </nav>
@@ -156,8 +172,11 @@ export default function App() {
           )}
 
           <main>
-            {!weather && !error && tab !== 'news' && tab !== 'ask' && tab !== 'models' && tab !== 'ocean' && <div className="card skeleton">Fetching the sky…</div>}
-            {weather && tab === 'today' && (
+            {!weather && !error && ['today', 'play', 'explore', 'chaser', 'learn', 'school'].includes(tab) && !(tab !== 'today' && route.section === 'ocean') && <div className="card skeleton">Fetching the sky…</div>}
+            {weather && kidMode && ['today', 'play', 'explore', 'chaser'].includes(tab) && (
+              <KidMode tab={tab} weather={weather} user={user} location={location} kid={kidData} onAlerts={() => setModal('alerts')} />
+            )}
+            {weather && !kidMode && tab === 'today' && (
               <Dashboard
                 weather={weather}
                 location={location}
@@ -165,16 +184,16 @@ export default function App() {
                 kidMode={kidMode}
                 user={user}
                 loading={loading}
-                onTab={setTab}
+                onTab={(t, kidTab) => (t === 'kids' ? switchView(true, kidTab) : setTab(t))}
                 onSignIn={() => setModal('signin')}
                 onAlerts={() => setModal('alerts')}
                 onAdmin={() => setModal('admin')}
               />
             )}
             {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} layers={prefs.mapLayers} onLayers={(l) => setPrefs({ mapLayers: l })} signedIn={!!user} lightningMiles={lightningMiles} />}
-            {weather && tab === 'kids' && <KidMode weather={weather} user={user} location={location} onAlerts={() => setModal('alerts')} />}
-            {weather && tab === 'learn' && <Learn weather={weather} location={location} kidMode={kidMode} chasers={chasers} onOcean={() => setTab('ocean')} />}
-            {tab === 'ocean' && location && <Ocean location={location} units={units} kidMode={kidMode} ai={config.ai} />}
+            {(tab === 'learn' || tab === 'school') && location && (weather || route.section === 'ocean') && (
+              <Learn weather={weather} location={location} units={units} kidMode={kidMode} chasers={chasers} ai={config.ai} section={route.section} onSection={(s) => go(tab, s)} />
+            )}
             {tab === 'models' && location && <ModelsView location={location} units={units} />}
             {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} tts={config.tts} />}
             {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} kidMode={kidMode} location={location} />}
@@ -201,7 +220,28 @@ export default function App() {
       {modal === 'profile' && user && (
         <DisplayName user={user} onClose={() => setModal(null)} onSaved={(u) => { setUser(u); setModal(null); }} />
       )}
-      <BadgeCelebration user={user} onShelf={() => setTab('kids')} />
+      {modal === 'settings' && (
+        <Settings
+          user={user}
+          sso={config.auth.sso}
+          units={units}
+          onUnits={(u) => setPrefs({ units: u })}
+          theme={{ value: prefs.theme || 'auto', why: theme.why, onChange: (t) => setPrefs({ theme: t }) }}
+          onProfile={() => setModal('profile')}
+          onAlerts={() => setModal('alerts')}
+          onAdmin={() => setModal('admin')}
+          onSignIn={() => setModal('signin')}
+          onSignOut={signOut}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'badges' && (
+        <Modal title={kidMode ? 'My badges' : 'Badge shelf'} onClose={() => setModal(null)} wide>
+          <Badges kid={kidData} />
+        </Modal>
+      )}
+      <BadgeCelebration user={user} onShelf={() => setModal('badges')} />
+      <ThemeBuddy active={theme.id} />
       {modal === 'alerts' && (
         <PushAlerts
           location={location}

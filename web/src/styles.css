@@ -60,16 +60,46 @@ h3 { font-size: 1rem; margin: 18px 0 8px; }
 .results button:hover { background: var(--bg); }
 .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .header-actions select { padding: 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); }
-.switch { display: flex; align-items: center; gap: 6px; font-weight: 700; padding: 6px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); cursor: pointer; }
-.user { position: relative; }
-.menu { position: absolute; right: 0; top: 44px; z-index: 1000; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); min-width: 180px; }
-.menu button { background: none; color: var(--ink); text-align: left; }
-.menu button:hover { background: var(--bg); }
 
 /* tabs */
 .tabs { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; }
 .tabs button { background: var(--card); color: var(--ink); border: 1px solid var(--line); white-space: nowrap; }
 .tabs button.active { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+.tabs button { display: inline-flex; align-items: center; gap: 6px; }
+.tab-short { display: none; }
+.kids-switch, .kid-badges { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+/* Phones: the tab row becomes a bar along the bottom, icon over a short label. */
+@media (max-width: 640px) {
+  .search { flex: 1 1 100%; max-width: none; min-width: 0; }
+  .search input { width: 0; }
+  .app { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .tabs, .tabs.kid-tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 1400; margin: 0; gap: 0; overflow: visible; flex-wrap: nowrap;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  }
+  .tabs button, .tabs.kid-tabs button {
+    flex: 1 1 0; min-width: 0; flex-direction: column; gap: 2px; padding: 6px 2px; border: 0; border-radius: 12px;
+    background: none; font-size: 0.72rem; line-height: 1.1;
+  }
+  .tabs button.active, .tabs.kid-tabs button.active { background: var(--brand); color: var(--brand-ink); }
+  .tab-emoji { font-size: 1.35rem; line-height: 1; }
+  .tab-label { display: none; }
+  .tab-short { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+}
+
+/* Settings window */
+.prefs-group { border-top: 1px solid var(--line); padding: 4px 0 10px; }
+.prefs-group:first-child { border-top: 0; }
+.prefs-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; padding: 6px 0; }
+.prefs-row > span:first-child { flex: 1 1 260px; }
+.seg { display: inline-flex; gap: 4px; }
+.seg button.active { background: var(--brand); color: var(--brand-ink); }
+
+/* Family & settings jump bar */
+.admin-jump { position: sticky; top: -16px; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 8px; padding: 8px 0; background: var(--card); border-bottom: 1px solid var(--line); }
+.admin-jump button { padding: 6px 10px; font-size: 0.85rem; }
+.admin-anchor { display: block; scroll-margin-top: 64px; }
 
 /* cards */
 .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; border: 1px solid var(--line); }
@@ -77,7 +107,6 @@ h3 { font-size: 1rem; margin: 18px 0 8px; }
 .grid .hourly, .grid .source { grid-column: 1 / -1; }
 .grid .daily { grid-row: span 2; }
 @media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } .grid .daily { grid-row: auto; } }
-@media (max-width: 520px) { .tabs button { flex: 1; padding: 8px 6px; font-size: 0.9rem; } }
 .skeleton { color: var(--muted); }
 .error { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; border-color: var(--bad); }
 .error-text { color: var(--bad); }
@@ -516,6 +545,7 @@ body.radar-full-open { overflow: hidden; }
 @media (max-width: 700px) {
   .map-card:not(.full) .layer-panel { position: fixed; top: auto; left: 16px; right: 16px; bottom: 16px; width: auto; max-height: 72vh; }
 }
+@media (max-width: 640px) { .map-card:not(.full) .layer-panel { bottom: calc(84px + env(safe-area-inset-bottom)); max-height: 64vh; } }
 
 /* Windy webcams: map pins, the near-me grid and the credit Windy asks for */
 .webcam-pin span { background: #fff7e6; }

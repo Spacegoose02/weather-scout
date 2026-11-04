@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import Raccoon from './Raccoon.jsx';
-import RockyFace from './RockyFace.jsx';
 import { icon, round, duration, clockLabel } from '../format.js';
-import { useKidData } from '../kid/useKidData.js';
-import { SHELF_EVENT, takeShelfRequest } from '../kid/badges.js';
 import DailyFact from './kid/DailyFact.jsx';
 import StormPhoto from './kid/StormPhoto.jsx';
 import StormSafe from './kid/StormSafe.jsx';
@@ -14,7 +11,6 @@ import FieldTrips from './kid/FieldTrips.jsx';
 import Experiments from './kid/Experiments.jsx';
 import Seasons from './kid/Seasons.jsx';
 import TimeMachine from './kid/TimeMachine.jsx';
-import Badges from './kid/Badges.jsx';
 import ThunderCounter from './kid/ThunderCounter.jsx';
 import SpeakButton from './kid/SpeakButton.jsx';
 import Briefing from './kid/Briefing.jsx';
@@ -52,29 +48,12 @@ export function rockySays({ raccoon, playground, stormSafe }, c) {
   return `It's ${round(c.temp)} degrees and ${c.kidLabel.toLowerCase()}. Let's go explore!`;
 }
 
-const KID_TABS = [
-  ['today', 'Today', <RockyFace key="rocky" />],
-  ['play', 'Play', '🎲'],
-  ['explore', 'Explore', '🔭'],
-  ['chaser', 'Storm Chaser', '🌪️'],
-  ['badges', 'Badges', '🏅'],
-];
-
-export default function KidMode({ weather, user, location, onAlerts }) {
+// The kid view's pages. App draws the kid tab row (see nav.js) and owns the
+// kid progress (kidData) so the badge counter in the header stays in step.
+export default function KidMode({ tab = 'today', weather, user, location, onAlerts, kid: kidData }) {
   const today = weather.kid.date;
-  const kidData = useKidData(user, today);
-  const [tab, setTab] = useState(() => (takeShelfRequest() ? 'badges' : 'today'));
-  useEffect(() => {
-    const open = () => {
-      takeShelfRequest();
-      setTab('badges');
-    };
-    window.addEventListener(SHELF_EVENT, open);
-    return () => window.removeEventListener(SHELF_EVENT, open);
-  }, []);
   const [drill, setDrill] = useState(false);
   const storm = weather.kid.stormSafe;
-  const badgeCount = Object.keys(kidData.data.badges || {}).length;
 
   return (
     <div className="kid-zone">
@@ -90,14 +69,6 @@ export default function KidMode({ weather, user, location, onAlerts }) {
           }}
         />
       )}
-
-      <nav className="kid-tabs" aria-label="Kid Zone">
-        {KID_TABS.map(([id, label, emoji]) => (
-          <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)} aria-current={tab === id}>
-            <span aria-hidden>{emoji}</span> {label}{id === 'badges' && badgeCount > 0 ? ` (${badgeCount})` : ''}
-          </button>
-        ))}
-      </nav>
 
       {tab === 'today' && <KidToday weather={weather} name={user?.displayName} kid={kidData} today={today} location={location} onAlerts={onAlerts} isAdmin={!!user?.isAdmin} />}
       {tab === 'play' && (
@@ -125,7 +96,6 @@ export default function KidMode({ weather, user, location, onAlerts }) {
         </div>
       )}
       {tab === 'chaser' && <StormChaser weather={weather} user={user} location={location} kid={kidData} today={today} />}
-      {tab === 'badges' && <div className="kid-grid"><Badges kid={kidData} /></div>}
 
     </div>
   );

@@ -184,7 +184,7 @@ export function RockyCard({ weather, size, onKids }) {
         {items.length > 0 && <p className="hint">Wearing: {items.map((i) => ITEM_WORDS[i] || i).join(', ')}</p>}
         <div className="dash-row">
           <SpeakButton text={said} label="Hear Rocky" />
-          <button className="link" onClick={onKids}>Kid Zone →</button>
+          <button className="link" onClick={onKids}>Kids view →</button>
         </div>
       </div>
     </section>

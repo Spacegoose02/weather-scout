@@ -91,3 +91,9 @@
 
 .cloud-spot-row { margin-top: 8px; }
 .spotted-tick { color: #2e9d4f; font-weight: 700; }
+
+/* Lessons · Storm Center · Ocean */
+.learn-sections { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.learn-sections button { background: var(--card); color: var(--ink); border: 1px solid var(--line); display: inline-flex; gap: 6px; align-items: center; }
+.learn-sections button.active { background: var(--accent, var(--brand)); border-color: var(--accent, var(--brand)); color: #1d2433; }
+.learn-sections .tile-badge { position: static; margin-left: 4px; }

@@ -52,6 +52,7 @@
 .dash-add li button { width: 100%; display: flex; gap: 10px; align-items: center; text-align: left; }
 .dash-add li small { display: block; font-weight: 500; color: var(--muted); }
 .dash-add-emoji { font-size: 1.5rem; }
+.dash-add-group h3 { margin: 12px 0 6px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
 .dash-empty { grid-column: 1 / -1; text-align: center; }
 .dash-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
 
