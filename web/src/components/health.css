@@ -1,0 +1,61 @@
+/* Health & comfort and Allergies & breathing cards. */
+.health .card-title h2, .allergy .card-title h2 { margin: 0; font-size: 1.1rem; }
+.health-block { background: var(--bg); border-radius: 12px; padding: 10px 12px; margin: 10px 0 12px; }
+.health-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.pressure-now { text-align: right; }
+.pressure-now b { font-size: 1.3rem; }
+.health-block > .tile-note { margin: 6px 0; }
+
+.pressure-chart svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+.pressure-chart .grid { stroke: var(--line); }
+.pressure-chart .axis { font-size: 11px; fill: var(--muted); }
+.pressure-chart .series { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
+.pressure-chart .pressure { stroke: #7c5cff; }
+.pressure-chart .past { fill: var(--muted); opacity: 0.08; }
+.pressure-chart .now { stroke: var(--muted); stroke-dasharray: 3 3; }
+.pressure-chart .now-label { font-weight: 700; }
+.pressure-chart .cross { stroke: var(--muted); }
+.pressure-chart .pt { fill: #7c5cff; stroke: var(--card); stroke-width: 2; }
+.pressure-chart .swing.watch { fill: #ffd600; opacity: 0.22; }
+.pressure-chart .swing.warning { fill: #ff1744; opacity: 0.18; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.chip { display: inline-flex; gap: 4px; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; background: var(--card); border: 2px solid var(--line); }
+.chip small { font-weight: 400; color: var(--muted); }
+.chip.green { border-color: #00c853; } .chip.yellow { border-color: #ffd600; } .chip.orange { border-color: #ff9100; } .chip.red { border-color: #ff1744; }
+
+.effects { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 4px; font-size: 0.9rem; }
+.effects li { line-height: 1.35; }
+.allergy .effects li::before { content: '•'; color: var(--muted); margin-right: 6px; }
+
+.dew-meter { position: relative; height: 8px; border-radius: 4px; margin: 6px 0 4px;
+  background: linear-gradient(90deg, #8ecae6 0%, #00c853 30%, #ffd600 55%, #ff9100 70%, #ff1744 85%, #8e24aa 100%); }
+.dew-meter i { position: absolute; top: -3px; width: 4px; height: 14px; margin-left: -2px; border-radius: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--card); }
+.dot.dry { background: #8ecae6; }
+
+.wbgt-pair { display: flex; gap: 14px; }
+.wbgt-pair > div { display: grid; }
+.wbgt-pair small { font-size: 0.72rem; color: var(--muted); font-weight: 700; text-transform: uppercase; }
+.wbgt-pair span { font-size: 1.3rem; font-weight: 800; }
+
+.breathing { display: flex; gap: 14px; align-items: flex-start; margin: 10px 0; }
+.breathing .aqi-badge { min-width: 92px; height: 82px; text-align: center; }
+.breathing .aqi-badge b { font-size: 1.25rem; }
+.health-sub { margin: 14px 0 6px; font-size: 0.95rem; }
+
+.pollen-row { display: grid; grid-template-columns: 84px 1fr 104px; gap: 8px; align-items: center; font-size: 0.9rem; }
+.pollen-val small { color: var(--muted); }
+.pollen-days { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 6px; }
+.pollen-days th, .pollen-days td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.pollen-days thead th { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; }
+
+.particles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.particles .tile-value small { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+.muted-normal { text-transform: none; font-weight: 600; letter-spacing: 0; }
+
+@media (max-width: 480px) {
+  .pressure-now { text-align: left; }
+  .breathing .aqi-badge { min-width: 0; width: 100%; height: auto; padding: 8px; }
+  .breathing { flex-direction: column; }
+  .pollen-row { grid-template-columns: 74px 1fr 92px; }
+}

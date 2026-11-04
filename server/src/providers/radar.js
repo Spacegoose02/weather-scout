@@ -28,12 +28,23 @@ function future(now, hours = 12) {
   }));
 }
 
-// Everything the full-screen radar can show. Single-site radar uses the
-// super-resolution base reflectivity (N0B) from one NEXRAD, picked on the map.
+// One NEXRAD's latest scan of a Level III product, lowest tilt (0.5°).
+const siteTile = (code) => tile(`ridge::{site}-${code}-0`);
+
+// Everything the full-screen radar can show. Single-site products come from one
+// NEXRAD, picked on the map: super-resolution reflectivity (N0B), Doppler
+// velocity (N0U) and storm-relative velocity (N0S), and the dual-pol products
+// correlation coefficient (N0C), differential reflectivity (N0X) and specific
+// differential phase (N0K).
 export function radarProducts(now = Date.now()) {
   return [
     { id: 'composite', name: 'Radar', note: 'All US NEXRAD radars stitched together, last hour', legend: 'dbz', frames: loop('nexrad-n0q-900913', now, 11) },
-    { id: 'site', name: 'Single site', note: 'One radar up close (super-resolution reflectivity). Tap a radar on the map to switch.', legend: 'dbz', site: true, template: tile('ridge::{site}-N0B-0') },
+    { id: 'site', name: 'Reflectivity', note: 'One radar up close (super-resolution reflectivity). Tap a radar on the map to switch.', legend: 'dbz', site: true, template: siteTile('N0B') },
+    { id: 'velocity', name: 'Velocity', note: 'Base velocity: wind toward (green) or away from (red) the radar. Spins and downbursts show here.', legend: 'vel', site: true, template: siteTile('N0U') },
+    { id: 'srv', name: 'Storm-relative velocity', note: 'Velocity with the storm\'s own motion taken out, so rotation (mesocyclones) stands out.', legend: 'vel', site: true, template: siteTile('N0S') },
+    { id: 'cc', name: 'Correlation coefficient', note: 'Dual-pol CC: how alike the targets are. A low-CC spot on a velocity couplet can mean tornado debris.', legend: 'cc', site: true, template: siteTile('N0C') },
+    { id: 'zdr', name: 'Differential reflectivity (ZDR)', note: 'Dual-pol ZDR: flat targets (big raindrops) are high, round tumbling hail is near zero.', legend: 'zdr', site: true, template: siteTile('N0X') },
+    { id: 'kdp', name: 'Specific differential phase (KDP)', note: 'Dual-pol KDP: how much liquid water is in the beam. High means very heavy rain, not hail.', legend: 'kdp', site: true, template: siteTile('N0K') },
     { id: 'echotops', name: 'Echo tops', note: 'How tall the storms are. Taller usually means stronger.', legend: 'eet', frames: loop('nexrad-eet-900913', now, 11) },
     { id: 'rain1h', name: 'Rain, 1 hour', note: 'Radar-estimated rain in the last hour (MRMS)', legend: 'rain1', frames: [{ time: null, url: tile('q2-n1p-900913') }] },
     { id: 'rain24h', name: 'Rain, 24 hours', note: 'Radar-estimated rain in the last 24 hours (MRMS)', legend: 'rain24', frames: [{ time: null, url: tile('q2-p24h-900913') }] },

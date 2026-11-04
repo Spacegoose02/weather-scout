@@ -28,6 +28,7 @@ import { MAP_AREAS, MAP_MODELS, defaultArea, gridFor } from '../../shared/modelm
 import { kidReport } from './kid.js';
 import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
+import { allergyReport } from './allergy.js';
 import { moonPhase } from './sky.js';
 import { MediaService } from './media.js';
 import { ChaserService } from './chasers.js';
@@ -238,6 +239,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
       air: aq,
       kid: kidReport(fc, { alerts: alertList, air: aq }),
       health: healthReport(fc),
+      allergy: allergyReport(aq, fc),
       moon: moonPhase(),
       fetchedAt: new Date().toISOString(),
     };
