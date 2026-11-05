@@ -232,6 +232,7 @@ export default function App() {
           onUnits={(u) => setPrefs({ units: u })}
           theme={{ value: prefs.theme || 'auto', why: theme.why, onChange: (t) => setPrefs({ theme: t }) }}
           a11y={{ value: prefs.a11y, onChange: (a) => setPrefs({ a11y: a }) }}
+          places={{ list: prefs.saved || [], onChange: (list) => setPrefs({ saved: list }) }}
           onProfile={() => setModal('profile')}
           onAlerts={() => setModal('alerts')}
           onAdmin={() => setModal('admin')}
