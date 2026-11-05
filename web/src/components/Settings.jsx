@@ -5,7 +5,7 @@ import EasierToSee from './EasierToSee.jsx';
 
 // The ⚙️ window: every setting a person can change, in one place. Alerts, the
 // safety plan and Family & settings open their own windows from here.
-export default function Settings({ user, sso, units, onUnits, theme, a11y, onProfile, onAlerts, onAdmin, onSignIn, onSignOut, onClose }) {
+export default function Settings({ user, sso, units, onUnits, theme, a11y, places, onProfile, onAlerts, onAdmin, onSignIn, onSignOut, onClose }) {
   return (
     <Modal title="Settings" onClose={onClose} wide>
       <div className="prefs">
@@ -33,6 +33,28 @@ export default function Settings({ user, sso, units, onUnits, theme, a11y, onPro
             </span>
           </div>
         </section>
+
+        {places && (
+          <section className="prefs-group" aria-labelledby="set-places">
+            <h3 id="set-places">📍 Saved places</h3>
+            {places.list.length === 0 ? (
+              <div className="prefs-row"><span className="hint">No saved places yet. Places you search for are saved here.</span></div>
+            ) : (
+              <>
+                {places.list.map((p, i) => (
+                  <div className="prefs-row" key={`${p.lat},${p.lon}`}>
+                    <span>{p.name}</span>
+                    <button className="ghost" onClick={() => places.onChange(places.list.filter((_, j) => j !== i))} aria-label={`Remove ${p.name}`}>✕ Remove</button>
+                  </div>
+                ))}
+                <div className="prefs-row">
+                  <span className="hint">{user ? 'Saved to your account.' : 'Saved on this device.'}</span>
+                  <button className="ghost" onClick={() => { if (window.confirm('Remove all saved places?')) places.onChange([]); }}>🗑️ Clear all</button>
+                </div>
+              </>
+            )}
+          </section>
+        )}
 
         <section className="prefs-group" aria-labelledby="set-alerts">
           <h3 id="set-alerts">🔔 Alerts & safety</h3>
