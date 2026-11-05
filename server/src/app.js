@@ -225,6 +225,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     ai: ai.status(),
     tts: { enabled: !!cfg.tts.url, voice: cfg.tts.url ? cfg.tts.voice : null, fallback: cfg.tts.fallback },
     lightning: { enabled: lightning.enabled, sources: lightning.status().map((x) => x.id) },
+    map: { defaultLayers: cfg.mapDefaults.layers },
   }));
 
   // ---- live lightning (NOAA GOES GLM, optional Blitzortung.org) -------------

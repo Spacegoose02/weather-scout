@@ -147,3 +147,19 @@ test('Test buttons: MQTT, Home Assistant, Ambient and Tempest', async () => {
   assert.equal(row(await call('GET', '/api/admin/settings'), 'HA_URL').source, 'default');
   await app.close();
 });
+
+test('admins pick the map layers everyone starts with', async () => {
+  const { app, call } = await admin();
+  assert.equal((await app.inject('/api/config')).json().map.defaultLayers, null, 'built-in until set');
+  const before = await call('GET', '/api/admin/settings');
+  assert.equal(row(before, 'MAP_DEFAULT_LAYERS').type, 'layers');
+  assert.equal(row(before, 'MAP_DEFAULT_LAYERS').group, 'maps');
+  assert.equal((await put(call, { MAP_DEFAULT_LAYERS: 'radar,bogus' })).statusCode, 400);
+  assert.equal((await put(call, { MAP_DEFAULT_LAYERS: 'radar, Warnings,cams' })).statusCode, 200);
+  assert.deepEqual((await app.inject('/api/config')).json().map.defaultLayers, ['radar', 'warnings', 'cams']);
+  assert.equal((await put(call, { MAP_DEFAULT_LAYERS: 'none' })).statusCode, 200);
+  assert.deepEqual((await app.inject('/api/config')).json().map.defaultLayers, []);
+  assert.equal((await put(call, { MAP_DEFAULT_LAYERS: null })).statusCode, 200);
+  assert.equal((await app.inject('/api/config')).json().map.defaultLayers, null);
+  await app.close();
+});

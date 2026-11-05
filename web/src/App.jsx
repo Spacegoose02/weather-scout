@@ -194,7 +194,7 @@ export default function App() {
                 onAdmin={() => setModal('admin')}
               />
             )}
-            {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} layers={prefs.mapLayers} onLayers={(l) => setPrefs({ mapLayers: l })} signedIn={!!user} lightningMiles={lightningMiles} />}
+            {tab === 'map' && location && <WeatherMap center={location} alerts={weather?.alerts || []} units={units} layers={prefs.mapLayers} onLayers={(l) => setPrefs({ mapLayers: l })} signedIn={!!user} lightningMiles={lightningMiles} defaultLayers={config?.map?.defaultLayers} />}
             {(tab === 'learn' || tab === 'school') && location && (weather || route.section === 'ocean') && (
               <Learn weather={weather} location={location} units={units} kidMode={kidMode} chasers={chasers} ai={config.ai} section={route.section} onSection={(s) => go(tab, s)} />
             )}

@@ -26,3 +26,11 @@
 .settings-group > .ai-row, .settings-group > .ai-actions, .settings-group > .place-finder { margin-top: 10px; }
 .settings-group > .ai-test { margin-top: 8px; }
 .place-finder input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; }
+
+/* Admin: map layers everyone starts with (App settings, Maps). */
+.default-layers { grid-column: 1 / -1; border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 6px; }
+.default-layers > legend { font-weight: 700; padding: 0; margin-bottom: 4px; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.default-layer-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 16px; }
+.default-layer-group { display: grid; align-content: start; }
+.default-layer-group > b { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted, #5b6479); margin: 4px 0 2px; }
+.ai-settings .default-layers label.layer-row { grid-template-columns: auto 22px 1fr; gap: 4px 8px; font-weight: 500; }

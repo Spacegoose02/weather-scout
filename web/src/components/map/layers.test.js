@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeLayers, DEFAULT_LAYERS, alertKind, alertVisible, cameraFeedRows, toggleFeed, isDefault, layerCount, distanceText } from './layers.js';
+import { normalizeLayers, DEFAULT_LAYERS, alertKind, alertVisible, cameraFeedRows, toggleFeed, isDefault, layerCount, distanceText, layerDefaults, layerIdsMatch } from './layers.js';
+import { parseLayerList, validLayerList, layerListText } from '../../../../shared/maplayers.js';
 
 describe('map layers', () => {
   it('fills in defaults and drops junk from saved preferences', () => {
@@ -43,5 +44,34 @@ describe('map layers', () => {
     expect(distanceText(16.1)).toBe('10 miles');
     expect(distanceText(1.7)).toBe('1 mile');
     expect(distanceText(16.1, 'metric')).toBe('16 km');
+  });
+});
+
+describe('admin default layers', () => {
+  it('starts from the admin choice until someone picks their own', () => {
+    expect(layerIdsMatch()).toBe(true);
+    const base = layerDefaults(['radar', 'cams']);
+    expect(base.radar).toBe(true);
+    expect(base.lightning).toBe(false);
+    expect(base.cams).toBe(true);
+    expect(layerDefaults(null)).toEqual(DEFAULT_LAYERS);
+    expect(layerDefaults(undefined)).toEqual(DEFAULT_LAYERS);
+    expect(normalizeLayers(undefined, base)).toEqual(base);
+    // A saved choice still wins; missing keys come from the admin default.
+    const n = normalizeLayers({ lightning: true }, base);
+    expect(n.lightning).toBe(true);
+    expect(n.warnings).toBe(false);
+    expect(isDefault({}, base)).toBe(true);
+    expect(isDefault({ lightning: true }, base)).toBe(false);
+    expect(isDefault(DEFAULT_LAYERS, base)).toBe(false);
+  });
+  it('reads and writes the saved list', () => {
+    expect(parseLayerList('')).toBeNull();
+    expect(parseLayerList('none')).toEqual([]);
+    expect(parseLayerList('Radar, cams radar,bogus,RADARSITES')).toEqual(['radar', 'cams', 'radarSites']);
+    expect(validLayerList('radar,cams')).toBe(true);
+    expect(validLayerList('radar,bogus')).toBe(false);
+    expect(layerListText(['cams', 'radar'])).toBe('radar,cams');
+    expect(layerListText([])).toBe('none');
   });
 });
