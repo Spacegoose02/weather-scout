@@ -16,6 +16,7 @@
 //   CAMERA_FEEDS_JSON, CAMERAS_FILE, IP_LOCATION, CAMERA_RETRY_DELAY_MS - advanced/testing.
 import { loadConfig } from './config.js';
 import { CHASER_LIST } from './chasers.js';
+import { validLayerList } from '../../shared/maplayers.js';
 
 const MODEL = /^[\w.:@/-]{1,100}$/;
 
@@ -57,6 +58,8 @@ export const SETTINGS = [
   // ---- maps ----
   { key: 'WINDY_MAP_KEY', group: 'maps', label: 'Windy Map Forecast key', secret: true, signup: 'https://api.windy.com/keys', help: 'Optional. Blank uses the free Windy embed.' },
   { key: 'WINDY_WEBCAMS_KEY', group: 'maps', label: 'Windy Webcams key', secret: true, test: 'webcams', signup: 'https://api.windy.com/keys', help: 'Optional, and a different key from the map one (pick Webcams API when you make it). Adds public webcams from around the world to the Radar & Cams map. Stays on the server.' },
+
+  { key: 'MAP_DEFAULT_LAYERS', group: 'maps', label: 'Layers on by default', layers: true, max: 300, help: 'What the Radar & Cams map shows for anyone who has not picked their own layers yet. People can still switch layers on and off in 🗂️ Layers; Reset goes back to this.' },
 
   // ---- pollen ----
   { key: 'GOOGLE_POLLEN_API_KEY', group: 'pollen', label: 'Google Pollen API key', secret: true, signup: 'https://developers.google.com/maps/documentation/pollen/get-api-key', help: 'Optional. Adds tree, grass and weed pollen for the US and other places outside Europe (Europe works with no key). Make a Google Maps Platform key with the Pollen API turned on; checked about 8 times a day per place, well inside the free monthly allowance. Stays on the server.' },
@@ -118,6 +121,7 @@ export function validate(key, raw) {
     return v.toLowerCase();
   }
   if (!v) return v;
+  if (f.layers && !validLayerList(v)) throw new SettingsError(`${name} has a layer this map doesn't know.`);
   if (f.pattern && !f.pattern.test(v)) throw new SettingsError(`${name} doesn't look right.`);
   if (f.range) {
     const n = Number(v);
@@ -140,7 +144,7 @@ export function validate(key, raw) {
 
 // The parts of the live config that saved settings can change. Services keep
 // references to these objects, so they are updated in place.
-const LIVE_OBJECTS = ['ai', 'tts', 'youtube', 'defaultLocation', 'windy', 'android', 'stations', 'homeAssistant', 'push', 'lightning'];
+const LIVE_OBJECTS = ['ai', 'tts', 'youtube', 'defaultLocation', 'windy', 'android', 'stations', 'homeAssistant', 'push', 'lightning', 'mapDefaults'];
 
 export class Settings {
   constructor(db, cfg) {
@@ -202,6 +206,7 @@ export class Settings {
       for (const p of ['label', 'help', 'placeholder', 'options', 'choices', 'signup', 'test']) if (f[p] !== undefined) row[p] = f[p];
       if (f.range) row.type = 'number';
       if (f.url) row.type = 'url';
+      if (f.layers) row.type = 'layers';
       if (secret) return { ...row, set: !!value, hint: value ? value.slice(-4) : '' };
       return { ...row, value };
     });

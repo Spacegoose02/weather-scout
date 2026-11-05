@@ -1,8 +1,8 @@
-import { LAYER_GROUPS, DEFAULT_LAYERS, cameraFeedRows, toggleFeed, isDefault } from './layers.js';
+import { LAYER_GROUPS, cameraFeedRows, toggleFeed, isDefault } from './layers.js';
 
 // The "Layers" panel on the Radar & Cams map: switch each marker group or
 // overlay on or off, and cameras state by state.
-export default function LayerPanel({ layers, feeds, webcams, signedIn, onChange, onClose }) {
+export default function LayerPanel({ layers, defaults, feeds, webcams, signedIn, onChange, onClose }) {
   const set = (patch) => onChange({ ...layers, ...patch });
   const rows = cameraFeedRows(feeds || [], layers.camsOff);
   const allOn = rows.every((r) => r.on);
@@ -13,7 +13,7 @@ export default function LayerPanel({ layers, feeds, webcams, signedIn, onChange,
       <div className="layer-head">
         <strong>Map layers</strong>
         <span>
-          <button className="link" onClick={() => onChange({ ...DEFAULT_LAYERS })} disabled={isDefault(layers)}>Reset</button>
+          <button className="link" onClick={() => onChange({ ...defaults, camsOff: [] })} disabled={isDefault(layers, defaults)} title="Back to the layers this app starts with">Reset</button>
           <button className="layer-close" onClick={onClose} aria-label="Close map layers">✕</button>
         </span>
       </div>

@@ -8,7 +8,7 @@ import { fromRows, mergeStrikes, newestTime, countText } from '../lightning/stri
 import { AGE_STEPS, SOURCES, milesToKm } from '../../../shared/lightning.js';
 import '../lightning/lightning.css';
 import LayerPanel from './map/LayerPanel.jsx';
-import { normalizeLayers, alertVisible, anyAlerts, layerCount } from './map/layers.js';
+import { normalizeLayers, layerDefaults, alertVisible, anyAlerts, layerCount } from './map/layers.js';
 import { webcamIcon, webcamPopup, WEBCAM_MIN_ZOOM, WEBCAM_REFRESH_MS } from './map/webcams.js';
 import NearbyWebcams from './map/NearbyWebcams.jsx';
 import RadarGuide from './map/RadarGuide.jsx';
@@ -39,7 +39,7 @@ const siteIcon = (s, selected) => L.divIcon({
 });
 const dist2 = (a, b) => (a.lat - b.lat) ** 2 + ((a.lon - b.lon) * Math.cos((a.lat * Math.PI) / 180)) ** 2;
 
-export default function WeatherMap({ center, alerts, units = 'imperial', layers: savedLayers, onLayers, signedIn = false, lightningMiles = 0 }) {
+export default function WeatherMap({ center, alerts, units = 'imperial', layers: savedLayers, onLayers, signedIn = false, lightningMiles = 0, defaultLayers = null }) {
   const el = useRef(null);
   const card = useRef(null);
   const base = useRef(null);
@@ -72,10 +72,12 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   // Less motion (Settings or the device's reduce-motion setting): the loop waits for ▶.
   const [playing, setPlaying] = useState(() => !prefersLessMotion());
   const [opacity, setOpacity] = useState(0.7);
-  // Which layers are on comes from saved preferences (account or this device).
-  const [guestLayers, setGuestLayers] = useState(() => normalizeLayers(savedLayers));
-  const show = useMemo(() => (onLayers ? normalizeLayers(savedLayers) : guestLayers), [onLayers, savedLayers, guestLayers]);
-  const setShow = (next) => (onLayers ? onLayers(normalizeLayers(next)) : setGuestLayers(normalizeLayers(next)));
+  // Which layers are on comes from saved preferences (account or this device),
+  // starting from the admin's default for anyone who hasn't picked their own.
+  const defaults = useMemo(() => layerDefaults(defaultLayers), [JSON.stringify(defaultLayers)]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [guestLayers, setGuestLayers] = useState(() => normalizeLayers(savedLayers, defaults));
+  const show = useMemo(() => (onLayers ? normalizeLayers(savedLayers, defaults) : guestLayers), [onLayers, savedLayers, guestLayers, defaults]);
+  const setShow = (next) => (onLayers ? onLayers(normalizeLayers(next, defaults)) : setGuestLayers(normalizeLayers(next, defaults)));
   const showRef = useRef(show);
   showRef.current = show;
   const reload = useRef({});
@@ -611,7 +613,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
           <button className={`layers-btn ${layersOpen ? 'on' : ''}`} onClick={() => setLayersOpen(!layersOpen)} aria-expanded={layersOpen} aria-haspopup="dialog">
             🗂️ Layers <span className="layer-count">{layerCount(show, { webcams: !!webcams?.enabled })}</span>
           </button>
-          {layersOpen && <LayerPanel layers={show} feeds={feeds} webcams={webcams?.enabled ? webcams.attribution : null} signedIn={signedIn} onChange={setShow} onClose={() => setLayersOpen(false)} />}
+          {layersOpen && <LayerPanel layers={show} defaults={defaults} feeds={feeds} webcams={webcams?.enabled ? webcams.attribution : null} signedIn={signedIn} onChange={setShow} onClose={() => setLayersOpen(false)} />}
         </div>
         {!full && products.length > 1 && (
           <label className="radar-select">Show{' '}

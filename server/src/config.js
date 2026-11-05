@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { parseLayerList } from '../../shared/maplayers.js';
 
 const bool = (v, d = false) => (v === undefined || v === '' ? d : /^(1|true|yes|on)$/i.test(v));
 const num = (v, d) => (v === undefined || v === '' || Number.isNaN(Number(v)) ? d : Number(v));
@@ -109,6 +110,8 @@ export function loadConfig(env = process.env) {
       blitzortung: bool(env.BLITZORTUNG_ENABLED, false),
     },
     // webcamsKey: Windy Webcams API (a server key, separate from the map key).
+    // Radar & Cams map layers on for people who haven't picked their own. null = built-in.
+    mapDefaults: { layers: parseLayerList(env.MAP_DEFAULT_LAYERS) },
     windy: { mapKey: env.WINDY_MAP_KEY || '', webcamsKey: env.WINDY_WEBCAMS_KEY || '' },
     // Live storm chaser streams. Works without a key (a trusted channel list);
     // a YouTube Data API key adds viewer counts and a search for more chasers.

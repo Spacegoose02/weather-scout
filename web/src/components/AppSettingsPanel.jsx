@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { changedValues } from '../ai/settings.js';
 import { Source, Secret, Result } from './SettingsFields.jsx';
+import DefaultLayersField from './map/DefaultLayersField.jsx';
 
 // Family & settings: everything else that used to need the Unraid template
 // (home place, road camera keys, Windy, weather stations, Home Assistant, push,
@@ -9,7 +10,7 @@ import { Source, Secret, Result } from './SettingsFields.jsx';
 const GROUPS = [
   { id: 'home', title: '🏠 Home place & units', intro: 'Where the app opens for people who have not picked a place, and the units it starts in.' },
   { id: 'cameras', title: '📷 Road cameras', intro: 'VA, SC, MD, KY and DE work with no key. NC, NY, GA and OH switch on with a free developer key from each state.' },
-  { id: 'maps', title: '🗺️ Windy maps & webcams', intro: 'Windy has two different keys. The Map Forecast key is for the 🌬️ Windy wind map; the Webcams key adds 🌄 Windy webcams to the Radar & Cams map. Make each one at api.windy.com/keys.' },
+  { id: 'maps', title: '🗺️ Maps, Windy & webcams', intro: 'Windy has two different keys. The Map Forecast key is for the 🌬️ Windy wind map; the Webcams key adds 🌄 Windy webcams to the Radar & Cams map. Make each one at api.windy.com/keys. Also: which layers the Radar & Cams map starts with.' },
   { id: 'pollen', title: '🌼 Pollen counts', intro: 'Pollen for Europe is free with no key. For the US and most other countries, add a Google Pollen API key.' },
   { id: 'lightning', title: '⚡ Live lightning', intro: 'Lightning on the Radar & Cams map and the "lightning within X miles" alerts. Each person picks their own alert distance under 🔔 Alerts.' },
   { id: 'stations', title: '🌡️ Weather stations', intro: 'Ecowitt and Ambient stations can upload straight to Weather Scout. Cloud accounts (Ambient, Tempest) are checked on a timer.' },
@@ -24,6 +25,9 @@ function Field({ ctx, r }) {
   if (r.secret) {
     const help = <>{r.help}{r.signup && <> <a href={r.signup} target="_blank" rel="noopener noreferrer">Get a key</a>.</>}</>;
     return <Secret ctx={ctx} k={k} label={r.label} help={r.help || r.signup ? help : null} />;
+  }
+  if (r.type === 'layers') {
+    return <DefaultLayersField label={r.label} help={r.help} source={<Source ctx={ctx} k={k} />} value={ctx.form[k]} onChange={(v) => ctx.set(k)({ target: { value: v } })} />;
   }
   if (r.options) {
     const fallback = r.options[0];

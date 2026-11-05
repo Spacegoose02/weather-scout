@@ -1,5 +1,8 @@
 // Which marker groups and overlays the Radar & Cams map shows. The choice is
 // saved in preferences (your account when signed in, this device for guests).
+// Until someone picks their own, the map starts from the admin's "Layers on by
+// default" (App settings, Windy maps & webcams), or DEFAULT_LAYERS when unset.
+import { MAP_LAYER_IDS } from '../../../../shared/maplayers.js';
 
 export const LAYER_GROUPS = [
   {
@@ -64,17 +67,30 @@ export const DEFAULT_LAYERS = {
 };
 
 const BOOL_KEYS = Object.keys(DEFAULT_LAYERS).filter((k) => typeof DEFAULT_LAYERS[k] === 'boolean');
+export { BOOL_KEYS as LAYER_KEYS };
+
+// The admin's default ['radar', 'cams', ...] as a full layers object. null or
+// not a list = the built-in defaults.
+export function layerDefaults(onIds) {
+  if (!Array.isArray(onIds)) return DEFAULT_LAYERS;
+  const on = new Set(onIds);
+  return { ...Object.fromEntries(BOOL_KEYS.map((k) => [k, on.has(k)])), camsOff: [] };
+}
 
 // Saved preferences may be missing, from an older version, or hand-edited.
-export function normalizeLayers(saved) {
-  const out = { ...DEFAULT_LAYERS, camsOff: [] };
+// base: where anything not saved starts (the admin default, see layerDefaults).
+export function normalizeLayers(saved, base = DEFAULT_LAYERS) {
+  const out = { ...DEFAULT_LAYERS, ...base, camsOff: [] };
   if (!saved || typeof saved !== 'object') return out;
   for (const k of BOOL_KEYS) if (typeof saved[k] === 'boolean') out[k] = saved[k];
   if (Array.isArray(saved.camsOff)) out.camsOff = [...new Set(saved.camsOff.filter((x) => typeof x === 'string' && x))].slice(0, 100);
   return out;
 }
 
-export const isDefault = (layers) => JSON.stringify(normalizeLayers(layers)) === JSON.stringify(DEFAULT_LAYERS);
+export const isDefault = (layers, base = DEFAULT_LAYERS) => JSON.stringify(normalizeLayers(layers, base)) === JSON.stringify(normalizeLayers(base));
+
+// The shared id list (used by the server to check the admin setting) must match.
+export const layerIdsMatch = () => JSON.stringify([...BOOL_KEYS].sort()) === JSON.stringify([...MAP_LAYER_IDS].sort());
 
 // Same split the server uses for its warning / watch / advisory counts.
 export function alertKind(event = '') {
