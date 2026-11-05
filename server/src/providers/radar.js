@@ -1,3 +1,5 @@
+import { fetchJson } from '../cache.js';
+
 // Radar frames for a smooth, loopable map. The Iowa Environmental Mesonet serves
 // NEXRAD base reflectivity composites as map tiles in 5-minute steps, with no key.
 // The browser loads tiles directly from IEM, so this server only builds the list.
@@ -30,6 +32,51 @@ function future(now, hours = 12) {
 
 // One NEXRAD's latest scan of a Level III product, lowest tilt (0.5°).
 const siteTile = (code) => tile(`ridge::{site}-${code}-0`);
+
+// IEM only renders a single-site product when that radar sent it, and the
+// "-0" (latest) tile is blank when it did not, so the map looked empty. IEM's
+// radar.py says which products a radar has and lists every scan, which also
+// gives us real frames to loop. Each product lists NWS codes best first.
+export const SITE_CODES = {
+  site: ['N0B', 'N0Q', 'N0R'],
+  velocity: ['N0G', 'N0U', 'N0V'],
+  srv: ['N0S'],
+  cc: ['N0C'],
+  zdr: ['N0X'],
+  kdp: ['N0K'],
+};
+export const IEM_RADAR_JSON = 'https://mesonet.agron.iastate.edu/json/radar.py';
+const iso = (ms) => new Date(ms).toISOString().slice(0, 16) + 'Z';
+const stamp = (ts) => ts.replace(/[^0-9]/g, '').slice(0, 12); // 2026-11-05T00:31:00Z -> 202611050031
+
+// Which of our single-site products this radar has sent in the last two hours.
+export async function siteProductCodes(site, fetchImpl, now = Date.now()) {
+  const url = `${IEM_RADAR_JSON}?operation=products&radar=${site}&start=${iso(now - 2 * 3_600_000)}`;
+  const raw = await fetchJson(url, { source: 'IEM', fetchImpl, timeoutMs: 15000 });
+  const have = new Set((raw?.products || []).map((p) => String(p.id || '').toUpperCase()));
+  const out = {};
+  for (const [id, codes] of Object.entries(SITE_CODES)) {
+    const code = codes.find((c) => have.has(c));
+    if (code) out[id] = code;
+  }
+  return out;
+}
+
+// The last hour of one radar's scans of one product, oldest first, as tile frames.
+export async function siteScans(site, code, fetchImpl, now = Date.now(), count = 12) {
+  const url = `${IEM_RADAR_JSON}?operation=list&radar=${site}&product=${code}&start=${iso(now - 3_600_000)}&end=${iso(now + 300_000)}`;
+  const raw = await fetchJson(url, { source: 'IEM', fetchImpl, timeoutMs: 15000 });
+  const seen = new Set();
+  const frames = [];
+  for (const s of raw?.scans || []) {
+    const t = Date.parse(s.ts);
+    if (!Number.isFinite(t) || seen.has(stamp(s.ts))) continue;
+    seen.add(stamp(s.ts));
+    frames.push({ time: new Date(t).toISOString(), url: tile(`ridge::${site}-${code}-${stamp(s.ts)}`) });
+  }
+  frames.sort((a, b) => a.time.localeCompare(b.time));
+  return frames.slice(-count);
+}
 
 // Everything the full-screen radar can show. Single-site products come from one
 // NEXRAD, picked on the map: super-resolution reflectivity (N0B), Doppler

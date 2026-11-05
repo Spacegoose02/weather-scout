@@ -68,7 +68,11 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   const [storms, setStorms] = useState(null);
   const [buoyInfo, setBuoyInfo] = useState('');
   const [frames, setFrames] = useState([]);
+  // One radar's scans of the chosen single-site product: { key, code, available, frames, failed }.
+  const [scan, setScan] = useState(null);
   const [frame, setFrame] = useState(0);
+  // Bumped every time the radar layers are rebuilt, so the new ones get shown.
+  const [layerSet, setLayerSet] = useState(0);
   // Less motion (Settings or the device's reduce-motion setting): the loop waits for ▶.
   const [playing, setPlaying] = useState(() => !prefersLessMotion());
   const [opacity, setOpacity] = useState(0.7);
@@ -327,19 +331,40 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
 
   const product = products.find((p) => p.id === productId) || products[0];
 
+  // Single-site products (velocity, CC, ZDR...): ask which scans this radar really
+  // sent, so the map loops real frames and says so when a product isn't there.
+  const scanKey = product?.site && site ? `${site.id}:${product.id}` : null;
+  useEffect(() => {
+    if (!scanKey) return undefined;
+    let off = false;
+    const [siteId, pid] = scanKey.split(':');
+    const sameFrames = (a, b) => a && b && a.length === b.length && a.every((f, i) => f.url === b[i].url);
+    const load = () => api(`/api/radar/scans?site=${siteId}&product=${pid}`)
+      .then((r) => !off && setScan((old) => (old?.key === scanKey && !old.failed && sameFrames(old.frames, r.frames) ? old : { key: scanKey, ...r, frames: r.frames || [] })))
+      .catch(() => !off && setScan((old) => (old?.key === scanKey && old.frames?.length ? old : { key: scanKey, failed: true, frames: [] })));
+    load();
+    const timer = setInterval(load, 120_000);
+    return () => { off = true; clearInterval(timer); };
+  }, [scanKey]);
+  const siteScan = scan && scan.key === scanKey ? scan : null;
+
   // Build the tile layers for the chosen product (one per animation frame).
   useEffect(() => {
     const m = map.current;
     if (!m || !product) return undefined;
-    if (product.site && !site) return undefined;
-    const list = product.site ? [{ time: null, url: product.template.replace('{site}', site.id) }] : product.frames;
+    if (product.site && !siteScan) return undefined;
+    // If the scan list can't be reached, fall back to the radar's latest picture.
+    const list = !product.site ? product.frames
+      : siteScan.frames.length ? siteScan.frames
+        : siteScan.failed ? [{ time: null, url: product.template.replace('{site}', site.id) }] : [];
     const meta = radarMeta.current || {};
     radar.current.forEach((l) => l.remove());
     radar.current = list.map((f, i) => L.tileLayer(f.url, { opacity: 0, className: 'radar-tiles', maxNativeZoom: meta.maxNativeZoom || 12, maxZoom: 18, zIndex: 10, attribution: i === 0 ? meta.attribution : '' }).addTo(m));
     setFrames(list);
-    setFrame(product.future ? 0 : list.length - 1);
+    setFrame(product.future ? 0 : Math.max(0, list.length - 1));
+    setLayerSet((n) => n + 1);
     return undefined;
-  }, [product, site]);
+  }, [product, siteScan]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Radar animation
   useEffect(() => {
@@ -424,7 +449,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
 
   useEffect(() => {
     radar.current.forEach((layer, i) => layer.setOpacity(show.radar && i === frame ? opacity : 0));
-  }, [frame, opacity, show.radar, frames.length]);
+  }, [frame, opacity, show.radar, frames.length, layerSet]);
 
   useEffect(() => {
     const m = map.current;
@@ -536,8 +561,13 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   }, [alerts, show.warnings, show.watches, show.advisories, national]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = frames[frame]?.time;
-  const timeText = !frames.length ? '…'
-    : product?.site ? `${site?.name || ''} radar${site?.latest ? `, ${new Date(site.latest).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}`
+  const clock = (v) => new Date(v).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const siteEmpty = !!(product?.site && siteScan && !siteScan.failed && !siteScan.frames.length);
+  const missing = (p) => p.site && siteScan && !siteScan.failed && !(siteScan.available || []).includes(p.id);
+  const label = (p, name) => (missing(p) ? `${name} (not from ${site?.id || 'this radar'})` : name);
+  const timeText = product?.site && siteEmpty ? `${site?.name || ''} radar`
+    : !frames.length ? '…'
+    : product?.site ? `${site?.name || ''} radar${t ? `, ${clock(t)}${frame === frames.length - 1 ? ' (latest)' : ''}` : site?.latest ? `, ${clock(site.latest)}` : ''}`
       : !t ? 'Latest'
         : product?.future ? `${frames[frame].lead ? `+${frames[frame].lead} h · ` : 'Now · '}${new Date(t).toLocaleTimeString([], { hour: 'numeric' })}`
           : `${new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}${frame === frames.length - 1 ? ' (latest)' : ''}`;
@@ -566,7 +596,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
             <label className={`radar-select ${product?.site ? 'on' : ''}`} title="One radar up close: reflectivity, velocity and dual-pol products">📡 One radar{' '}
               <select value={product?.site ? productId : ''} onChange={(e) => setProductId(e.target.value)}>
                 {!product?.site && <option value="" disabled>Pick…</option>}
-                {siteProducts.map((p) => <option key={p.id} value={p.id}>{shortName(p)}</option>)}
+                {siteProducts.map((p) => <option key={p.id} value={p.id}>{label(p, shortName(p))}</option>)}
               </select>
             </label>
           )}
@@ -620,7 +650,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
             <select value={productId} onChange={(e) => setProductId(e.target.value)}>
               {productGroups(products).map((g) => (
                 <optgroup key={g.label} label={g.label}>
-                  {g.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  {g.products.map((p) => <option key={p.id} value={p.id}>{label(p, p.name)}</option>)}
                 </optgroup>
               ))}
             </select>
@@ -641,6 +671,12 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
         {show.ptype && stormLayers.counts && <PtypeLegend />}
         {full && product?.note && <span className="radar-note">{product.note}{outlook?.features && outlookDay ? ` · SPC Day ${outlookDay} outlook: ${outlook.features.length ? [...new Set(outlook.features.map((f) => f.properties.name))].join(', ') : 'no severe risk'}` : ''}</span>}
       </div>
+      {siteEmpty && (
+        <p className="radar-empty" role="status">
+          📡 The {site?.name || ''} radar hasn't sent {product.name.toLowerCase()} in the last hour.
+          {siteScan.available?.length ? ' Try another product, or tap a different radar on the map.' : ' It may be down for maintenance. Tap a different radar on the map.'}
+        </p>
+      )}
       <div ref={el} className="map" role="application" aria-label="Radar and camera map" />
       <RadarGuide product={product} legend={legend} full={full} site={site} onPick={setProductId} products={products} />
       <div className="map-foot" aria-live="polite">
