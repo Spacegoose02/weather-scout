@@ -16,7 +16,7 @@ import { AuthService, AuthError, SESSION_COOKIE } from './auth.js';
 import { CameraService } from './providers/cameras/index.js';
 import * as openMeteo from './providers/openmeteo.js';
 import * as nws from './providers/nws.js';
-import { radarFrames } from './providers/radar.js';
+import { radarFrames, SITE_CODES, siteProductCodes, siteScans } from './providers/radar.js';
 import * as severe from './providers/severe.js';
 import * as tropics from './providers/tropics.js';
 import * as ocean from './providers/ocean.js';
@@ -261,6 +261,21 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.get('/api/alerts', { schema: latLonSchema }, async (req) => alerts(loc(req.query)));
   app.get('/api/air', { schema: latLonSchema }, async (req) => air(loc(req.query)));
   app.get('/api/radar', async () => radarFrames());
+  // One radar's loop of one single-site product (reflectivity, velocity, dual-pol),
+  // plus which of those products this radar is sending right now.
+  app.get('/api/radar/scans', {
+    schema: { querystring: { type: 'object', required: ['site', 'product'], properties: {
+      site: { type: 'string', pattern: '^[A-Za-z0-9]{3,4}$' },
+      product: { type: 'string', enum: Object.keys(SITE_CODES) },
+    } } },
+  }, async (req) => {
+    const site = req.query.site.toUpperCase();
+    const { product } = req.query;
+    const codes = await cache.wrap(`radar-codes:${site}`, 10 * MIN, () => siteProductCodes(site, fetchImpl));
+    const code = codes[product] || null;
+    const frames = code ? await cache.wrap(`radar-scans:${site}:${code}`, 2 * MIN, () => siteScans(site, code, fetchImpl)) : [];
+    return { site, product, code, available: Object.keys(codes), frames };
+  });
   app.get('/api/radar/sites', async () => ({ sites: await cache.wrap('nexrad-sites', 10 * MIN, () => severe.getNexradSites(fetchImpl)) }));
   app.get('/api/alerts/national', async () => cache.wrap('alerts-national', 2 * MIN, () => severe.getNationalAlerts({ userAgent: cfg.nwsUserAgent, fetchImpl })));
   app.get('/api/outlook', {

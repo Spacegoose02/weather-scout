@@ -619,3 +619,7 @@ main:focus { outline: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .prefs-group .check { margin: 8px 0; }
 .trip-at { white-space: nowrap; }
+
+/* A single-site radar product the chosen radar isn't sending. */
+.radar-empty { margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); font-weight: 600; }
+.map-card.full .radar-empty { position: absolute; z-index: 1000; top: 70px; left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 20px)); background: #2b2410; color: #fff; }

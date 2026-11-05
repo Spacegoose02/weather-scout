@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeNational, normalizeOutlook, alertColor, alertRank, getNexradSites } from '../src/providers/severe.js';
-import { radarProducts, radarFrames } from '../src/providers/radar.js';
+import { radarProducts, radarFrames, siteProductCodes, siteScans } from '../src/providers/radar.js';
 import { mockFetch, testApp } from './helpers.js';
 
 const poly = [[[-97, 35], [-96, 35], [-96, 36], [-97, 35]]];
@@ -84,5 +84,38 @@ test('API: national alerts, outlook and sites', async () => {
   assert.equal((await app.inject('/api/outlook?day=2')).json().day, 2);
   assert.equal((await app.inject('/api/outlook?day=5')).statusCode, 400);
   assert.deepEqual((await app.inject('/api/radar/sites')).json(), { sites: [] });
+  await app.close();
+});
+
+test('single-site radar: picks the products a radar sends and loops its real scans', async () => {
+  const now = Date.parse('2026-11-05T00:40:00Z');
+  const fetchImpl = mockFetch({
+    'operation=products': () => Response.json({ products: [{ id: 'N0B' }, { id: 'N0Q' }, { id: 'N0U' }, { id: 'N0C' }, { id: 'N0X' }] }),
+    'operation=list': () => Response.json({ scans: [
+      { ts: '2026-11-05T00:31:00Z' }, { ts: '2026-11-05T00:22:00Z' }, { ts: '2026-11-05T00:31:00Z' }, { ts: 'bad' }, { ts: '2026-11-05T00:36:00Z' },
+    ] }),
+  });
+  const codes = await siteProductCodes('EAX', fetchImpl, now);
+  assert.deepEqual(codes, { site: 'N0B', velocity: 'N0U', cc: 'N0C', zdr: 'N0X' });
+  assert.match(fetchImpl.calls[0].url, /radar\.py\?operation=products&radar=EAX&start=2026-11-04T22:40Z/);
+  const frames = await siteScans('EAX', 'N0X', fetchImpl, now);
+  assert.deepEqual(frames.map((f) => f.time), ['2026-11-05T00:22:00.000Z', '2026-11-05T00:31:00.000Z', '2026-11-05T00:36:00.000Z']);
+  assert.match(frames[2].url, /ridge::EAX-N0X-202611050036\/\{z\}/);
+  assert.match(fetchImpl.calls[1].url, /product=N0X&start=2026-11-04T23:40Z&end=2026-11-05T00:45Z/);
+});
+
+test('API: radar scans say when a radar is not sending a product', async () => {
+  const fetchImpl = mockFetch({
+    'operation=products': () => Response.json({ products: [{ id: 'N0B' }, { id: 'N0U' }] }),
+    'operation=list': () => Response.json({ scans: [{ ts: '2026-11-05T00:31:00Z' }, { ts: '2026-11-05T00:36:00Z' }] }),
+  });
+  const { app } = await testApp({ fetchImpl });
+  const zdr = (await app.inject('/api/radar/scans?site=eax&product=zdr')).json();
+  assert.deepEqual(zdr, { site: 'EAX', product: 'zdr', code: null, available: ['site', 'velocity'], frames: [] });
+  const vel = (await app.inject('/api/radar/scans?site=EAX&product=velocity')).json();
+  assert.equal(vel.code, 'N0U');
+  assert.equal(vel.frames.length, 2);
+  assert.equal((await app.inject('/api/radar/scans?site=EAX&product=nope')).statusCode, 400);
+  assert.equal((await app.inject('/api/radar/scans?site=../x&product=zdr')).statusCode, 400);
   await app.close();
 });
