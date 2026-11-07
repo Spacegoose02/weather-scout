@@ -22,6 +22,8 @@ export function loadConfig(env = process.env) {
     },
     units: env.DEFAULT_UNITS === 'metric' ? 'metric' : 'imperial',
     // NWS asks every client to send a User-Agent that identifies the app and a contact.
+    // Canada/Mexico radar from RainViewer on the radar map (WORLD_RADAR=off hides it).
+    worldRadar: bool(env.WORLD_RADAR, true),
     nwsUserAgent: env.NWS_USER_AGENT || 'WeatherScout/0.1 (self-hosted; set NWS_USER_AGENT)',
     auth: {
       required: bool(env.AUTH_REQUIRED, false),

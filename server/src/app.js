@@ -16,7 +16,7 @@ import { AuthService, AuthError, SESSION_COOKIE } from './auth.js';
 import { CameraService } from './providers/cameras/index.js';
 import * as openMeteo from './providers/openmeteo.js';
 import * as nws from './providers/nws.js';
-import { radarFrames, SITE_CODES, siteProductCodes, siteScans } from './providers/radar.js';
+import { radarFrames, SITE_CODES, siteProductCodes, siteScans, worldRadarFrames, withWorldRadar } from './providers/radar.js';
 import * as severe from './providers/severe.js';
 import * as tropics from './providers/tropics.js';
 import * as ocean from './providers/ocean.js';
@@ -261,7 +261,13 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   });
   app.get('/api/alerts', { schema: latLonSchema }, async (req) => alerts(loc(req.query)));
   app.get('/api/air', { schema: latLonSchema }, async (req) => air(loc(req.query)));
-  app.get('/api/radar', async () => radarFrames());
+  // US radar plus Canada/Mexico fill; if RainViewer can't be reached the US loop still shows.
+  app.get('/api/radar', async () => {
+    const radar = radarFrames();
+    if (!cfg.worldRadar) return radar;
+    const fill = await cache.wrap('world-radar', 5 * MIN, () => worldRadarFrames(fetchImpl)).catch(() => []);
+    return withWorldRadar(radar, fill);
+  });
   // One radar's loop of one single-site product (reflectivity, velocity, dual-pol),
   // plus which of those products this radar is sending right now.
   app.get('/api/radar/scans', {

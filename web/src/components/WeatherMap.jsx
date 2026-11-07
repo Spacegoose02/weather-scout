@@ -17,6 +17,7 @@ import { prefersLessMotion } from '../a11y.js';
 import { useStormLayers } from './map/stormLayers.js';
 import { PTYPES } from '../../../shared/stormcells.js';
 import { legendFor, productGroups, shortName } from './map/radarGuide.js';
+import { fillLayer, inView, limitToCoverage } from './map/radarFill.js';
 
 window.L = L; // leaflet.markercluster is a classic plugin that extends the global L
 
@@ -57,6 +58,8 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   const [panel, setPanel] = useState(false);
   const map = useRef(null);
   const radar = useRef([]);
+  // Canada/Mexico fill under the US loop: one layer per distinct frame, and which one each US frame shows.
+  const fill = useRef({ layers: [], byFrame: [] });
   const radarMeta = useRef(null);
   const camLayer = useRef(null);
   const webcamLayer = useRef(null);
@@ -106,7 +109,11 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
     base.current = baseMap('light').addTo(m);
     L.circleMarker([center.lat, center.lon], { radius: 7, color: '#fff', weight: 3, fillColor: '#2f6fde', fillOpacity: 1 }).addTo(m).bindTooltip('You are here');
 
+    // Only pan/zoom out over where the radar has data (unless home is somewhere else).
+    const unlimit = inView(center.lat, center.lon) ? limitToCoverage(m) : () => {};
+
     let cancelled = false;
+    const fillKey = (r) => (r.frames || []).map((f) => f.fill || '').join('|');
     api('/api/radar').then((r) => {
       if (cancelled) return;
       radarMeta.current = r;
@@ -117,6 +124,12 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
       }
       setProducts(r.products || [{ id: 'composite', name: 'Radar', legend: 'dbz', frames: r.frames }]);
     });
+    // The Canada/Mexico frames are fixed snapshots, so pick up new ones every 10 minutes.
+    const radarTimer = setInterval(() => api('/api/radar').then((r) => {
+      if (cancelled || !r.fill || fillKey(r) === fillKey(radarMeta.current || {})) return;
+      radarMeta.current = { ...radarMeta.current, ...r, satellite: radarMeta.current?.satellite };
+      setProducts(r.products);
+    }).catch(() => {}), 10 * 60_000);
 
     // Nationwide warning polygons, refreshed every 2 minutes.
     const loadNational = () => api('/api/alerts/national').then((n) => !cancelled && setNational(n)).catch(() => {});
@@ -315,6 +328,8 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
       clearTimeout(buoyTimer);
       clearTimeout(tideTimer);
       clearInterval(natTimer);
+      clearInterval(radarTimer);
+      unlimit();
       reload.current = {};
       tideLayer.current = null;
       m.remove();
@@ -323,6 +338,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
       stormLayer.current = null;
       buoyLayer.current = null;
       radar.current = [];
+      fill.current = { layers: [], byFrame: [] };
       satLayer.current = null;
       camLayer.current = null;
       webcamLayer.current = null;
@@ -360,6 +376,17 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
     const meta = radarMeta.current || {};
     radar.current.forEach((l) => l.remove());
     radar.current = list.map((f, i) => L.tileLayer(f.url, { opacity: 0, className: 'radar-tiles', maxNativeZoom: meta.maxNativeZoom || 12, maxZoom: 18, zIndex: 10, attribution: i === 0 ? meta.attribution : '' }).addTo(m));
+    // Canada and Mexico, drawn just under the US loop with the US box cut out.
+    fill.current.layers.forEach((l) => l.remove());
+    const made = new Map();
+    const byFrame = list.map((f) => {
+      if (!f.fill || !meta.fill) return null;
+      if (!made.has(f.fill)) {
+        made.set(f.fill, fillLayer(f.fill, { opacity: 0, className: 'radar-tiles', maxNativeZoom: meta.fill.maxNativeZoom, maxZoom: 18, zIndex: 9, attribution: made.size === 0 ? meta.fill.attribution : '' }).addTo(m));
+      }
+      return made.get(f.fill);
+    });
+    fill.current = { layers: [...made.values()], byFrame };
     setFrames(list);
     setFrame(product.future ? 0 : Math.max(0, list.length - 1));
     setLayerSet((n) => n + 1);
@@ -449,6 +476,8 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
 
   useEffect(() => {
     radar.current.forEach((layer, i) => layer.setOpacity(show.radar && i === frame ? opacity : 0));
+    const shown = show.radar ? fill.current.byFrame[frame] : null;
+    fill.current.layers.forEach((layer) => layer.setOpacity(layer === shown ? opacity : 0));
   }, [frame, opacity, show.radar, frames.length, layerSet]);
 
   useEffect(() => {
