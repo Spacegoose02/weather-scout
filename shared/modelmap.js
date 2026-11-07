@@ -1,6 +1,7 @@
 // Forecast model maps (Models tab), shared by the server (which fetches a grid
 // of points from Open-Meteo) and the web app (which paints the grid onto a
 // keyless base map). Plain data and pure functions, no DOM.
+import { inView } from './radarcoverage.js';
 
 // Models that can be mapped. `windy` is the matching Windy model, when there is one.
 export const MAP_MODELS = [
@@ -21,6 +22,13 @@ export const GRID_COLS = 16;
 export const CONUS = { south: 23.5, north: 50, west: -126, east: -65.5 };
 export const inConus = (lat, lon) => lat >= CONUS.south && lat <= CONUS.north && lon >= CONUS.west && lon <= CONUS.east;
 
+// Canada, the lower 48 and Mexico down to Central America, for the "North America" area.
+// The same 270-odd points as the whole-US map, just spread wider (about 4° apart).
+export const NORTH_AMERICA = { south: 15, north: 60, west: -135, east: -55 };
+// Places that get the North America map (and a map kept to North America): Alaska
+// and Hawaii to Panama and the Caribbean, the same box as the radar map.
+export const inNorthAmerica = (lat, lon) => inView(lat, lon);
+
 // How much of the map to cover. `half` is half the height in degrees of latitude.
 // "country" is the whole lower 48 for US places, and a wide area anywhere else.
 // Its 275 points keep two maps side by side under Open-Meteo's 600 a minute.
@@ -28,6 +36,7 @@ export const MAP_AREAS = [
   { id: 'nearby', name: 'Nearby', half: 2.2 },
   { id: 'region', name: 'Region', half: 6 },
   { id: 'country', name: 'Whole US', wideName: 'Wide area', half: 13, rows: 11, cols: 25, aspect: 2 },
+  { id: 'continent', name: 'North America', wideName: 'Continent', half: 22, rows: 13, cols: 21, aspect: 1.8 },
 ];
 
 // HRRR's grid: 1799 x 1059 points 3 km apart on a Lambert conformal map
@@ -184,6 +193,14 @@ export function gridFor(lat, lon, areaId = 'region') {
       area: area.id, center, rows, cols,
       lats: spread(CONUS.north, CONUS.south, rows), lons: spread(CONUS.west, CONUS.east, cols),
       latHalf: (CONUS.north - CONUS.south) / 2, lonHalf: (CONUS.east - CONUS.west) / 2,
+    };
+  }
+  if (area.id === 'continent' && inNorthAmerica(lat, lon)) {
+    const box = NORTH_AMERICA;
+    return {
+      area: area.id, center: { lat: (box.north + box.south) / 2, lon: (box.west + box.east) / 2 }, rows, cols,
+      lats: spread(box.north, box.south, rows), lons: spread(box.west, box.east, cols),
+      latHalf: (box.north - box.south) / 2, lonHalf: (box.east - box.west) / 2,
     };
   }
   const snap = area.half > 3 ? 0.5 : 0.25;
