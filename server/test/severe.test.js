@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeNational, normalizeOutlook, alertColor, alertRank, getNexradSites } from '../src/providers/severe.js';
-import { radarProducts, radarFrames, siteProductCodes, siteScans } from '../src/providers/radar.js';
+import { radarProducts, radarFrames, siteProductCodes, siteScans, worldRadarFrames, withWorldRadar } from '../src/providers/radar.js';
 import { mockFetch, testApp } from './helpers.js';
 
 const poly = [[[-97, 35], [-96, 35], [-96, 36], [-97, 35]]];
@@ -118,4 +118,32 @@ test('API: radar scans say when a radar is not sending a product', async () => {
   assert.equal((await app.inject('/api/radar/scans?site=EAX&product=nope')).statusCode, 400);
   assert.equal((await app.inject('/api/radar/scans?site=../x&product=zdr')).statusCode, 400);
   await app.close();
+});
+
+test('Canada and Mexico radar from RainViewer pairs with the US loop', async () => {
+  const fetchImpl = mockFetch({
+    'weather-maps.json': () => Response.json({
+      host: 'https://tilecache.rainviewer.com',
+      radar: { past: [
+        { time: Date.parse('2026-11-02T18:00:00Z') / 1000, path: '/v2/radar/abc123' },
+        { time: Date.parse('2026-11-02T17:50:00Z') / 1000, path: '/v2/radar/def456' },
+        { time: Date.parse('2026-11-02T17:40:00Z') / 1000, path: '../evil' },
+      ] },
+    }),
+  });
+  const fill = await worldRadarFrames(fetchImpl);
+  assert.equal(fill.length, 2);
+  assert.equal(fill[0].url, 'https://tilecache.rainviewer.com/v2/radar/def456/256/{z}/{x}/{y}/2/1_1.png');
+  const r = withWorldRadar(radarFrames(Date.parse('2026-11-02T18:07:00Z')), fill);
+  assert.match(r.frames.at(-1).fill, /abc123/);
+  assert.match(r.frames[0].fill, /def456/); // 17:15, before any fill frame: oldest one
+  const composite = r.products.find((p) => p.id === 'composite');
+  assert.match(composite.frames.at(-1).fill, /abc123/);
+  assert.equal(r.products.find((p) => p.id === 'echotops').frames[0].fill, undefined);
+  assert.equal(r.fill.maxNativeZoom, 7);
+  assert.match(r.fill.attribution, /RainViewer/);
+  assert.deepEqual(r.view, { south: 5, west: -172, north: 72, east: -50 });
+  // Without fill frames nothing changes.
+  const plain = radarFrames();
+  assert.equal(withWorldRadar(plain, []), plain);
 });

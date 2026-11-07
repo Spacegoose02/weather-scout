@@ -1,4 +1,5 @@
 import { fetchJson } from '../cache.js';
+import { NEXRAD_EXTENT, RADAR_VIEW, pairFill } from '../../../shared/radarcoverage.js';
 
 // Radar frames for a smooth, loopable map. The Iowa Environmental Mesonet serves
 // NEXRAD base reflectivity composites as map tiles in 5-minute steps, with no key.
@@ -106,6 +107,8 @@ export function radarFrames(now = Date.now(), count = 11) {
     attribution: 'NEXRAD radar via <a href="https://mesonet.agron.iastate.edu/">Iowa Environmental Mesonet</a>',
     maxNativeZoom: 12,
     coverage: 'United States',
+    nexradExtent: NEXRAD_EXTENT,
+    view: RADAR_VIEW,
     // Infrared satellite (clouds day and night) from NASA GIBS, as WMS so Leaflet
     // can ask for any zoom. GOES-East covers the Americas and the Atlantic.
     satellite: {
@@ -113,6 +116,42 @@ export function radarFrames(now = Date.now(), count = 11) {
       layers: 'GOES-East_ABI_Band13_Clean_Infrared',
       name: 'Infrared satellite (GOES-East)',
       attribution: 'Satellite: <a href="https://earthdata.nasa.gov/gibs">NASA GIBS</a> / NOAA GOES',
+    },
+  };
+}
+
+// Canada and Mexico. NEXRAD stops at the border, so the map looked empty past
+// it. RainViewer stitches Environment Canada's radars and Mexico's (CONAGUA/SMN
+// and a few state radars) into one free tile set: 10-minute frames for the last
+// 2 hours, zoom 7 at most, one colour scheme ("Universal Blue", id 2), for
+// personal and educational use with a credit link. Set WORLD_RADAR=off to hide it.
+export const RAINVIEWER_JSON = 'https://api.rainviewer.com/public/weather-maps.json';
+export const RAINVIEWER_MAX_ZOOM = 7;
+
+export async function worldRadarFrames(fetchImpl) {
+  const raw = await fetchJson(RAINVIEWER_JSON, { source: 'RainViewer', fetchImpl, timeoutMs: 6000 });
+  const host = typeof raw?.host === 'string' && /^https:\/\/[a-z0-9.-]+$/i.test(raw.host) ? raw.host : null;
+  if (!host) return [];
+  return (raw?.radar?.past || [])
+    .filter((f) => Number.isFinite(f?.time) && typeof f.path === 'string' && /^\/[A-Za-z0-9/_-]+$/.test(f.path))
+    .map((f) => ({ time: new Date(f.time * 1000).toISOString(), url: `${host}${f.path}/256/{z}/{x}/{y}/2/1_1.png` }))
+    .sort((a, b) => a.time.localeCompare(b.time));
+}
+
+// Give each live-radar frame the Canada/Mexico frame closest in time.
+export function withWorldRadar(radar, fill) {
+  if (!fill?.length) return radar;
+  const pair = (frames) => frames.map((f) => ({ ...f, fill: pairFill(f.time, fill)?.url || null }));
+  return {
+    ...radar,
+    frames: pair(radar.frames),
+    products: radar.products.map((p) => (p.id === 'composite'
+      ? { ...p, note: 'US NEXRAD radars stitched together, plus Canada and Mexico (lighter blue colours, less detail up close), last hour', frames: pair(p.frames) }
+      : p)),
+    coverage: 'United States, Canada and Mexico',
+    fill: {
+      maxNativeZoom: RAINVIEWER_MAX_ZOOM,
+      attribution: 'Canada &amp; Mexico radar by <a href="https://www.rainviewer.com/">RainViewer</a>',
     },
   };
 }

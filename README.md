@@ -432,6 +432,7 @@ names also work as environment variables (`LIGHTNING_GLM`, `LIGHTNING_GLM_SATELL
 | Air quality (US AQI, PM2.5, PM10, ozone) | Open-Meteo Air Quality (CAMS) | none |
 | Pollen | Open-Meteo (CAMS) in Europe; [Google Pollen API](https://developers.google.com/maps/documentation/pollen) for the US and elsewhere | none in Europe; optional `GOOGLE_POLLEN_API_KEY` (set it in Family & settings) |
 | Watches, warnings, advisories | [api.weather.gov](https://www.weather.gov/documentation/services-web-api) | none, but set `NWS_USER_AGENT` |
+| Radar outside the US (Canada, Mexico) | [RainViewer](https://www.rainviewer.com/api.html) free tiles (Environment Canada, CONAGUA/SMN), zoom 7 max, personal/educational use | none; `WORLD_RADAR=off` hides it |
 | Satellite | NASA [GIBS](https://earthdata.nasa.gov/gibs) GOES-East infrared | none |
 | Aurora (Kp forecast, OVATION) | NOAA [Space Weather Prediction Center](https://www.swpc.noaa.gov/) | none |
 | Forecast scorecard | Open-Meteo [Previous Runs API](https://open-meteo.com/en/docs/previous-runs-api), NWS station observations | none |

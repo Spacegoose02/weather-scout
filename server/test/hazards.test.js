@@ -17,6 +17,13 @@ const lsrFixture = {
   ],
 };
 
+// The same reports as if they came in just now, for tests that run on the real clock
+// (reports older than REPORT_HOURS drop off, so fixed dates go stale).
+const freshLsr = () => ({
+  ...lsrFixture,
+  features: lsrFixture.features.map((f) => ({ ...f, properties: { ...f.properties, valid: new Date(Date.parse(f.properties.valid.replace(' ', 'T') + (f.properties.valid.includes('Z') ? '' : 'Z')) + Date.now() - NOW).toISOString() } })),
+});
+
 test('notes are cleaned for everyone to read', () => {
   assert.equal(cleanNote('  big\n drops  https://spam.example now '), 'big drops now');
   assert.equal(cleanNote('x'.repeat(300)).length, 140);
@@ -91,7 +98,7 @@ test('smoke outlook from the air quality forecast', () => {
 });
 
 test('crowd reports: sign in to post, one at a time, own or admin can remove', async () => {
-  const fetchImpl = mockFetch({ 'geojson/lsr.php': () => json(lsrFixture) });
+  const fetchImpl = mockFetch({ 'geojson/lsr.php': () => json(freshLsr()) });
   const { app } = await testApp({ fetchImpl, env: { ADMIN_USERNAME: 'admin', ADMIN_PASSWORD: 'correct-horse-9' } });
   const guest = await app.inject({ method: 'POST', url: '/api/reports', payload: { kind: 'rain', lat: 37.5, lon: -77.4 } });
   assert.equal(guest.statusCode, 401);
