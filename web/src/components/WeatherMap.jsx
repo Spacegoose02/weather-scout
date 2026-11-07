@@ -17,7 +17,8 @@ import { prefersLessMotion } from '../a11y.js';
 import { useStormLayers } from './map/stormLayers.js';
 import { PTYPES } from '../../../shared/stormcells.js';
 import { legendFor, productGroups, shortName } from './map/radarGuide.js';
-import { fillLayer, inView, limitToCoverage } from './map/radarFill.js';
+import { fillLayer } from './map/radarFill.js';
+import { inView, limitToCoverage } from './map/limitView.js';
 
 window.L = L; // leaflet.markercluster is a classic plugin that extends the global L
 

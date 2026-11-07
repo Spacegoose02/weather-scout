@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import { api } from '../api.js';
+import { inView, limitToCoverage } from './map/limitView.js';
 import { baseMap } from './basemap.js';
 import WindyView from './WindyView.jsx';
 import './modelmap.css';
@@ -150,6 +151,19 @@ function ModelPane({ state, modelId, field, time, units, location, sync, panes =
     if (first) m.setView(first.getCenter(), first.getZoom(), { animate: false });
     return () => { ro.disconnect(); sync.maps.delete(m); m.remove(); };
   }, [location.lat, location.lon, sync]);
+
+  // No zooming out to the whole globe: the big areas stay on their own grid (all of
+  // it fits, with little empty map around it), the smaller ones on North America.
+  const viewKey = data ? `${data.area}:${data.center.lat},${data.center.lon}` : '';
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !data) return undefined;
+    if (data.area === 'country' || data.area === 'continent') {
+      const b = boundsOf(data);
+      return limitToCoverage(m, { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() }, { whole: true });
+    }
+    return inView(location.lat, location.lon) ? limitToCoverage(m) : undefined;
+  }, [viewKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fit the map to the grid the first time a new area arrives.
   useEffect(() => {
@@ -347,7 +361,7 @@ export default function ModelMap({ location, units }) {
 
       {windy && (
         <WindyView
-          center={{ lat: location.lat, lon: location.lon, zoom: area === 'nearby' ? 8 : area === 'country' ? 4 : 6 }}
+          center={{ lat: location.lat, lon: location.lon, zoom: area === 'nearby' ? 8 : area === 'country' ? 4 : area === 'continent' ? 3 : 6 }}
           initial={{ overlay: f.windy, product: windyModel }}
           units={units}
           onClose={() => setWindy(false)}

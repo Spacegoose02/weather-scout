@@ -139,6 +139,14 @@ test('US places get the whole lower 48 by default; elsewhere a wide area', async
   const uk = gridFor(51.5, -0.1, 'country');
   assert.ok(uk.lats[0] > 60 && uk.lats[uk.rows - 1] < 40);
 
+  // North America: Canada, the lower 48 and Mexico on one shared grid.
+  const na = gridFor(37.55, -77.46, 'continent');
+  assert.deepEqual([na.lats[0], na.lats[na.rows - 1], na.lons[0], na.lons[na.cols - 1]], [60, 15, -135, -55]);
+  assert.deepEqual(gridFor(45.4, -75.7, 'continent').lats, na.lats); // Ottawa shares it
+  assert.deepEqual(gridFor(19.4, -99.1, 'continent').lons, na.lons); // and Mexico City
+  assert.ok(na.rows * na.cols * 2 <= 600, 'two North America maps fit in a minute of Open-Meteo calls');
+  assert.ok(gridFor(51.5, -0.1, 'continent').center.lon > -10, 'elsewhere it is a wide area around the place');
+
   // Like Open-Meteo: one point off HRRR's grid and the whole request is refused.
   const hrrr = (u) => {
     const q = new URL(u).searchParams;

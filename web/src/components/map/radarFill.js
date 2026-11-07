@@ -1,7 +1,5 @@
 import L from 'leaflet';
-import { NEXRAD_EXTENT, RADAR_VIEW, maskRect, inView } from '../../../../shared/radarcoverage.js';
-
-export { inView };
+import { NEXRAD_EXTENT, maskRect } from '../../../../shared/radarcoverage.js';
 
 // A radar tile layer with the NEXRAD box cut out of it, for Canada and Mexico:
 // inside the box the US mosaic shows instead, so the two never stack up.
@@ -34,21 +32,3 @@ const Masked = L.GridLayer.extend({
 });
 
 export const fillLayer = (url, options = {}) => new Masked(url, { mask: NEXRAD_EXTENT, ...options });
-
-// Keep the map on North America: no panning off to empty oceans, and no
-// zooming out past the point where the covered area fills the screen.
-export const viewBounds = (v = RADAR_VIEW) => L.latLngBounds([v.south, v.west], [v.north, v.east]);
-
-export function limitToCoverage(m, view = RADAR_VIEW) {
-  const b = viewBounds(view);
-  m.options.maxBoundsViscosity = 1;
-  m.setMaxBounds(b);
-  const fit = () => {
-    const size = m.getSize();
-    if (!size.x || !size.y) return;
-    m.setMinZoom(Math.max(2, m.getBoundsZoom(b, true)));
-  };
-  fit();
-  m.on('resize', fit);
-  return () => m.off('resize', fit);
-}
