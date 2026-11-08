@@ -30,7 +30,7 @@ test('app settings list every group, mask secrets, and leave start-up settings a
   const res = await call('GET', '/api/admin/settings');
   assert.equal(res.statusCode, 200);
   assert.doesNotMatch(res.body, /ny-secret/);
-  assert.deepEqual([...new Set(res.json().settings.map((s) => s.group))], ['home', 'cameras', 'maps', 'lightning', 'stations', 'homeassistant', 'apps']);
+  assert.deepEqual([...new Set(res.json().settings.map((s) => s.group))], ['home', 'cameras', 'maps', 'pollen', 'air', 'lightning', 'stations', 'homeassistant', 'apps']);
   assert.equal(row(res, 'NY511_API_KEY').hint, 'abcd');
   assert.equal(row(res, 'DEFAULT_LOCATION_NAME').source, 'env');
   assert.ok(!res.json().settings.some((s) => s.group === 'ai'), 'AI has its own panel');

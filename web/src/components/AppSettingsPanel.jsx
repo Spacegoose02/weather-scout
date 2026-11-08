@@ -12,6 +12,7 @@ const GROUPS = [
   { id: 'cameras', title: '📷 Road cameras', intro: 'VA, SC, MD, KY and DE work with no key. NC, NY, GA and OH switch on with a free developer key from each state.' },
   { id: 'maps', title: '🗺️ Maps, Windy & webcams', intro: 'Windy has two different keys. The Map Forecast key is for the 🌬️ Windy wind map; the Webcams key adds 🌄 Windy webcams to the Radar & Cams map. Make each one at api.windy.com/keys. Also: which layers the Radar & Cams map starts with.' },
   { id: 'pollen', title: '🌼 Pollen counts', intro: 'Pollen for Europe is free with no key. For the US and most other countries, add a Google Pollen API key.' },
+  { id: 'air', title: '📡 Live air sensors', intro: 'Optional. Without keys the app uses the air-quality model. With an AirNow and/or PurpleAir key, the Air card and the 📡 Air sensors map layer show real readings from monitors near you.' },
   { id: 'lightning', title: '⚡ Live lightning', intro: 'Lightning on the Radar & Cams map and the "lightning within X miles" alerts. Each person picks their own alert distance under 🔔 Alerts.' },
   { id: 'stations', title: '🌡️ Weather stations', intro: 'Ecowitt and Ambient stations can upload straight to Weather Scout. Cloud accounts (Ambient, Tempest) are checked on a timer.' },
   { id: 'homeassistant', title: '🏡 Home Assistant', intro: 'Send the weather to Home Assistant over MQTT (sensors appear on their own) and/or straight to its REST API.' },
