@@ -17,9 +17,10 @@ export class TtlCache {
     return hit.value;
   }
 
-  set(key, value, ttlMs) {
-    if (this.map.size >= this.max) this.map.delete(this.map.keys().next().value);
-    this.map.set(key, { value, expires: Date.now() + ttlMs });
+  set(key, value, ttlMs, freshMs) {
+    if (this.map.size >= this.max && !this.map.has(key)) this.map.delete(this.map.keys().next().value);
+    const now = Date.now();
+    this.map.set(key, { value, expires: now + ttlMs, fresh: freshMs == null ? null : now + freshMs });
   }
 
   async wrap(key, ttlMs, fn) {
@@ -30,6 +31,36 @@ export class TtlCache {
       try {
         const value = await fn();
         this.set(key, value, ttlMs);
+        return value;
+      } finally {
+        this.inflight.delete(key);
+      }
+    })();
+    this.inflight.set(key, p);
+    return p;
+  }
+
+  /**
+   * Like wrap, but an answer older than `freshMs` (and younger than `staleMs`) is
+   * still served right away while a fresh one is fetched in the background, so
+   * nobody waits on the upstream once the server has a copy.
+   */
+  async wrapStale(key, freshMs, staleMs, fn) {
+    const hit = this.map.get(key);
+    const now = Date.now();
+    if (hit && hit.expires >= now) {
+      if (hit.fresh != null && hit.fresh < now && !this.inflight.has(key)) this._load(key, staleMs, freshMs, fn).catch(() => {});
+      return hit.value;
+    }
+    if (this.inflight.has(key)) return this.inflight.get(key);
+    return this._load(key, staleMs, freshMs, fn);
+  }
+
+  _load(key, ttlMs, freshMs, fn) {
+    const p = (async () => {
+      try {
+        const value = await fn();
+        this.set(key, value, ttlMs, freshMs);
         return value;
       } finally {
         this.inflight.delete(key);

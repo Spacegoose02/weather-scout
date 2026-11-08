@@ -16,7 +16,10 @@ export class PointBudget {
     Object.assign(this, { perMinute, now, sleep, spent: [] });
   }
 
-  async take(points) {
+  // `maxWaitMs`: give up (with a BusyError saying when to try again) rather than
+  // hold the request open that long. A map that waited a whole minute looked stuck.
+  async take(points, { maxWaitMs = Infinity } = {}) {
+    const start = this.now();
     for (;;) {
       const t = this.now();
       this.spent = this.spent.filter((x) => x.at > t - 60_000);
@@ -25,11 +28,32 @@ export class PointBudget {
         this.spent.push({ at: t, points });
         return;
       }
-      await this.sleep(this.spent[0].at + 60_000 - t + 50);
+      // When enough points free up for this request.
+      let free = used + points - this.perMinute;
+      let until = t;
+      for (const x of this.spent) {
+        until = x.at + 60_000;
+        free -= x.points;
+        if (free <= 0) break;
+      }
+      const wait = until - t + 50;
+      if (t + wait - start > maxWaitMs) throw new BusyError(Math.ceil(wait / 1000));
+      await this.sleep(wait);
     }
   }
 }
-const budget = new PointBudget();
+// One budget for every Open-Meteo grid (model maps and precipitation type), since they share the limit.
+export const sharedBudget = new PointBudget();
+const budget = sharedBudget;
+
+/** Too many map points asked for this minute; try again in `retryAfter` seconds. */
+export class BusyError extends Error {
+  constructor(retryAfter) {
+    super(`Lots of maps were asked for this minute. Trying again in ${retryAfter} s.`);
+    this.statusCode = 503;
+    this.retryAfter = retryAfter;
+  }
+}
 
 export function modelMapUrl(model, grid, units, keep = pointsFor(model, grid)) {
   // The grid points the model covers, row by row (north to south, west to east).
@@ -117,7 +141,7 @@ export async function getModelMap({ lat, lon, units, model: id, area }, fetchImp
   const keep = pointsFor(model, grid);
   if (!keep.length) throw noData();
   let raw;
-  await points.take(keep.length);
+  await points.take(keep.length, { maxWaitMs: 6000 });
   try {
     raw = await fetchJson(modelMapUrl(model, grid, units, keep), { source: `Open-Meteo ${model.name} map`, fetchImpl, timeoutMs: 25000 });
   } catch (err) {

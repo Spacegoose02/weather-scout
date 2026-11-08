@@ -44,3 +44,47 @@ export function maskRect({ x, y, z }, box = NEXRAD_EXTENT, size = 256) {
 }
 
 export const inView = (lat, lon, v = RADAR_VIEW) => lat >= v.south && lat <= v.north && lon >= v.west && lon <= v.east;
+
+// How far a NEXRAD sees well enough to trust over the Canada/Mexico layer. Past
+// about 230 km its beam is above the low clouds, so it misses or undercounts
+// rain that Canada's own radars see; the two blend between NEAR and FAR.
+export const NEXRAD_NEAR_KM = 230;
+export const NEXRAD_FAR_KM = 300;
+
+/**
+ * Which US radars reach into one tile, in that tile's pixels: `circles` with
+ * a center and the near/far radius, and `covered` when every part of the tile
+ * that lies in the NEXRAD box is within the near radius of some radar.
+ * `sites` is a list of [lat, lon].
+ */
+export function nexradReach({ x, y, z }, sites, box = NEXRAD_EXTENT, size = 256) {
+  const circles = [];
+  const ox = x * size;
+  const oy = y * size;
+  for (const [lat, lon] of sites) {
+    const p = worldPixel(lat, lon, z, size);
+    const perKm = (size * 2 ** z) / (40075.016686 * Math.cos((lat * Math.PI) / 180));
+    const near = NEXRAD_NEAR_KM * perKm;
+    const far = NEXRAD_FAR_KM * perKm;
+    const cx = p.x - ox;
+    const cy = p.y - oy;
+    const dx = Math.max(0 - cx, 0, cx - size);
+    const dy = Math.max(0 - cy, 0, cy - size);
+    if (dx * dx + dy * dy < far * far) circles.push({ x: cx, y: cy, near, far });
+  }
+  // Check a 9 x 9 grid of points over the tile.
+  const nw = worldPixel(box.north, box.west, z, size);
+  const se = worldPixel(box.south, box.east, z, size);
+  let covered = circles.length > 0;
+  for (let i = 0; i <= 8 && covered; i++) {
+    for (let j = 0; j <= 8 && covered; j++) {
+      const px = (i / 8) * size;
+      const py = (j / 8) * size;
+      const wx = ox + px;
+      const wy = oy + py;
+      if (wx < nw.x || wx > se.x || wy < nw.y || wy > se.y) { covered = false; break; }
+      if (!circles.some((c) => (c.x - px) ** 2 + (c.y - py) ** 2 <= c.near * c.near)) covered = false;
+    }
+  }
+  return { circles, covered };
+}

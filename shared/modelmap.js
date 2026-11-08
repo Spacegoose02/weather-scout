@@ -112,7 +112,7 @@ export const SCALES = {
     [85, [250, 140, 30, 210]], [95, [230, 50, 40, 210]], [105, [160, 20, 60, 210]],
   ],
   precip: [
-    [0.05, [120, 220, 255, 0]], [0.2, [120, 220, 255, 170]], [1, [40, 130, 240, 210]], [2.5, [30, 190, 90, 225]],
+    [0.01, [120, 220, 255, 0]], [0.08, [120, 220, 255, 70]], [0.3, [110, 210, 255, 160]], [1, [40, 130, 240, 210]], [2.5, [30, 190, 90, 225]],
     [5, [250, 225, 40, 235]], [10, [250, 140, 20, 240]], [20, [230, 30, 30, 245]], [40, [210, 40, 210, 250]],
   ],
   wind: [
@@ -246,28 +246,31 @@ const cubic = (t) => [
 
 /**
  * Smooth (bicubic) value at a fractional grid position, so a coarse grid
- * paints soft shapes instead of diamonds. Falls back to bilinear next to
- * missing points and at the edges.
+ * paints soft shapes instead of diamonds. The edges reuse the edge points, so
+ * there's no kink a cell in from the border, and the result stays between the
+ * four nearest points: plain bicubic overshoots next to a shower, which painted
+ * dark rings and holes in the rain. Falls back to bilinear next to missing points.
  */
 export function sampleSmooth(values, rows, cols, r, c) {
   if (r < 0 || c < 0 || r > rows - 1 || c > cols - 1) return null;
-  const r0 = Math.floor(r);
-  const c0 = Math.floor(c);
-  if (r0 < 1 || c0 < 1 || r0 > rows - 3 || c0 > cols - 3) return sampleGrid(values, rows, cols, r, c);
+  if (rows < 2 || cols < 2) return sampleGrid(values, rows, cols, r, c);
+  const r0 = Math.min(rows - 2, Math.floor(r));
+  const c0 = Math.min(cols - 2, Math.floor(c));
   const wr = cubic(r - r0);
   const wc = cubic(c - c0);
+  const at = (i, j) => values[Math.max(0, Math.min(rows - 1, i)) * cols + Math.max(0, Math.min(cols - 1, j))];
   let sum = 0;
   for (let i = 0; i < 4; i++) {
-    const row = (r0 - 1 + i) * cols + c0 - 1;
     let line = 0;
     for (let j = 0; j < 4; j++) {
-      const v = values[row + j];
+      const v = at(r0 - 1 + i, c0 - 1 + j);
       if (v == null) return sampleGrid(values, rows, cols, r, c);
       line += v * wc[j];
     }
     sum += line * wr[i];
   }
-  return sum;
+  const near = [at(r0, c0), at(r0, c0 + 1), at(r0 + 1, c0), at(r0 + 1, c0 + 1)];
+  return Math.max(Math.min(...near), Math.min(Math.max(...near), sum));
 }
 
 /** Grid position of a lat/lon, given the grid's corner points. */
