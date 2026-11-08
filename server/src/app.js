@@ -57,6 +57,8 @@ import { FeedHealth, registerFeedHealth } from './feedhealth.js';
 import { LiveHub, registerLive } from './live.js';
 import { MarineService, registerMarine } from './marine.js';
 import { HurricaneImpacts, registerHurricane } from './hurricane.js';
+import { ClimateService, registerClimate } from './climate.js';
+import { registerClassroom } from './classroom.js';
 import { nextRain, nextRainText, nextRainShort } from '../../shared/glance.js';
 import { getScorecard } from './scorecard.js';
 import { cleanOutfit, rockySvg } from '../../shared/rocky-outfit.js';
@@ -440,6 +442,8 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   registerOdds(app, { cache, fetchImpl, latLonSchema, loc });
   registerMarine(app, { marine: new MarineService(cache, fetchImpl, { userAgent: cfg.nwsUserAgent, log: app.log }), alerts, settle, latLonSchema, loc });
   registerHurricane(app, { impacts: new HurricaneImpacts(cache, fetchImpl, { storms: () => cache.wrap('tropics', 15 * MIN, () => tropics.getStorms(fetchImpl, { log: app.log })), log: app.log }), latLonSchema, loc });
+  registerClassroom(app, { db, requireUser });
+  registerClimate(app, { climate: new ClimateService(cache, fetchImpl, { log: app.log }), latLonSchema, loc });
   const liveHub = new LiveHub({ alerts, storm: (p) => stormCells.approaching(p), log: app.log });
   registerLive(app, { hub: liveHub, latLonSchema, loc });
   app.decorate('liveHub', liveHub);

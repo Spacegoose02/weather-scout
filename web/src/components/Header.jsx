@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 import RockyFace from './RockyFace.jsx';
+import { t } from '../i18n.js';
 
 // Grown-ups get search, saved places, Kids, units and ⚙️ Settings. In the kid
 // view the header is just the place, the badge counter and a way back.
@@ -89,9 +90,9 @@ export default function Header({ location, onLocation, saved, kidMode, onKidMode
 
       {!kidMode && (
         <form className="search" onSubmit={search} role="search">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a city or ZIP" aria-label="Search location" />
-          <button type="submit" disabled={busy}>{busy ? '…' : 'Go'}</button>
-          <button type="button" onClick={locate} title="Use my location" aria-label="Use my location">🎯</button>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Search a city or ZIP')} aria-label={t('Search location')} />
+          <button type="submit" disabled={busy}>{busy ? '…' : t('Go')}</button>
+          <button type="button" onClick={locate} title={t('Use my location')} aria-label={t('Use my location')}>🎯</button>
           {locMsg && (
             <div className="locate-msg" role="alert">
               <p>
@@ -100,8 +101,8 @@ export default function Header({ location, onLocation, saved, kidMode, onKidMode
                   : locMsg}
               </p>
               <div className="row-actions">
-                <button type="button" onClick={approximate} disabled={busy}>📍 Use approximate location</button>
-                <button type="button" className="ghost" onClick={() => setLocMsg('')}>Close</button>
+                <button type="button" onClick={approximate} disabled={busy}>{t('📍 Use approximate location')}</button>
+                <button type="button" className="ghost" onClick={() => setLocMsg('')}>{t('Close')}</button>
               </div>
             </div>
           )}
@@ -118,21 +119,21 @@ export default function Header({ location, onLocation, saved, kidMode, onKidMode
       {kidMode ? (
         <div className="header-actions">
           <button className="ghost kid-badges" onClick={onBadges} aria-label={`My badges: ${badges}`}>🏅 {badges}</button>
-          <button className="ghost" onClick={() => onKidMode(false)} title="Back to the grown-up view">🧑 Grown-ups</button>
+          <button className="ghost" onClick={() => onKidMode(false)} title={t('Back to the grown-up view')}>🧑 {t('Grown-ups')}</button>
         </div>
       ) : (
         <div className="header-actions">
           {saved.length > 1 && (
-            <select aria-label="Saved places" value="" onChange={(e) => e.target.value && pick(saved[Number(e.target.value)])}>
-              <option value="">Saved places</option>
+            <select aria-label={t('Saved places')} value="" onChange={(e) => e.target.value && pick(saved[Number(e.target.value)])}>
+              <option value="">{t('Saved places')}</option>
               {saved.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
             </select>
           )}
-          <button className="ghost kids-switch" onClick={() => onKidMode(true)} title="Big, simple, friendly view for kids"><RockyFace /> Kids</button>
-          <button className="ghost" onClick={() => onUnits(units === 'imperial' ? 'metric' : 'imperial')} title="Switch units">
+          <button className="ghost kids-switch" onClick={() => onKidMode(true)} title={t('Big, simple, friendly view for kids')}><RockyFace /> {t('Kids')}</button>
+          <button className="ghost" onClick={() => onUnits(units === 'imperial' ? 'metric' : 'imperial')} title={t('Switch units')}>
             {units === 'imperial' ? '°F' : '°C'}
           </button>
-          <button className="ghost" onClick={onSettings} title="Settings" aria-label="Settings">⚙️</button>
+          <button className="ghost" onClick={onSettings} title={t('Settings')} aria-label={t('Settings')}>⚙️</button>
         </div>
       )}
     </header>
