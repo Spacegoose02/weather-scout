@@ -1,7 +1,7 @@
 // Storm tracks (NEXRAD storm cells via IEM) and the rain/snow/mix layer
 // (Open-Meteo's current weather on a grid). Both are free and need no key.
 import { fetchJson } from './cache.js';
-import { PointBudget } from './providers/modelmaps.js';
+import { sharedBudget } from './providers/modelmaps.js';
 import { parseCells, cellsNear, precipType, ptypeGrid, PTYPE_CODE, ptypeCounts } from '../../shared/stormcells.js';
 import { inBox } from '../../shared/lightning.js';
 
@@ -44,7 +44,7 @@ export function encodePtype(raw, grid) {
 }
 
 export class StormCellService {
-  constructor(cache, fetchImpl, { log = console, budget = new PointBudget() } = {}) {
+  constructor(cache, fetchImpl, { log = console, budget = sharedBudget } = {}) {
     Object.assign(this, { cache, fetchImpl, log, budget });
   }
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeNational, normalizeOutlook, alertColor, alertRank, getNexradSites } from '../src/providers/severe.js';
-import { radarProducts, radarFrames, siteProductCodes, siteScans, worldRadarFrames, withWorldRadar } from '../src/providers/radar.js';
+import { radarProducts, radarFrames, siteProductCodes, siteScans, worldRadarFrames, withWorldRadar, nexradPoints } from '../src/providers/radar.js';
 import { mockFetch, testApp } from './helpers.js';
 
 const poly = [[[-97, 35], [-96, 35], [-96, 36], [-97, 35]]];
@@ -146,4 +146,16 @@ test('Canada and Mexico radar from RainViewer pairs with the US loop', async () 
   // Without fill frames nothing changes.
   const plain = radarFrames();
   assert.equal(withWorldRadar(plain, []), plain);
+});
+
+test('the radar blend gets the US radars in and near the NEXRAD box', () => {
+  const pts = nexradPoints([
+    { id: 'KCBW', lat: 46.0392, lon: -67.8066 },
+    { id: 'KBUF', lat: 42.9489, lon: -78.7367 },
+    { id: 'PHKI', lat: 21.89, lon: -159.55 }, // Hawaii: far from the box
+    { id: 'TJUA', lat: 18.12, lon: -66.08 }, // Puerto Rico
+  ]);
+  assert.deepEqual(pts, [[46.04, -67.81], [42.95, -78.74]]);
+  const r = withWorldRadar(radarFrames(), [{ time: new Date().toISOString(), url: 'x' }], [{ id: 'KBUF', lat: 42.9489, lon: -78.7367 }]);
+  assert.deepEqual(r.fill.sites, [[42.95, -78.74]]);
 });

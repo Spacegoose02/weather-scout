@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import { api } from '../api.js';
-import { inView, limitToCoverage } from './map/limitView.js';
+import { limitToCoverage } from './map/limitView.js';
 import { baseMap } from './basemap.js';
 import WindyView from './WindyView.jsx';
 import './modelmap.css';
 import {
-  MAP_AREAS, MAP_FIELDS, MAP_MODELS, colorAt, defaultArea, inConus, gridPos, legendFor, pressureCenters, sampleGrid, sampleSmooth, scaleValue,
+  MAP_AREAS, MAP_FIELDS, MAP_MODELS, colorAt, defaultArea, inConus, gridPos, legendFor, pressureCenters, sampleSmooth, scaleValue,
 } from '../../../shared/modelmap.js';
 
 // Forecast maps for the Models tab: one model (or two side by side) painted on a
@@ -14,20 +14,33 @@ import {
 // The grid comes from /api/modelmap (Open-Meteo, no key). ECMWF, GFS and ICON
 // can also open in Windy for the full animated map.
 
-// About 22 pixels per grid cell; the browser smooths the rest.
-const imgSize = (data) => [Math.min(600, data.cols * 22), Math.min(400, data.rows * 24)];
+// About 30 pixels per grid cell; the browser smooths the rest.
+const imgSize = (data) => [Math.min(720, data.cols * 30), Math.min(480, data.rows * 32)];
 const PLAY_MS = 850;
+// Painted frames kept per map, so playing the loop again doesn't repaint.
+const KEEP_FRAMES = 18;
 
 function useModelGrid(location, units, model, area) {
-  const [state, setState] = useState({ data: null, error: '', loading: false });
+  const [state, setState] = useState({ data: null, error: '', loading: false, retryIn: 0 });
   useEffect(() => {
-    if (!model) { setState({ data: null, error: '', loading: false }); return undefined; }
+    if (!model) { setState({ data: null, error: '', loading: false, retryIn: 0 }); return undefined; }
     let live = true;
-    setState((s) => ({ data: s.data?.model === model && s.data?.area === area ? s.data : null, error: '', loading: true }));
-    api(`/api/modelmap?lat=${location.lat}&lon=${location.lon}&units=${units}&model=${model}&area=${area}`)
-      .then((data) => live && setState({ data, error: '', loading: false }))
-      .catch((e) => live && setState({ data: null, error: e.message, loading: false }));
-    return () => { live = false; };
+    let timer;
+    setState((s) => ({ data: s.data?.model === model && s.data?.area === area ? s.data : null, error: '', loading: true, retryIn: 0 }));
+    const load = (tries) => api(`/api/modelmap?lat=${location.lat}&lon=${location.lon}&units=${units}&model=${model}&area=${area}`)
+      .then((data) => live && setState({ data, error: '', loading: false, retryIn: 0 }))
+      .catch((e) => {
+        if (!live) return;
+        // The server is pacing Open-Meteo's free limit: wait our turn and ask again.
+        if (e.retryAfter && tries < 4) {
+          setState((s) => ({ ...s, loading: true, retryIn: e.retryAfter }));
+          timer = setTimeout(() => load(tries + 1), e.retryAfter * 1000);
+          return;
+        }
+        setState({ data: null, error: e.message, loading: false, retryIn: 0 });
+      });
+    load(0);
+    return () => { live = false; clearTimeout(timer); };
   }, [location.lat, location.lon, units, model, area]);
   return state;
 }
@@ -56,31 +69,62 @@ const aheadLabel = (ms, from) => {
 const mercY = (lat) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
 const unMercY = (y) => (360 / Math.PI) * Math.atan(Math.exp(y)) - 90;
 
-/** Paint one time step of one field to a data: URL the size of the overlay. */
-export function paintField(data, field, idx, units, canvas = document.createElement('canvas')) {
-  const values = data.fields[field]?.[idx];
+// Gaussian-weighted average of the nearby grid points (0.45 cells wide): a lone
+// shower paints as a soft round patch instead of a square-ish blob.
+const SOFT = 1 / (2 * 0.45 * 0.45);
+function sampleSoft(values, rows, cols, r, c) {
+  const r0 = Math.floor(r);
+  const c0 = Math.floor(c);
+  let sum = 0;
+  let wsum = 0;
+  for (let i = r0 - 1; i <= r0 + 2; i++) {
+    if (i < 0 || i >= rows) continue;
+    const wr = Math.exp(-((i - r) ** 2) * SOFT);
+    for (let j = c0 - 1; j <= c0 + 2; j++) {
+      if (j < 0 || j >= cols) continue;
+      const v = values[i * cols + j];
+      if (v == null) continue;
+      const w = wr * Math.exp(-((j - c) ** 2) * SOFT);
+      sum += v * w;
+      wsum += w;
+    }
+  }
+  return wsum > 0.05 ? sum / wsum : null;
+}
+
+const smoothstep = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+
+/** Paint one time step of one field into an ImageData the size of the overlay. */
+export function paintField(data, field, idx, units) {
   const [IMG_W, IMG_H] = imgSize(data);
-  canvas.width = IMG_W;
-  canvas.height = IMG_H;
-  const ctx = canvas.getContext('2d');
-  const img = ctx.createImageData(IMG_W, IMG_H);
-  if (!values) return canvas.toDataURL();
+  const img = new ImageData(IMG_W, IMG_H);
+  const values = data.fields[field]?.[idx];
+  if (!values) return img;
   const { rows, cols, lats } = data;
   const yN = mercY(lats[0]);
   const yS = mercY(lats[rows - 1]);
   const grid = new Float32Array(IMG_W * IMG_H);
+  const floor = field === 'precip' || field === 'clouds' || field === 'wind';
+  // Showers and cloud patches come out round and soft; smooth fields stay exact.
+  const soft = field === 'precip' || field === 'clouds';
+  // Colors repeat a lot (most of a rain map is dry), so remember each one.
+  const colors = new Map();
   for (let py = 0; py < IMG_H; py++) {
     const lat = unMercY(yN + ((yS - yN) * (py + 0.5)) / IMG_H);
     const r = ((lats[0] - lat) / (lats[0] - lats[rows - 1])) * (rows - 1);
     for (let px = 0; px < IMG_W; px++) {
       const c = ((px + 0.5) / IMG_W) * (cols - 1);
-      let v = sampleSmooth(values, rows, cols, r, c);
-      // Bicubic can overshoot below zero next to a shower; rain and cloud can't be negative.
-      if (v != null && (field === 'precip' || field === 'clouds' || field === 'wind')) v = Math.max(0, v);
+      let v = soft ? sampleSoft(values, rows, cols, r, c) : sampleSmooth(values, rows, cols, r, c);
+      if (v != null && floor) v = Math.max(0, v);
       grid[py * IMG_W + px] = v == null ? NaN : v;
-      const rgba = colorAt(field, scaleValue(field, v, units));
+      if (v == null) continue;
+      const key = Math.round(scaleValue(field, v, units) * 50); // steps of 0.02 mm, °F, mph...
+      let rgba = colors.get(key);
+      if (!rgba) { rgba = colorAt(field, key / 50); colors.set(key, rgba); }
+      // Fade out over the last bit of the grid, so its edge isn't a hard line.
+      const edge = smoothstep(Math.min(r, rows - 1 - r, c, cols - 1 - c) / 0.45);
       const o = (py * IMG_W + px) * 4;
-      img.data[o] = rgba[0]; img.data[o + 1] = rgba[1]; img.data[o + 2] = rgba[2]; img.data[o + 3] = rgba[3];
+      img.data[o] = rgba[0]; img.data[o + 1] = rgba[1]; img.data[o + 2] = rgba[2]; img.data[o + 3] = rgba[3] * edge;
     }
   }
   // Isobars every 4 hPa: a pixel sits on a line where the band changes next to it.
@@ -99,9 +143,23 @@ export function paintField(data, field, idx, units, canvas = document.createElem
       }
     }
   }
-  ctx.putImageData(img, 0, 0);
-  return canvas.toDataURL();
+  return img;
 }
+
+// An image overlay that shows a canvas, so a new time step is one putImageData
+// instead of encoding a PNG and decoding it again.
+const CanvasOverlay = L.ImageOverlay.extend({
+  _initImage() {
+    const el = this._url;
+    this._image = el;
+    L.DomUtil.addClass(el, 'leaflet-image-layer');
+    if (this._zoomAnimated) L.DomUtil.addClass(el, 'leaflet-zoom-animated');
+    if (this.options.className) L.DomUtil.addClass(el, this.options.className);
+    el.onselectstart = L.Util.falseFn;
+    el.onmousemove = L.Util.falseFn;
+    if (this.options.zIndex) this._updateZIndex();
+  },
+});
 
 function boundsOf(data) {
   const { lats, lons } = data;
@@ -121,14 +179,18 @@ function ModelPane({ state, modelId, field, time, units, location, sync, panes =
   const map = useRef(null);
   const overlay = useRef(null);
   const marks = useRef(null);
+  const arrows = useRef({ key: '', list: [] });
   const canvas = useRef(null);
+  const frames = useRef({ data: null, list: new Map() });
   const fitted = useRef('');
-  const { data, error, loading } = state;
+  const { data, error, loading, retryIn } = state;
   const model = MAP_MODELS.find((m) => m.id === modelId);
   const idx = data ? data.times.indexOf(time) : -1;
 
   useEffect(() => {
-    const m = L.map(el.current, { zoomControl: true, attributionControl: true, worldCopyJump: true }).setView([location.lat, location.lon], 6);
+    // Quarter zoom steps, so the grid can fill the map exactly.
+    const m = L.map(el.current, { zoomControl: true, attributionControl: true, worldCopyJump: true, zoomSnap: 0.25, zoomDelta: 0.5, wheelPxPerZoomLevel: 90 })
+      .setView([location.lat, location.lon], 6);
     map.current = m;
     baseMap('dark').addTo(m);
     marks.current = L.layerGroup().addTo(m);
@@ -149,20 +211,19 @@ function ModelPane({ state, modelId, field, time, units, location, sync, panes =
     ro.observe(el.current);
     const first = [...sync.maps].find((x) => x !== m);
     if (first) m.setView(first.getCenter(), first.getZoom(), { animate: false });
-    return () => { ro.disconnect(); sync.maps.delete(m); m.remove(); };
+    return () => { ro.disconnect(); sync.maps.delete(m); m.remove(); overlay.current = null; arrows.current = { key: '', list: [] }; };
   }, [location.lat, location.lon, sync]);
 
-  // No zooming out to the whole globe: the big areas stay on their own grid (all of
-  // it fits, with little empty map around it), the smaller ones on North America.
+  // Keep the map on the grid, so there's forecast everywhere you look instead of
+  // a patch on a big empty map. A wide map fills up with the grid; a tall phone
+  // map shows all of it across.
   const viewKey = data ? `${data.area}:${data.center.lat},${data.center.lon}` : '';
   useEffect(() => {
     const m = map.current;
     if (!m || !data) return undefined;
-    if (data.area === 'country' || data.area === 'continent') {
-      const b = boundsOf(data);
-      return limitToCoverage(m, { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() }, { whole: true });
-    }
-    return inView(location.lat, location.lon) ? limitToCoverage(m) : undefined;
+    const b = boundsOf(data);
+    const size = m.getSize();
+    return limitToCoverage(m, { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() }, { whole: size.x < size.y * 1.15 });
   }, [viewKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fit the map to the grid the first time a new area arrives.
@@ -175,10 +236,11 @@ function ModelPane({ state, modelId, field, time, units, location, sync, panes =
     if (sync.maps.size > 1 && [...sync.maps][0] !== map.current) return; // the first map leads
     map.current.invalidateSize();
     // No animation: a second map copies this view right away and would cut an animation short.
-    map.current.fitBounds(boundsOf(data), { padding: [4, 4], animate: false });
+    const m = map.current;
+    m.setView(boundsOf(data).getCenter(), m.getMinZoom(), { animate: false });
   }, [data, sync, panes]);
 
-  // Paint the field for this time step.
+  // Paint the field for this time step (or reuse it if it was painted already).
   useEffect(() => {
     const m = map.current;
     if (!m) return;
@@ -186,30 +248,57 @@ function ModelPane({ state, modelId, field, time, units, location, sync, panes =
       overlay.current?.remove();
       overlay.current = null;
       marks.current.clearLayers();
+      arrows.current = { key: '', list: [] };
       return;
     }
-    const url = paintField(data, field, idx, units, canvas.current);
+    if (frames.current.data !== data) frames.current = { data, list: new Map() };
+    const cache = frames.current.list;
+    const frameKey = `${field}:${idx}:${units}`;
+    let img = cache.get(frameKey);
+    if (img) cache.delete(frameKey);
+    else img = paintField(data, field, idx, units);
+    cache.set(frameKey, img);
+    if (cache.size > KEEP_FRAMES) cache.delete(cache.keys().next().value);
+    const cv = canvas.current;
+    if (cv.width !== img.width || cv.height !== img.height) { cv.width = img.width; cv.height = img.height; }
+    cv.getContext('2d').putImageData(img, 0, 0);
     const b = boundsOf(data);
-    if (!overlay.current) overlay.current = L.imageOverlay(url, b, { opacity: 0.8, className: 'mm-overlay', interactive: false, zIndex: 5 }).addTo(m);
-    else { overlay.current.setUrl(url); overlay.current.setBounds(b); }
+    if (!overlay.current) overlay.current = new CanvasOverlay(cv, b, { opacity: 0.85, className: 'mm-overlay', interactive: false, zIndex: 5 }).addTo(m);
+    else if (!overlay.current.getBounds().equals(b)) overlay.current.setBounds(b);
 
-    marks.current.clearLayers();
+    // Wind arrows: made once per map, then only turned for each time step.
+    const arrowKey = field;
+    if (arrows.current.key !== arrowKey || arrows.current.data !== data) {
+      marks.current.clearLayers();
+      const list = [];
+      if (field === 'wind') {
+        for (let r = 0; r < data.rows; r += 2) {
+          for (let c = 0; c < data.cols; c += 2) {
+            const mk = L.marker(latLonAt(data, r, c), {
+              interactive: false, keyboard: false,
+              icon: L.divIcon({ className: 'mm-arrow', html: '<span></span>', iconSize: [22, 22], iconAnchor: [11, 11] }),
+            }).addTo(marks.current);
+            list.push({ k: r * data.cols + c, mk });
+          }
+        }
+      }
+      arrows.current = { key: arrowKey, data, list };
+    }
     if (field === 'wind') {
       const dirs = data.fields.windDir[idx];
       const speeds = data.fields.wind[idx];
-      for (let r = 0; r < data.rows; r += 2) {
-        for (let c = 0; c < data.cols; c += 2) {
-          const d = dirs[r * data.cols + c];
-          if (d == null) continue;
-          const calm = (speeds[r * data.cols + c] ?? 0) < (units === 'metric' ? 3 : 2);
-          L.marker(latLonAt(data, r, c), {
-            interactive: false, keyboard: false,
-            icon: L.divIcon({ className: 'mm-arrow', html: calm ? '<span class="calm">·</span>' : `<span style="transform:rotate(${(d + 180) % 360}deg)">↑</span>`, iconSize: [22, 22], iconAnchor: [11, 11] }),
-          }).addTo(marks.current);
-        }
+      for (const { k, mk } of arrows.current.list) {
+        const span = mk.getElement()?.firstChild;
+        if (!span) continue;
+        const d = dirs[k];
+        const calm = d == null || (speeds[k] ?? 0) < (units === 'metric' ? 3 : 2);
+        span.className = calm ? 'calm' : '';
+        span.textContent = d == null ? '' : calm ? '·' : '↑';
+        span.style.transform = calm ? '' : `rotate(${(d + 180) % 360}deg)`;
       }
     }
     if (field === 'pressure') {
+      marks.current.clearLayers();
       for (const p of pressureCenters(data.fields.pressure[idx], data.rows, data.cols)) {
         L.marker(latLonAt(data, p.r, p.c), {
           interactive: false, keyboard: false,
@@ -240,6 +329,7 @@ function ModelPane({ state, modelId, field, time, units, location, sync, panes =
 
   let note = '';
   if (error) note = error;
+  else if (loading && !data && retryIn) note = `Lots of maps were asked for this minute. The ${model?.name} map is coming in about ${retryIn} s…`;
   else if (loading && !data) note = `Loading the ${model?.name} map…`;
   else if (data && idx < 0) note = time > data.times[data.times.length - 1] ? `${model?.name} doesn't forecast this far ahead.` : `No ${model?.name} map for this time.`;
   else if (data && data.coverage < 0.6) note = `${model?.name} only covers part of this map.`;
@@ -271,8 +361,10 @@ export default function ModelMap({ location, units }) {
   const b = useModelGrid(location, units, compare, area);
 
   // The slider runs over whichever map reaches further (HRRR stops at 2 days).
+  // Steps more than 90 minutes gone are left out (the server may share a map fetched a few hours ago).
   const times = useMemo(() => {
-    const all = new Set([...(a.data?.times || []), ...(b.data?.times || [])]);
+    const since = Date.now() - 90 * 60_000;
+    const all = new Set([...(a.data?.times || []), ...(b.data?.times || [])].filter((t) => t >= since));
     return [...all].sort((x, y) => x - y);
   }, [a.data, b.data]);
   const last = Math.max(0, times.length - 1);
@@ -356,7 +448,7 @@ export default function ModelMap({ location, units }) {
         </button>
         <input type="range" min={0} max={last} value={i} onChange={(e) => { setPlaying(false); setStep(Number(e.target.value)); }}
           aria-label="Forecast time" aria-valuetext={time ? timeLabel(time) : ''} disabled={!times.length} />
-        <span className="mm-when">{time ? <><b>{timeLabel(time)}</b> <span className="hint">{aheadLabel(time, times[0])}</span></> : '…'}</span>
+        <span className="mm-when">{time ? <><b>{timeLabel(time)}</b> <span className="hint">{aheadLabel(time, Date.now())}</span></> : '…'}</span>
       </div>
 
       {windy && (

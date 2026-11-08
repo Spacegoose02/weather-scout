@@ -376,14 +376,18 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
         : siteScan.failed ? [{ time: null, url: product.template.replace('{site}', site.id) }] : [];
     const meta = radarMeta.current || {};
     radar.current.forEach((l) => l.remove());
-    radar.current = list.map((f, i) => L.tileLayer(f.url, { opacity: 0, className: 'radar-tiles', maxNativeZoom: meta.maxNativeZoom || 12, maxZoom: 18, zIndex: 10, attribution: i === 0 ? meta.attribution : '' }).addTo(m));
-    // Canada and Mexico, drawn just under the US loop with the US box cut out.
+    // Every frame is its own layer; they load tiles once a pan or zoom ends, not
+    // during it, so dragging the map stays smooth.
+    const idle = { updateWhenIdle: true, updateWhenZooming: false, keepBuffer: 1 };
+    radar.current = list.map((f, i) => L.tileLayer(f.url, { ...idle, opacity: 0, className: 'radar-tiles', maxNativeZoom: meta.maxNativeZoom || 12, maxZoom: 18, zIndex: 10, attribution: i === 0 ? meta.attribution : '' }).addTo(m));
+    // Canada and Mexico, cut out where a US radar sees well and blended in past that.
     fill.current.layers.forEach((l) => l.remove());
     const made = new Map();
     const byFrame = list.map((f) => {
       if (!f.fill || !meta.fill) return null;
       if (!made.has(f.fill)) {
-        made.set(f.fill, fillLayer(f.fill, { opacity: 0, className: 'radar-tiles', maxNativeZoom: meta.fill.maxNativeZoom, maxZoom: 18, zIndex: 9, attribution: made.size === 0 ? meta.fill.attribution : '' }).addTo(m));
+        // Just over the US loop: past the US radars' range it has the fuller picture.
+        made.set(f.fill, fillLayer(f.fill, { ...idle, opacity: 0, className: 'radar-tiles', maxNativeZoom: meta.fill.maxNativeZoom, maxZoom: 18, zIndex: 11, sites: meta.fill.sites, attribution: made.size === 0 ? meta.fill.attribution : '' }).addTo(m));
       }
       return made.get(f.fill);
     });

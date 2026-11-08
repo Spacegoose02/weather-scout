@@ -138,20 +138,30 @@ export async function worldRadarFrames(fetchImpl) {
     .sort((a, b) => a.time.localeCompare(b.time));
 }
 
+// Where the US radars are (in and near the NEXRAD box), as [lat, lon], so the map
+// can blend the Canada/Mexico layer in past their range instead of at a straight line.
+export function nexradPoints(sites = []) {
+  const b = NEXRAD_EXTENT;
+  return sites
+    .filter((s) => /^K/.test(s.id) && s.lat >= b.south - 3 && s.lat <= b.north + 3 && s.lon >= b.west - 3 && s.lon <= b.east + 3)
+    .map((s) => [Math.round(s.lat * 100) / 100, Math.round(s.lon * 100) / 100]);
+}
+
 // Give each live-radar frame the Canada/Mexico frame closest in time.
-export function withWorldRadar(radar, fill) {
+export function withWorldRadar(radar, fill, sites = []) {
   if (!fill?.length) return radar;
   const pair = (frames) => frames.map((f) => ({ ...f, fill: pairFill(f.time, fill)?.url || null }));
   return {
     ...radar,
     frames: pair(radar.frames),
     products: radar.products.map((p) => (p.id === 'composite'
-      ? { ...p, note: 'US NEXRAD radars stitched together, plus Canada and Mexico (lighter blue colours, less detail up close), last hour', frames: pair(p.frames) }
+      ? { ...p, note: 'US NEXRAD radars stitched together, plus Canada and Mexico (less detail up close), last hour', frames: pair(p.frames) }
       : p)),
     coverage: 'United States, Canada and Mexico',
     fill: {
       maxNativeZoom: RAINVIEWER_MAX_ZOOM,
       attribution: 'Canada &amp; Mexico radar by <a href="https://www.rainviewer.com/">RainViewer</a>',
+      sites: nexradPoints(sites),
     },
   };
 }

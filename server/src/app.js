@@ -265,8 +265,15 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.get('/api/radar', async () => {
     const radar = radarFrames();
     if (!cfg.worldRadar) return radar;
-    const fill = await cache.wrap('world-radar', 5 * MIN, () => worldRadarFrames(fetchImpl)).catch(() => []);
-    return withWorldRadar(radar, fill);
+    const [fill, sites] = await Promise.all([
+      cache.wrap('world-radar', 5 * MIN, () => worldRadarFrames(fetchImpl)).catch(() => []),
+      // The radar list helps the blend but isn't worth holding the map for.
+      Promise.race([
+        cache.wrap('nexrad-sites', 10 * MIN, () => severe.getNexradSites(fetchImpl)),
+        new Promise((r) => { setTimeout(() => r([]), 2000).unref?.(); }),
+      ]).catch(() => []),
+    ]);
+    return withWorldRadar(radar, fill, sites);
   });
   // One radar's loop of one single-site product (reflectivity, velocity, dual-pol),
   // plus which of those products this radar is sending right now.
@@ -389,8 +396,16 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     const area = req.query.area || defaultArea(l.lat, l.lon);
     const g = gridFor(l.lat, l.lon, area);
     reply.header('cache-control', 'private, max-age=600');
-    return cache.wrap(`mmap:${model}:${area}:${g.center.lat},${g.center.lon},${l.units}`, 60 * MIN,
-      () => modelMaps.getModelMap({ ...l, model, area }, fetchImpl));
+    // Models run every 6 hours, so a copy up to 6 hours old is still worth showing
+    // at once; after an hour the server fetches a new one in the background.
+    try {
+      return await cache.wrapStale(`mmap:${model}:${area}:${g.center.lat},${g.center.lon},${l.units}`, 60 * MIN, 6 * 60 * MIN,
+        () => modelMaps.getModelMap({ ...l, model, area }, fetchImpl));
+    } catch (err) {
+      if (!(err instanceof modelMaps.BusyError)) throw err;
+      reply.header('retry-after', String(err.retryAfter));
+      return reply.code(503).send({ error: err.message, retryAfter: err.retryAfter });
+    }
   });
 
   // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----

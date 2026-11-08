@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PointBudget, modelMapUrl, normalizeModelMap } from '../src/providers/modelmaps.js';
+import { BusyError, PointBudget, modelMapUrl, normalizeModelMap, sharedBudget } from '../src/providers/modelmaps.js';
+import { TtlCache } from '../src/cache.js';
 import {
-  GRID_COLS, GRID_ROWS, MAP_MODELS, defaultArea, inHrrr, pointsFor, colorAt, gridFor, gridPos, legendFor, pressureCenters, sampleGrid, scaleValue,
+  GRID_COLS, GRID_ROWS, MAP_MODELS, defaultArea, inHrrr, pointsFor, colorAt, gridFor, gridPos, legendFor, pressureCenters, sampleGrid, sampleSmooth, scaleValue,
 } from '../../shared/modelmap.js';
 import { testApp, mockFetch } from './helpers.js';
 
@@ -155,6 +156,7 @@ test('US places get the whole lower 48 by default; elsewhere a wide area', async
     if (lats.some((la, i) => !inHrrr(la, lons[i], 0))) return new Response('{"error":true,"reason":"No data is available for this location"}', { status: 400 });
     return Response.json(fakeGrid({ rows: 1, cols: lats.length }));
   };
+  sharedBudget.spent = []; // a fresh minute of Open-Meteo calls (the test above used some)
   const { app, fetchImpl } = await testApp({ fetchImpl: mockFetch({ 'models=gfs_hrrr': hrrr }) });
   const r = await app.inject({ url: '/api/modelmap?lat=37.55&lon=-77.46&model=gfs_hrrr' });
   assert.equal(r.statusCode, 200, r.body);
@@ -193,4 +195,47 @@ test('HRRR grid: the lower 48 is on it, the corners of the box and Europe are no
   assert.ok(pointsFor(hrrr, g).length > 0.8 * g.rows * g.cols);
   assert.equal(pointsFor(MAP_MODELS[0], g).length, g.rows * g.cols);
   assert.equal(pointsFor(hrrr, gridFor(51.5, -0.1, 'region')).length, 0);
+});
+
+test('point budget gives up with a retry time instead of holding a request for a minute', async () => {
+  let t = 0;
+  const b = new PointBudget({ perMinute: 600, now: () => t, sleep: async (ms) => { t += ms; } });
+  await b.take(275);
+  t = 10_000;
+  await b.take(275);
+  await assert.rejects(b.take(275, { maxWaitMs: 6000 }), (err) => err instanceof BusyError && err.statusCode === 503 && err.retryAfter === 51);
+  // A short wait still just waits.
+  t = 55_000;
+  await b.take(275, { maxWaitMs: 6000 });
+  assert.ok(t >= 60_000 && t < 61_000);
+});
+
+test('smooth sampling stays between the nearest points (no rings around a shower) and is smooth at the edge', () => {
+  const rows = 5;
+  const cols = 5;
+  const v = new Array(rows * cols).fill(0);
+  v[2 * cols + 2] = 10; // one shower in the middle
+  for (let r = 0; r <= 4; r += 0.25) {
+    for (let c = 0; c <= 4; c += 0.25) {
+      const x = sampleSmooth(v, rows, cols, r, c);
+      assert.ok(x >= 0 && x <= 10, `${r},${c}: ${x}`);
+    }
+  }
+  assert.equal(sampleSmooth(v, rows, cols, 2, 2), 10);
+  // A smooth ramp is reproduced right up to the border.
+  const ramp = Array.from({ length: rows * cols }, (_, k) => k % cols);
+  assert.ok(Math.abs(sampleSmooth(ramp, rows, cols, 0.2, 0.5) - 0.5) < 0.1);
+  assert.ok(Math.abs(sampleSmooth(ramp, rows, cols, 4, 3.5) - 3.5) < 0.1);
+});
+
+test('the server keeps sharing a model map while it fetches a newer one', async () => {
+  const cache = new TtlCache();
+  let n = 0;
+  const fn = async () => ++n;
+  assert.equal(await cache.wrapStale('k', 1000, 60_000, fn), 1);
+  const hit = cache.map.get('k');
+  hit.fresh = Date.now() - 1; // an hour later
+  assert.equal(await cache.wrapStale('k', 1000, 60_000, fn), 1); // the old copy, at once
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(await cache.wrapStale('k', 1000, 60_000, fn), 2); // the refreshed one
 });
