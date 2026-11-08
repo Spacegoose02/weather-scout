@@ -300,3 +300,18 @@
 .odds-table tbody th { text-align: left; font-weight: 600; white-space: nowrap; }
 .odds-cell { display: inline-block; min-width: 2.6rem; padding: 1px 4px; border-radius: 6px; background: linear-gradient(90deg, color-mix(in srgb, var(--brand) 32%, transparent) var(--p), transparent var(--p)); }
 .odds-range { white-space: nowrap; }
+
+/* ---- v0.10: marine & beach, hurricane impacts ---- */
+.dash-marine.alarm { border-left: 5px solid #e0322b; }
+.marine-hazards { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 2px; }
+.marine-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 6px 0; }
+.marine-tile { display: grid; gap: 1px; padding: 6px 10px; border-radius: 12px; background: color-mix(in srgb, #2a78d6 9%, transparent); }
+.marine-tile b { font-size: 1.35rem; }
+.marine-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(48px, 1fr)); gap: 4px; text-align: center; margin: 6px 0; }
+.marine-days > div { display: grid; padding: 4px 0; border-radius: 8px; background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.marine-fc p { margin: 4px 0; font-size: .9rem; }
+.storm-impacts { margin: 6px 0 0; display: grid; gap: 6px; }
+.storm-odds { display: grid; grid-template-columns: max-content 3.5em; gap: 2px 16px; font-size: .9rem; }
+.storm-odds b { text-align: right; }
+.surge-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; font-size: .88rem; }
+.surge-list b { color: #9b45d9; white-space: nowrap; }

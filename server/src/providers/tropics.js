@@ -59,6 +59,8 @@ export function normalizeStorm(raw) {
     movement: dir == null ? null : { dir: COMPASS[Math.round(dir / 22.5) % 16], mph: num(raw.movementSpeed) },
     updated: raw.lastUpdate || null,
     advisoryUrl: safeUrl(raw.publicAdvisory?.url),
+    // Text products for surge heights and wind odds (see server/src/hurricane.js).
+    windOddsUrl: safeUrl(raw.windSpeedProbabilities?.url),
     coneKmz: safeUrl(raw.trackCone?.kmzFile),
     trackKmz: safeUrl(raw.forecastTrack?.kmzFile),
   };

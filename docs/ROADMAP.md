@@ -104,3 +104,12 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Backyard-tuned forecast | ✅ 🏡 card: every 15 minutes the server compares the home weather station with the forecast (14 days kept), learns today's miss and the time-of-day pattern, and corrects the next 48 hours. Works within 15 miles of home |
 | Forecast odds | ✅ 🎲 card: 82 runs (ECMWF 51 + GFS 31) give the chance of rain, a soaking, 1″ and 6″ snow, a freeze, 90° heat and 40 mph gusts each day, plus the likely range of highs |
 | Minute-by-minute radar rain | ✅ The ⏱️ card's 📡 Radar mode: the two latest NEXRAD mosaics (IEM, every 5 minutes), motion by block matching, extrapolated an hour in 5-minute steps. Lower 48 only; falls back to the model's 15-minute nowcast |
+
+## v0.10: Instant updates, feed health, marine and hurricane impacts
+
+| Feature | Status |
+| --- | --- |
+| Instant updates | ✅ Each open app keeps one server-sent-events line (`/api/live`). The server checks each watched place once a minute and pushes new or ended alerts and storms turning toward the place; the app reloads at once and shows a short notice |
+| Data-feed health | ✅ 📶 Data feeds in Settings (`/api/status`): every upstream call is noted per service (working, slow or flaky, not answering), with when it last worked and how fast it answers |
+| Marine & beach | ✅ ⛵ card: waves, swell and water temperature (Open-Meteo Marine), the NWS forecast for the nearest coastal or Great Lakes zone, small craft, gale, rip current and high surf hazards |
+| Hurricane wind odds and storm surge | ✅ The 🌀 tracker shows the NHC chance of 39, 58 and 74 mph winds at the nearest listed town and the peak storm surge for each stretch of coast, read from NHC text products |

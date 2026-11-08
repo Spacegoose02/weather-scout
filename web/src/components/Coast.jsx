@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { clockLabel, dayLabel } from '../format.js';
 
@@ -15,6 +15,7 @@ function miles(a, b) {
 export default function Coast({ location, units, onMap }) {
   const [tropics, setTropics] = useState(null);
   const [tides, setTides] = useState(null);
+  const [impacts, setImpacts] = useState({});
   useEffect(() => {
     api('/api/tropics').then(setTropics).catch(() => setTropics(null));
   }, []);
@@ -27,6 +28,13 @@ export default function Coast({ location, units, onMap }) {
     .map((s) => ({ ...s, miles: Math.round(miles(location, s) / 10) * 10 }))
     .filter((s) => s.miles <= NEAR_MILES)
     .sort((a, b) => a.miles - b.miles);
+
+  // Wind odds and surge for storms within reach (fetched only when one is near).
+  const anyClose = near.some((s) => s.miles <= 1500);
+  useEffect(() => {
+    if (!anyClose) return;
+    api(`/api/tropics/impacts?lat=${location.lat}&lon=${location.lon}`).then((r) => setImpacts(Object.fromEntries((r.storms || []).map((x) => [x.id, x])))).catch(() => setImpacts({}));
+  }, [anyClose, location.lat, location.lon]);
 
   const d = new Date();
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -51,6 +59,7 @@ export default function Coast({ location, units, onMap }) {
                     {`. About ${s.miles.toLocaleString()} miles from you.`}
                   </div>
                   <div className="tile-note kid-line">{s.kid}</div>
+                  {impacts[s.id] && <StormImpacts x={impacts[s.id]} />}
                 </div>
                 {s.advisoryUrl && <a href={s.advisoryUrl} target="_blank" rel="noopener noreferrer">Advisory</a>}
               </li>
@@ -79,5 +88,31 @@ export default function Coast({ location, units, onMap }) {
         </section>
       )}
     </>
+  );
+}
+
+const ODDS_ROWS = [['p34', 'Tropical-storm winds (39+ mph)'], ['p50', 'Damaging winds (58+ mph)'], ['p64', 'Hurricane winds (74+ mph)']];
+const town = (n) => n.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase()).replace(/ ([A-Z][a-z])$/, (m) => m.toUpperCase());
+
+// The chance of strong winds at the nearest listed town over the next 5 days,
+// and the highest storm surge NHC expects along the coast.
+export function StormImpacts({ x }) {
+  const n = x.wind?.near;
+  if (!n && !x.surge?.length) return null;
+  return (
+    <div className="storm-impacts">
+      {n && (
+        <div>
+          <strong>Wind chances at {town(n.name)}{n.miles > 5 ? ` (${n.miles} mi away)` : ''}, next 5 days</strong>
+          <div className="storm-odds">{ODDS_ROWS.map(([k, label]) => <Fragment key={k}><span>{label}</span><b>{n[k]}%</b></Fragment>)}</div>
+        </div>
+      )}
+      {x.surge?.length > 0 && (
+        <div>
+          <strong>Peak storm surge if it comes at high tide</strong>
+          <ul className="surge-list">{x.surge.slice(0, 5).map((s) => <li key={s.area}><b>{s.low === s.high ? s.high : `${s.low}-${s.high}`} ft</b> {s.area}</li>)}</ul>
+        </div>
+      )}
+    </div>
   );
 }

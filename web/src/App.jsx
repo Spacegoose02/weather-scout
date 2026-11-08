@@ -25,6 +25,7 @@ import Briefing from './components/kid/Briefing.jsx';
 import Modal from './components/Modal.jsx';
 import LightningBanner from './components/LightningBanner.jsx';
 import OfflineBanner from './components/OfflineBanner.jsx';
+import { useLive } from './live.js';
 import { DEFAULT_ALERT_MILES } from '../../shared/lightning.js';
 import ChaserPopup from './components/chasers/ChaserPopup.jsx';
 import { popupMode } from './chasers/chasers.js';
@@ -109,6 +110,9 @@ export default function App() {
     return () => clearInterval(id);
   }, [load]);
 
+  // A warning starting or ending reloads the weather right away.
+  const live = useLive(location, units, { onAlerts: () => load() });
+
   useEffect(() => {
     document.documentElement.dataset.kid = kidMode ? 'on' : 'off';
   }, [kidMode]);
@@ -157,6 +161,7 @@ export default function App() {
           </nav>
 
           <OfflineBanner onRetry={load} />
+          {live.note && <div className="live-note card" role="status">{live.note}</div>}
           {error && (
             <div className="error card" role="alert">
               {error} <button onClick={load}>Try again</button>

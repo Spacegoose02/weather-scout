@@ -2,6 +2,7 @@ import Modal from './Modal.jsx';
 import { ThemeChoices } from './ThemeChoices.jsx';
 import { openSafety } from '../safety/useSafetyPlan.js';
 import EasierToSee from './EasierToSee.jsx';
+import DataFeeds from './DataFeeds.jsx';
 
 // The ⚙️ window: every setting a person can change, in one place. Alerts, the
 // safety plan and Family & settings open their own windows from here.
@@ -91,6 +92,11 @@ export default function Settings({ user, sso, units, onUnits, theme, a11y, place
             <EasierToSee value={a11y.value} onChange={a11y.onChange} />
           </section>
         )}
+
+        <section className="prefs-group" aria-labelledby="set-feeds">
+          <h3 id="set-feeds">📶 Data feeds</h3>
+          <DataFeeds />
+        </section>
       </div>
     </Modal>
   );

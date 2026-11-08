@@ -53,6 +53,10 @@ import { AirSensorService, registerAirSensors } from './airsensors.js';
 import { BackyardTuning, registerTuning } from './tuning.js';
 import { registerOdds } from './odds.js';
 import { RadarNowcast, registerRadarNowcast } from './radarcast.js';
+import { FeedHealth, registerFeedHealth } from './feedhealth.js';
+import { LiveHub, registerLive } from './live.js';
+import { MarineService, registerMarine } from './marine.js';
+import { HurricaneImpacts, registerHurricane } from './hurricane.js';
 import { nextRain, nextRainText, nextRainShort } from '../../shared/glance.js';
 import { getScorecard } from './scorecard.js';
 import { cleanOutfit, rockySvg } from '../../shared/rocky-outfit.js';
@@ -66,10 +70,13 @@ function rockyPath({ items, mood }) {
   return `/api/connect/rocky.svg?${q}`;
 }
 
-export async function buildApp({ config, fetchImpl = fetch, logger = true, pushSend, mqttConnect, WebSocketImpl } = {}) {
+export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = true, pushSend, mqttConnect, WebSocketImpl } = {}) {
   const cfg = config || loadConfig();
   const app = Fastify({ logger, trustProxy: true });
   const cache = new TtlCache();
+  // Every upstream call is noted for the 📶 Data feeds page.
+  const feedHealth = new FeedHealth();
+  const fetchImpl = feedHealth.wrap(rawFetch);
   // Rocky's base art as a data: URL for /api/connect/rocky.svg (an SVG shown as an
   // image can't load other files). From the built web app, or web/public in dev.
   let rockyBaseHref;
@@ -112,7 +119,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     req.user = user || null;
   });
 
-  const OPEN = new Set(['/api/health', '/api/config', '/api/auth/login', '/api/auth/logout', '/api/auth/me', '/api/auth/setup']);
+  const OPEN = new Set(['/api/health', '/api/status', '/api/config', '/api/auth/login', '/api/auth/logout', '/api/auth/me', '/api/auth/setup']);
   app.addHook('preHandler', async (req, reply) => {
     if (!cfg.auth.required || !req.url.startsWith('/api/')) return;
     if (OPEN.has(req.url.split('?')[0]) || req.user || req.url.startsWith('/api/connect/') || req.url.startsWith('/api/stations/push')) return;
@@ -431,6 +438,13 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   app.decorate('tuning', tuning);
   app.addHook('onClose', async () => tuning.stop());
   registerOdds(app, { cache, fetchImpl, latLonSchema, loc });
+  registerMarine(app, { marine: new MarineService(cache, fetchImpl, { userAgent: cfg.nwsUserAgent, log: app.log }), alerts, settle, latLonSchema, loc });
+  registerHurricane(app, { impacts: new HurricaneImpacts(cache, fetchImpl, { storms: () => cache.wrap('tropics', 15 * MIN, () => tropics.getStorms(fetchImpl, { log: app.log })), log: app.log }), latLonSchema, loc });
+  const liveHub = new LiveHub({ alerts, storm: (p) => stormCells.approaching(p), log: app.log });
+  registerLive(app, { hub: liveHub, latLonSchema, loc });
+  app.decorate('liveHub', liveHub);
+  app.addHook('preClose', async () => liveHub.closeAll());
+  registerFeedHealth(app, { health: feedHealth, extra: () => ({ keys: { airnow: !!cfg.env.AIRNOW_API_KEY, purpleair: !!cfg.env.PURPLEAIR_API_KEY, pollen: !!cfg.env.GOOGLE_POLLEN_API_KEY } }) });
   registerRadarNowcast(app, { nowcast: new RadarNowcast(cache, fetchImpl, { log: app.log }), latLonSchema, loc });
   // Northern lights tonight (NOAA SWPC Kp forecast and OVATION), with tonight's clouds.
   const aurora = new AuroraService(cache, fetchImpl);
