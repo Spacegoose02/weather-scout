@@ -46,18 +46,20 @@ export const LAYER_GROUPS = [
 ];
 
 export const DEFAULT_LAYERS = {
+  // On to start: radar, lightning, warnings, watches, advisories, radar site pins
+  // and cameras. Everything else waits in 🗂️ Layers.
   radar: true,
   satellite: false,
   lightning: true,
-  cells: true,
+  cells: false,
   ptype: false,
-  storms: true,
+  storms: false,
   warnings: true,
   watches: true,
   advisories: true,
-  buoys: true,
-  reports: true,
-  fires: true,
+  buoys: false,
+  reports: false,
+  fires: false,
   gauges: false,
   tides: false,
   radarSites: true,
