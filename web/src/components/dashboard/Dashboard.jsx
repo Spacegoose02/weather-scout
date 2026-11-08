@@ -8,6 +8,9 @@ import HealthSky from '../HealthSky.jsx';
 import Allergy from '../Allergy.jsx';
 import Coast from '../Coast.jsx';
 import WhyNow from '../learn/WhyNow.jsx';
+import AirSensorsCard from '../air/AirSensorsCard.jsx';
+import BackyardCard from '../forecast/BackyardCard.jsx';
+import OddsCard from '../forecast/OddsCard.jsx';
 import { RainNext, AirUv, Wind } from '../NowCards.jsx';
 import { RadarCard, CamerasCard, AlertsCard, RockyCard, DenDutyCard } from './SmallCards.jsx';
 import Journal from './Journal.jsx';
@@ -38,7 +41,7 @@ function renderCard(id, size, ctx) {
     case 'textfc': return location ? <TextForecast location={location} units={units} kidMode={kidMode} size={size} /> : null;
     case 'hourly': return <HourlyTimeline hourly={weather.forecast.hourly} units={weather.forecast.units} />;
     case 'details': return <Details weather={weather} />;
-    case 'rain': return <RainNext forecast={weather.forecast} />;
+    case 'rain': return <RainNext forecast={weather.forecast} location={location} />;
     case 'wind': return <Wind forecast={weather.forecast} />;
     case 'air': return <AirUv air={weather.air} forecast={weather.forecast} />;
     case 'health': return <HealthSky weather={weather} />;
@@ -62,6 +65,9 @@ function renderCard(id, size, ctx) {
     case 'trip': return location ? <TripCard location={location} units={units} size={size} /> : null;
     case 'flood': return location ? <FloodCard location={location} kidMode={kidMode} size={size} /> : null;
     case 'fire': return location ? <FireSmoke weather={weather} location={location} kidMode={kidMode} size={size} /> : null;
+    case 'aqs': return location ? <AirSensorsCard weather={weather} location={location} kidMode={kidMode} size={size} /> : null;
+    case 'backyard': return location ? <BackyardCard location={location} units={units} kidMode={kidMode} size={size} /> : null;
+    case 'odds': return location ? <OddsCard location={location} units={units} kidMode={kidMode} size={size} /> : null;
     case 'plan': return <BestTimes weather={weather} units={units} kidMode={kidMode} size={size} />;
     case 'aurora': return location ? <Aurora location={location} kidMode={kidMode} size={size} /> : null;
     case 'scorecard': return location ? <Scorecard location={location} units={units} kidMode={kidMode} size={size} /> : null;

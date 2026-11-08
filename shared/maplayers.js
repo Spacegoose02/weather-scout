@@ -5,7 +5,7 @@
 export const MAP_LAYER_IDS = [
   'radar', 'satellite', 'lightning', 'cells', 'ptype', 'storms',
   'warnings', 'watches', 'advisories',
-  'reports', 'fires', 'gauges',
+  'reports', 'fires', 'gauges', 'smoke', 'sensors',
   'buoys', 'tides',
   'radarSites',
   'cams', 'webcams',

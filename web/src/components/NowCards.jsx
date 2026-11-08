@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { clockLabel, compass, hourLabel, nextRainText, round } from '../format.js';
+import { api } from '../api.js';
+import { nowcastText } from '../../../shared/radarcast.js';
 
 // ---- Next 2 hours of rain, 15 minutes at a time ------------------------------
 // Rates are per hour (the 15-minute amount x 4) so the bands mean the usual thing.
@@ -21,47 +23,77 @@ export function rainWord(rate, units) {
   return 'Heavy';
 }
 
-export function RainNext({ forecast }) {
+// The radar's own next hour (5-minute steps), when the server can read the US
+// mosaic for this place; null while loading or when it can't.
+export function useRadarHour(location, units) {
+  const [r, setR] = useState(null);
+  useEffect(() => {
+    if (!location) return undefined;
+    let live = true;
+    const load = () => api(`/api/nowcast/radar?lat=${location.lat}&lon=${location.lon}&units=${units}`).then((x) => live && setR(x)).catch(() => live && setR(null));
+    load();
+    const id = setInterval(load, 5 * 60_000);
+    return () => { live = false; clearInterval(id); };
+  }, [location?.lat, location?.lon, units]);
+  return r?.available ? r : null;
+}
+
+export function RainNext({ forecast, location }) {
   const [sel, setSel] = useState(null);
-  const m = forecast.minutely || [];
-  if (!m.length) return null;
+  const [mode, setMode] = useState('radar');
   const units = forecast.units.precip === 'mm' ? 'metric' : 'imperial';
-  const rates = m.map((x) => (x.precip || 0) * 4);
+  const radar = useRadarHour(location, units);
+  const m = forecast.minutely || [];
+  if (!m.length && !radar) return null;
+  const snowNow = SNOW_CODES.has(m[0]?.code) || SNOW_CODES.has(forecast.current?.code);
+  const useRadar = radar && mode === 'radar';
+  // One shape for both: label, rate per hour, snow?
+  const rows = useRadar
+    ? radar.steps.map((x) => ({ key: x.min, label: x.min === 0 ? 'Now' : `${x.min} min`, rate: x.rate || 0, snow: snowNow, time: null, min: x.min }))
+    : m.map((x, i) => ({ key: x.time, label: i === 0 ? 'Now' : `${i * 15} min`, rate: (x.precip || 0) * 4, snow: SNOW_CODES.has(x.code), time: x.time, min: i * 15 }));
+  const rates = rows.map((x) => x.rate);
   const [, heavy] = RAIN_BANDS[units];
   const top = Math.max(heavy * 1.2, ...rates);
-  const W = 100 / m.length;
-  const pick = sel ?? rates.findIndex((r) => r > 0);
-  const cur = pick >= 0 ? m[pick] : null;
-  const snow = (x) => SNOW_CODES.has(x.code);
-  const minutesFrom = (i) => (i === 0 ? 'Now' : `${i * 15} min`);
+  const W = 100 / rows.length;
+  const pick = sel != null && sel < rows.length ? sel : rates.findIndex((r) => r > 0);
+  const cur = pick >= 0 ? rows[pick] : null;
+  const headline = useRadar ? (nowcastText(radar.steps.map((x) => ({ ...x, rate: x.mmh })), { snow: snowNow }) || nextRainText(m)) : nextRainText(m);
+  const when = (x) => (x.time ? clockLabel(x.time) : x.min === 0 ? 'Now' : `In ${x.min} min`);
 
   return (
-    <section className="card rain-next" aria-label="Rain in the next 2 hours">
+    <section className="card rain-next" aria-label={useRadar ? 'Rain in the next hour, from radar' : 'Rain in the next 2 hours'}>
       <div className="card-title">
-        <h2>⏱️ Next 2 hours</h2>
-        <span className="hint">{nextRainText(m)}</span>
+        <h2>⏱️ {useRadar ? 'Next hour' : 'Next 2 hours'}</h2>
+        <span className="hint">{headline}</span>
       </div>
-      <div className="rain-bars" role="img" aria-label={m.map((x, i) => `${minutesFrom(i)}: ${rainWord(rates[i], units)}`).join(', ')} onMouseLeave={() => setSel(null)}>
+      {radar && m.length > 0 && (
+        <div className="seg rain-mode" role="group" aria-label="Rain timing source">
+          <button aria-pressed={mode === 'radar'} onClick={() => { setMode('radar'); setSel(null); }}>📡 Radar, 1 hr</button>
+          <button aria-pressed={mode === 'model'} onClick={() => { setMode('model'); setSel(null); }}>🧮 Model, 2 hr</button>
+        </div>
+      )}
+      <div className="rain-bars" role="img" aria-label={rows.map((x, i) => `${x.label}: ${rainWord(rates[i], units)}`).join(', ')} onMouseLeave={() => setSel(null)}>
         {[heavy, RAIN_BANDS[units][0]].map((b) => <div key={b} className="rain-grid" style={{ bottom: `${(b / top) * 100}%` }}><span>{b === heavy ? 'heavy' : 'light'}</span></div>)}
-        {m.map((x, i) => (
+        {rows.map((x, i) => (
           <button
-            key={x.time}
-            className={`rain-bar ${snow(x) ? 'snow' : ''} ${pick === i ? 'sel' : ''}`}
+            key={x.key}
+            className={`rain-bar ${x.snow ? 'snow' : ''} ${pick === i ? 'sel' : ''}`}
             style={{ left: `${i * W}%`, width: `${W}%` }}
             onMouseEnter={() => setSel(i)}
             onFocus={() => setSel(i)}
             onClick={() => setSel(i)}
-            aria-label={`${minutesFrom(i)}: ${rainWord(rates[i], units)}`}
+            aria-label={`${x.label}: ${rainWord(rates[i], units)}`}
           >
             <i style={{ height: `${Math.max(rates[i] ? 4 : 0, (rates[i] / top) * 100)}%` }} />
           </button>
         ))}
       </div>
-      <div className="rain-axis">{m.map((x, i) => <span key={x.time} style={{ width: `${W}%` }}>{i % 2 === 0 ? (i === 0 ? 'Now' : clockLabel(x.time).replace(':00', '')) : ''}</span>)}</div>
+      <div className="rain-axis">{rows.map((x, i) => <span key={x.key} style={{ width: `${W}%` }}>{useRadar ? (i % 3 === 0 ? (i === 0 ? 'Now' : `${x.min}m`) : '') : (i % 2 === 0 ? (i === 0 ? 'Now' : clockLabel(x.time).replace(':00', '')) : '')}</span>)}</div>
       <p className="tile-note">
         {cur
-          ? <>{clockLabel(cur.time)}: <strong>{rainWord(rates[pick], units)} {snow(cur) ? 'snow' : 'rain'}</strong>{rates[pick] ? `, about ${rates[pick].toFixed(units === 'metric' ? 1 : 2)} ${forecast.units.precip} an hour` : ''}.</>
-          : 'Dry skies for the next 2 hours. 15-minute steps from Open-Meteo, updated every 10 minutes.'}
+          ? <>{when(cur)}: <strong>{rainWord(rates[pick], units)} {cur.snow ? 'snow' : 'rain'}</strong>{rates[pick] ? `, about ${rates[pick].toFixed(units === 'metric' ? 1 : 2)} ${forecast.units.precip} an hour` : ''}.</>
+          : useRadar ? 'Nothing on radar heading here in the next hour.' : 'Dry skies for the next 2 hours. 15-minute steps from Open-Meteo, updated every 10 minutes.'}
+        {useRadar && <span className="source"> From the radar {radar.ageMin} min ago{radar.motion?.mph ? `, rain moving ${compass(radar.motion.heading)} at ${radar.motion.mph} mph` : ''}, slid forward. Storms that haven't formed yet won't show.</span>}
       </p>
     </section>
   );

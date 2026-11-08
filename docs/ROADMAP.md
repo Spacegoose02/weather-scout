@@ -93,3 +93,14 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Windy for maps | ✅ 🌬️ Windy button on the Radar & Cams map (normal and full screen): wind, gusts, rain, temperature, clouds, pressure, CAPE, waves, new snow; ECMWF/GFS/ICON; four heights; kid explanation per layer. Free embed by default, Map Forecast API with `WINDY_MAP_KEY` |
 | Windy webcams | ✅ 🌄 Windy webcams as a map layer (Layers → Cameras) and a *Webcams near me* view with timelapses. Needs a Webcams API key in App settings (with a Test button); hidden without one. Pictures load straight from Windy, list cached 5 min, credited to Windy.com |
 | Integrate with Den-Duty | 🚧 Step 1: weather card on Den-Duty kid boards and the family wall (Weather Scout app keys + `/api/connect/summary`). Rocky in today's outfit on that card (`/api/connect/rocky.svg`). Next: weather steps in the morning routine, severe alerts through Den-Duty push |
+
+## v0.9: Live air, your backyard, odds and radar rain
+
+| Feature | Status |
+| --- | --- |
+| Live air sensors | ✅ 😷 Air sensors card and map layer: EPA AirNow monitors (free key, `AIRNOW_API_KEY`) and PurpleAir sensors (`PURPLEAIR_API_KEY`, EPA-corrected), the 2024 PM2.5 AQI, and a sensor reading that counts official monitors twice. Keys are optional and set under Family & settings |
+| Smoke & haze map | ✅ 🌫️ layer: Copernicus CAMS PM2.5 (via Open-Meteo) on a grid over the view, as AQI colors. Free, no key |
+| Wildfire burned areas | ✅ NIFC WFIGS mapped fire edges inside the 🔥 Wildfires layer at zoom 7 and closer |
+| Backyard-tuned forecast | ✅ 🏡 card: every 15 minutes the server compares the home weather station with the forecast (14 days kept), learns today's miss and the time-of-day pattern, and corrects the next 48 hours. Works within 15 miles of home |
+| Forecast odds | ✅ 🎲 card: 82 runs (ECMWF 51 + GFS 31) give the chance of rain, a soaking, 1″ and 6″ snow, a freeze, 90° heat and 40 mph gusts each day, plus the likely range of highs |
+| Minute-by-minute radar rain | ✅ The ⏱️ card's 📡 Radar mode: the two latest NEXRAD mosaics (IEM, every 5 minutes), motion by block matching, extrapolated an hour in 5-minute steps. Lower 48 only; falls back to the model's 15-minute nowcast |

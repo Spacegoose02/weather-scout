@@ -223,7 +223,7 @@ export class RadarNowcast {
       step: STEP_MIN,
       motion: motionVector(perMin, cellMiles),
       rainNearby: wetCells > 0,
-      steps: steps.map((s) => ({ ...s, rate: s.rate == null ? null : place.units === 'metric' ? s.rate : Math.round((s.rate / 25.4) * 1000) / 1000 })),
+      steps: steps.map((s) => ({ ...s, mmh: s.rate, rate: s.rate == null ? null : place.units === 'metric' ? s.rate : Math.round((s.rate / 25.4) * 1000) / 1000 })),
       rateUnit: place.units === 'metric' ? 'mm/h' : 'in/h',
       text: nowcastText(steps),
     };

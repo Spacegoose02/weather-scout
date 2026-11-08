@@ -65,7 +65,7 @@ export const SETTINGS = [
   { key: 'GOOGLE_POLLEN_API_KEY', group: 'pollen', label: 'Google Pollen API key', secret: true, signup: 'https://developers.google.com/maps/documentation/pollen/get-api-key', help: 'Optional. Adds tree, grass and weed pollen for the US and other places outside Europe (Europe works with no key). Make a Google Maps Platform key with the Pollen API turned on; checked about 8 times a day per place, well inside the free monthly allowance. Stays on the server.' },
 
   // ---- live air sensors ----
-  { key: 'AIRNOW_API_KEY', group: 'air', label: 'EPA AirNow API key', secret: true, signup: 'https://docs.airnowapi.org/account/request/', help: 'Optional and free. Adds the official EPA air monitors near you (hourly) to the Air card and the 📡 Air sensors map layer. Stays on the server.' },
+  { key: 'AIRNOW_API_KEY', group: 'air', label: 'EPA AirNow API key', secret: true, signup: 'https://docs.airnowapi.org/account/request/', help: 'Optional and free. Adds the official EPA air monitors near you (hourly) to the Air card and the 😷 Air sensors map layer. Stays on the server.' },
   { key: 'PURPLEAIR_API_KEY', group: 'air', label: 'PurpleAir API read key', secret: true, signup: 'https://develop.purpleair.com/', help: 'Optional. Adds thousands of backyard PurpleAir sensors, every 10 minutes, corrected with the EPA formula. PurpleAir sells API points; a new account comes with free points, and one home server checking every 10 minutes uses only a little. Stays on the server.' },
 
   // ---- live lightning ----

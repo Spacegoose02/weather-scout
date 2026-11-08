@@ -261,3 +261,42 @@
 .trip-stops li.bad { background: color-mix(in srgb, #f08a24 14%, transparent); }
 .trip-stops li.bad.r4, .trip-stops li.bad.r5 { background: color-mix(in srgb, #c4123a 14%, transparent); font-weight: 600; }
 .trip-mile { font-variant-numeric: tabular-nums; }
+
+/* ---- v0.9: air sensors, backyard forecast, forecast odds, radar hour ---- */
+.rain-mode { margin: 0 0 6px; }
+.rain-mode button { font-size: .8rem; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; }
+.rain-mode button[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+.rain-next .source { display: block; margin-top: 4px; font-size: .78rem; opacity: .75; }
+
+.dash-aqs.alarm { border-left: 5px solid #e0322b; }
+.aqs-top { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+.aqs-top > div { display: grid; gap: 2px; }
+.aqs-big { min-width: 3.2rem; padding: 8px 10px; border-radius: 12px; color: #fff; font-size: 1.6rem; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+.aqs-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.aqs-list li { display: grid; grid-template-columns: 12px 1fr auto 2.5rem; gap: 8px; align-items: center; }
+.aqs-list i { width: 12px; height: 12px; border-radius: 50%; }
+.aqs-list b { text-align: right; }
+.aqs-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.yard-now { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; margin-bottom: 6px; }
+.yard-now > div { display: grid; gap: 1px; }
+.yard-now b { font-size: 1.5rem; line-height: 1.1; }
+.yard-now .yard-tuned { color: var(--brand); }
+.yard-arrow { font-size: 1.3rem; opacity: .5; padding-bottom: 2px; }
+.yard-text { margin: 4px 0 8px; }
+.yard-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 8px; }
+.yard-days > div { display: grid; gap: 1px; padding: 6px 10px; border-radius: 12px; background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.yard-days s { margin-left: 4px; }
+.yard-hours { display: grid; grid-template-columns: repeat(auto-fit, minmax(48px, 1fr)); gap: 4px; text-align: center; }
+.yard-hour { display: grid; gap: 1px; padding: 4px 0; border-radius: 8px; background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.yard-hour small.warm { color: #d4572a; }
+.yard-hour small.cool { color: #2a78d6; }
+
+.odds-hl { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 3px; }
+.odds-hl b { display: inline-block; min-width: 2.8rem; }
+.odds-table { width: 100%; border-collapse: collapse; font-size: .88rem; font-variant-numeric: tabular-nums; }
+.odds-table th, .odds-table td { padding: 3px 4px; text-align: center; border-bottom: 1px solid var(--line); }
+.odds-table thead th { font-size: .74rem; font-weight: 600; opacity: .8; }
+.odds-table tbody th { text-align: left; font-weight: 600; white-space: nowrap; }
+.odds-cell { display: inline-block; min-width: 2.6rem; padding: 1px 4px; border-radius: 6px; background: linear-gradient(90deg, color-mix(in srgb, var(--brand) 32%, transparent) var(--p), transparent var(--p)); }
+.odds-range { white-space: nowrap; }

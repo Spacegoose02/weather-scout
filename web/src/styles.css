@@ -623,3 +623,8 @@ main:focus { outline: none; }
 /* A single-site radar product the chosen radar isn't sending. */
 .radar-empty { margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); font-weight: 600; }
 .map-card.full .radar-empty { position: absolute; z-index: 1000; top: 70px; left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 20px)); background: #2b2410; color: #fff; }
+
+/* Air sensor pins and the smoke tint (v0.9) */
+.aq-pin span { display: block; min-width: 26px; padding: 1px 3px; border-radius: 9px; color: #fff; font: 700 11px/16px var(--font); text-align: center; border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.45); text-shadow: 0 1px 1px rgba(0,0,0,.5); }
+.aq-pin.official span { border-radius: 4px; border-color: #111; }
+.smoke-overlay { image-rendering: auto; filter: blur(2px); }

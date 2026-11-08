@@ -28,8 +28,10 @@ export const LAYER_GROUPS = [
     title: 'Hazards & reports',
     layers: [
       { id: 'reports', icon: '📣', label: 'Weather reports', note: 'Family reports and NWS storm reports, last 24 hours' },
-      { id: 'fires', icon: '🔥', label: 'Wildfires', note: 'Active wildfires (NIFC)' },
+      { id: 'fires', icon: '🔥', label: 'Wildfires', note: 'Active wildfires (NIFC); zoom in for the burned area' },
       { id: 'gauges', icon: '📏', label: 'River gauges', note: 'Colored by flood stage. Zoom in to see them' },
+      { id: 'smoke', icon: '🌫️', label: 'Smoke & haze', note: 'Fine particles (PM2.5) from the air-quality model, as AQI' },
+      { id: 'sensors', icon: '😷', label: 'Air sensors', note: 'EPA monitors and PurpleAir sensors. Zoom in to see them' },
     ],
   },
   {
@@ -61,6 +63,8 @@ export const DEFAULT_LAYERS = {
   reports: false,
   fires: false,
   gauges: false,
+  smoke: false,
+  sensors: false,
   tides: false,
   radarSites: true,
   cams: true,

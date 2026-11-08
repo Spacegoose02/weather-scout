@@ -15,6 +15,8 @@ import RadarGuide from './map/RadarGuide.jsx';
 import { useHazardLayers } from './map/hazardLayers.js';
 import { prefersLessMotion } from '../a11y.js';
 import { useStormLayers } from './map/stormLayers.js';
+import { useAirLayers } from './map/airLayers.js';
+import { AQI_LEVELS } from '../../../shared/aqi.js';
 import { PTYPES } from '../../../shared/stormcells.js';
 import { legendFor, productGroups, shortName } from './map/radarGuide.js';
 import { fillLayer } from './map/radarFill.js';
@@ -502,6 +504,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   // Storm reports, wildfires and river gauges (their own layer groups, after the map exists).
   const hazardInfo = useHazardLayers(map, show, [center.lat, center.lon, units]);
   const stormLayers = useStormLayers(map, show, [center.lat, center.lon]);
+  const airLayers = useAirLayers(map, show, [center.lat, center.lon]);
 
   // Reload cameras when the layer or a state is switched; buoys and tides when switched on.
   const camsOffKey = show.camsOff.join(',');
@@ -703,6 +706,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
         )}
         {full && show.lightning && <LightningLegend miles={lightningMiles} units={units} />}
         {show.ptype && stormLayers.counts && <PtypeLegend />}
+        {(show.smoke || show.sensors) && <AqiLegend />}
         {full && product?.note && <span className="radar-note">{product.note}{outlook?.features && outlookDay ? ` · SPC Day ${outlookDay} outlook: ${outlook.features.length ? [...new Set(outlook.features.map((f) => f.properties.name))].join(', ') : 'no severe risk'}` : ''}</span>}
       </div>
       {siteEmpty && (
@@ -724,6 +728,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
           {show.tides && tideInfo && ` · ${tideInfo}`}
           {hazardInfo && ` · ${hazardInfo}`}
           {stormLayers.info && ` · ${stormLayers.info}`}
+          {airLayers.info && ` · ${airLayers.info}`}
           {show.cams && camInfo && ` · ${camInfo}`}
           {webcamsOn.current && webcamInfo && ` · ${webcamInfo}`}
         </span>
@@ -742,6 +747,15 @@ function PtypeLegend() {
   return (
     <div className="ptype-legend" aria-label="Rain and snow colors">
       {Object.entries(PTYPES).map(([k, t]) => <span key={k}><i style={{ background: t.color }} />{t.label}</span>)}
+    </div>
+  );
+}
+
+// Air quality colors, for the smoke tint and sensor pins.
+function AqiLegend() {
+  return (
+    <div className="ptype-legend aqi-legend" aria-label="Air quality colors">
+      {AQI_LEVELS.slice(1, 5).map((l) => <span key={l.id}><i style={{ background: l.color }} />{l.id === 'usg' ? 'Sensitive groups' : l.label}</span>)}
     </div>
   );
 }
