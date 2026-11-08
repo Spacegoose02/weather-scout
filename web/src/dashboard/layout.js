@@ -39,6 +39,7 @@ export const CARDS = [
   { id: 'health', group: 'outdoors', title: 'Health & comfort', emoji: '💓', sizes: ['m', 'l'], blurb: 'Pressure swings for migraines and sinuses, dew point, heat stress (WBGT) and the Moon' },
   { id: 'allergy', group: 'outdoors', title: 'Allergies & breathing', emoji: '🤧', sizes: ['m', 'l'], blurb: 'Tree, grass and weed pollen, PM2.5, PM10 and ozone, and an asthma outlook' },
   { id: 'tides', group: 'outdoors', title: 'Tides & hurricanes', emoji: '🌊', sizes: ['m', 'l'], blurb: 'Next high and low tide, storms nearby' },
+  { id: 'marine', group: 'outdoors', title: 'Marine & beach', emoji: '⛵', sizes: ['s', 'm', 'l'], blurb: 'Waves, water temperature, rip currents and the NWS marine forecast' },
   { id: 'stars', group: 'outdoors', title: 'Stargazing tonight', emoji: '🔭', sizes: ['s', 'm', 'l'], blurb: 'Which planets are up and where to look' },
   { id: 'plan', title: 'Best times outside', emoji: '🗓️', sizes: ['s', 'm', 'l'], group: 'outdoors', blurb: 'The best hours for a walk, bike ride, kite, picnic or the pool' },
   { id: 'aurora', title: 'Northern lights', emoji: '🌌', sizes: ['s', 'm', 'l'], group: 'outdoors', blurb: 'Can you see the aurora tonight? From NOAA space weather' },

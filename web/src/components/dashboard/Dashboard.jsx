@@ -9,6 +9,7 @@ import Allergy from '../Allergy.jsx';
 import Coast from '../Coast.jsx';
 import WhyNow from '../learn/WhyNow.jsx';
 import AirSensorsCard from '../air/AirSensorsCard.jsx';
+import MarineCard from '../ocean/MarineCard.jsx';
 import BackyardCard from '../forecast/BackyardCard.jsx';
 import OddsCard from '../forecast/OddsCard.jsx';
 import { RainNext, AirUv, Wind } from '../NowCards.jsx';
@@ -65,6 +66,7 @@ function renderCard(id, size, ctx) {
     case 'trip': return location ? <TripCard location={location} units={units} size={size} /> : null;
     case 'flood': return location ? <FloodCard location={location} kidMode={kidMode} size={size} /> : null;
     case 'fire': return location ? <FireSmoke weather={weather} location={location} kidMode={kidMode} size={size} /> : null;
+    case 'marine': return location ? <MarineCard location={location} units={units} kidMode={kidMode} size={size} /> : null;
     case 'aqs': return location ? <AirSensorsCard weather={weather} location={location} kidMode={kidMode} size={size} /> : null;
     case 'backyard': return location ? <BackyardCard location={location} units={units} kidMode={kidMode} size={size} /> : null;
     case 'odds': return location ? <OddsCard location={location} units={units} kidMode={kidMode} size={size} /> : null;
