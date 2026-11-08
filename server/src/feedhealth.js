@@ -16,6 +16,8 @@ export const FEEDS = [
   [/^mesonet\.agron\.iastate\.edu$/, 'iem', 'Radar, storm cells and reports (Iowa Environmental Mesonet)'],
   [/nhc\.noaa\.gov$/, 'nhc', 'Hurricanes (National Hurricane Center)'],
   [/^api\.water\.noaa\.gov$/, 'rivers', 'River gauges (NOAA NWPS)'],
+  [/cpc\.ncep\.noaa\.gov$/, 'cpc', 'El Niño and La Niña (NOAA Climate Prediction Center)'],
+  [/droughtmonitor\.unl\.edu$/, 'drought', 'Drought (US Drought Monitor)'],
   [/wpc\.ncep\.noaa\.gov$/, 'wpc', 'Flash flood outlook (NOAA WPC)'],
   [/ndbc\.noaa\.gov$/, 'buoys', 'Buoys (NOAA NDBC)'],
   [/tidesandcurrents\.noaa\.gov$/, 'tides', 'Tides (NOAA CO-OPS)'],

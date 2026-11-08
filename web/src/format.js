@@ -1,3 +1,5 @@
+import { t, shortDay } from './i18n.js';
+
 export const round = (v) => (v == null || Number.isNaN(v) ? '–' : Math.round(v));
 
 const DIRS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -18,11 +20,10 @@ export function clockLabel(t) {
   return `${h % 12 || 12}:${m} ${h < 12 ? 'AM' : 'PM'}`;
 }
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export function dayLabel(date, i) {
-  if (i === 0) return 'Today';
+  if (i === 0) return t('Today');
   const [y, m, d] = date.split('-').map(Number);
-  return DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+  return shortDay(new Date(Date.UTC(y, m - 1, d)).getUTCDay());
 }
 
 export function duration(minutes) {

@@ -315,3 +315,14 @@
 .storm-odds b { text-align: right; }
 .surge-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; font-size: .88rem; }
 .surge-list b { color: #9b45d9; white-space: nowrap; }
+
+/* Drought & El Niño */
+.drought-row { display: flex; gap: 10px; align-items: center; margin: 4px 0 8px; }
+.drought-row p { margin: 0; }
+.drought-chip { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 10px; font-weight: 800; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); }
+.enso p { margin: 4px 0; }
+.nino-bars { width: 100%; max-width: 360px; height: auto; display: block; margin: 4px 0; }
+.nino-bars .warm { fill: #e0533d; }
+.nino-bars .cool { fill: #2a78d6; }
+.nino-bars .nino-zero { stroke: currentColor; stroke-opacity: .45; }
+.nino-bars .nino-line { stroke: currentColor; stroke-opacity: .3; stroke-dasharray: 3 3; }

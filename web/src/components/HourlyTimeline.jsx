@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { hourLabel, icon, round } from '../format.js';
+import { t } from '../i18n.js';
 
 const COL = 46;
 const H = 150;
@@ -19,7 +20,7 @@ export default function HourlyTimeline({ hourly, units }) {
   return (
     <section className="card hourly">
       <div className="card-title">
-        <h2>Next 48 hours</h2>
+        <h2>{t('Next 48 hours')}</h2>
         <div className="hour-detail" aria-live="polite">
           <strong>{hourLabel(h.time)}</strong> {icon(h.icon, h.isDay)} {round(h.temp)}{units.temp} · ☔ {round(h.precipChance)}% · 💨 {round(h.windSpeed)} {units.wind}
         </div>

@@ -113,3 +113,11 @@ Eight kid features added after the MVP. They live in the Kid Zone under Today, P
 | Data-feed health | ✅ 📶 Data feeds in Settings (`/api/status`): every upstream call is noted per service (working, slow or flaky, not answering), with when it last worked and how fast it answers |
 | Marine & beach | ✅ ⛵ card: waves, swell and water temperature (Open-Meteo Marine), the NWS forecast for the nearest coastal or Great Lakes zone, small craft, gale, rip current and high surf hazards |
 | Hurricane wind odds and storm surge | ✅ The 🌀 tracker shows the NHC chance of 39, 58 and 74 mph winds at the nearest listed town and the peak storm surge for each stretch of coast, read from NHC text products |
+
+## v0.11: Spanish, classroom board, live drought and El Niño
+
+| Feature | Status |
+| --- | --- |
+| Drought & El Niño | ✅ 🌎 card (`/api/climate`): this week's US Drought Monitor category at your place (D0 to D4), the CPC El Niño/La Niña alert status and synopsis, 12 weeks of the Niño 3.4 sea temperature, and what the phase usually means for your winter. Both update weekly and are cached 12 hours |
+| Classroom board | ✅ `#classroom` (Settings → 🏫 Classroom board): a full-screen view for a class projector with a big clock, today's weather, the recess traffic light, what to wear, kid-worded warnings and a question of the day (30, in English and Spanish). The class weather log (`/api/classroom/log`) lets signed-in people record sky, thermometer, rain, wind and a note; only the writer or an admin can remove an entry |
+| Spanish | ✅ Settings → 🌐 Language (a Spanish browser starts in Spanish): tabs, header, Settings, the main cards, every card name and blurb, weather words, dates and the classroom board. Strings are keyed by their English text, so anything not translated yet shows in English. NWS-written text stays in English |

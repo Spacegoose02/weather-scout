@@ -21,6 +21,8 @@ import Settings from './components/Settings.jsx';
 import { ThemeBuddy } from './components/ThemeChoices.jsx';
 import { useKidData } from './kid/useKidData.js';
 import { parseRoute, routeHash, tabsFor } from './nav.js';
+import Classroom from './components/classroom/Classroom.jsx';
+import { t, pickLang, setLang } from './i18n.js';
 import Briefing from './components/kid/Briefing.jsx';
 import Modal from './components/Modal.jsx';
 import LightningBanner from './components/LightningBanner.jsx';
@@ -57,6 +59,8 @@ export default function App() {
   const location = prefs.location || config?.defaultLocation;
   const units = prefs.units || config?.units || 'imperial';
   const kidMode = !!prefs.kidMode;
+  const language = pickLang(prefs.lang);
+  setLang(language); // before any child renders, so t() and dates follow it
   const aiOn = !!config?.ai?.enabled;
   // The tab lives in the address (#map, #learn/ocean) so refresh, back and
   // bookmarks work. Tapping a lightning notification (/?lightning=1) opens the map.
@@ -131,10 +135,20 @@ export default function App() {
   if (!config) return <div className="splash">{error || 'Loading Weather Scout…'}</div>;
   const blocked = config.auth.required && !user;
 
+  // Classroom board (#classroom): a full-screen view for a class projector.
+  if (/^#classroom/i.test(hash) && !blocked) {
+    return (
+      <>
+        <Classroom weather={weather} location={location} units={units} user={user} onSignIn={() => setModal('signin')} onExit={() => go('today')} />
+        {modal === 'signin' && <SignIn sso={config.auth.sso} onClose={() => setModal(null)} onDone={(u) => { setUser(u); setModal(null); }} />}
+      </>
+    );
+  }
+
   return (
     <div className={`app ${kidMode ? 'kid' : ''}`}>
       {/* Keyboard and screen-reader users can jump past the header and tabs. */}
-      <button className="skip-link" onClick={() => document.getElementById('main')?.focus()}>Skip to the weather</button>
+      <button className="skip-link" onClick={() => document.getElementById('main')?.focus()}>{t('Skip to the weather')}</button>
       <Header
         location={location}
         onLocation={(l) => setPrefs((p) => ({ location: l, saved: dedupe([l, ...(p.saved || [])]).slice(0, 8) }))}
@@ -150,12 +164,12 @@ export default function App() {
 
       {!blocked && (
         <>
-          <nav className={`tabs${kidMode ? ' kid-tabs' : ''}`} aria-label={kidMode ? 'Kid sections' : 'Sections'}>
-            {tabsFor(kidMode, aiOn).map((t) => (
-              <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)} aria-current={tab === t.id ? 'page' : undefined}>
-                <span className="tab-emoji" aria-hidden>{t.emoji === 'rocky' ? <RockyFace /> : t.emoji}</span>
-                <span className="tab-label">{t.label}</span>
-                <span className="tab-short" aria-hidden>{t.short}</span>
+          <nav className={`tabs${kidMode ? ' kid-tabs' : ''}`} aria-label={kidMode ? t('Kid sections') : t('Sections')}>
+            {tabsFor(kidMode, aiOn).map((tb) => (
+              <button key={tb.id} className={tab === tb.id ? 'active' : ''} onClick={() => setTab(tb.id)} aria-current={tab === tb.id ? 'page' : undefined}>
+                <span className="tab-emoji" aria-hidden>{tb.emoji === 'rocky' ? <RockyFace /> : tb.emoji}</span>
+                <span className="tab-label">{t(tb.label)}</span>
+                <span className="tab-short" aria-hidden>{t(tb.short)}</span>
               </button>
             ))}
           </nav>
@@ -181,7 +195,7 @@ export default function App() {
           )}
 
           <main id="main" tabIndex={-1}>
-            {!weather && !error && ['today', 'play', 'explore', 'chaser', 'learn', 'school'].includes(tab) && !(tab !== 'today' && route.section === 'ocean') && <div className="card skeleton">Fetching the sky…</div>}
+            {!weather && !error && ['today', 'play', 'explore', 'chaser', 'learn', 'school'].includes(tab) && !(tab !== 'today' && route.section === 'ocean') && <div className="card skeleton">{t('Fetching the sky…')}</div>}
             {weather && kidMode && ['today', 'play', 'explore', 'chaser'].includes(tab) && (
               <KidMode tab={tab} weather={weather} user={user} location={location} kid={kidData} onAlerts={() => setModal('alerts')} />
             )}
@@ -235,6 +249,8 @@ export default function App() {
           sso={config.auth.sso}
           units={units}
           onUnits={(u) => setPrefs({ units: u })}
+          language={language}
+          onLanguage={(l) => setPrefs({ lang: l })}
           theme={{ value: prefs.theme || 'auto', why: theme.why, onChange: (t) => setPrefs({ theme: t }) }}
           a11y={{ value: prefs.a11y, onChange: (a) => setPrefs({ a11y: a }) }}
           places={{ list: prefs.saved || [], onChange: (list) => setPrefs({ saved: list }) }}

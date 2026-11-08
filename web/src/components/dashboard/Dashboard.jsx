@@ -10,6 +10,7 @@ import Coast from '../Coast.jsx';
 import WhyNow from '../learn/WhyNow.jsx';
 import AirSensorsCard from '../air/AirSensorsCard.jsx';
 import MarineCard from '../ocean/MarineCard.jsx';
+import ClimateCard from '../climate/ClimateCard.jsx';
 import BackyardCard from '../forecast/BackyardCard.jsx';
 import OddsCard from '../forecast/OddsCard.jsx';
 import { RainNext, AirUv, Wind } from '../NowCards.jsx';
@@ -33,6 +34,7 @@ import { useDashboard } from '../../dashboard/useDashboard.js';
 import { CARD, CARD_GROUPS, SIZE_NAMES, hidden, addCard, removeCard, moveCard, nudgeCard, resizeCard } from '../../dashboard/layout.js';
 import { usePackedGrid } from '../../dashboard/usePackedGrid.js';
 import '../../dashboard/dashboard.css';
+import { t, locale } from '../../i18n.js';
 
 function renderCard(id, size, ctx) {
   const { weather, location, units, kidMode, user } = ctx;
@@ -66,6 +68,7 @@ function renderCard(id, size, ctx) {
     case 'trip': return location ? <TripCard location={location} units={units} size={size} /> : null;
     case 'flood': return location ? <FloodCard location={location} kidMode={kidMode} size={size} /> : null;
     case 'fire': return location ? <FireSmoke weather={weather} location={location} kidMode={kidMode} size={size} /> : null;
+    case 'climate': return location ? <ClimateCard location={location} kidMode={kidMode} size={size} /> : null;
     case 'marine': return location ? <MarineCard location={location} units={units} kidMode={kidMode} size={size} /> : null;
     case 'aqs': return location ? <AirSensorsCard weather={weather} location={location} kidMode={kidMode} size={size} /> : null;
     case 'backyard': return location ? <BackyardCard location={location} units={units} kidMode={kidMode} size={size} /> : null;
@@ -89,7 +92,7 @@ class CardBoundary extends Component {
   }
 
   render() {
-    if (this.state.failed) return <section className="card"><h2>{this.props.title}</h2><p className="hint">This card hit a snag. Reload the page to try again.</p></section>;
+    if (this.state.failed) return <section className="card"><h2>{this.props.title}</h2><p className="hint">{t('This card hit a snag. Reload the page to try again.')}</p></section>;
     return this.props.children;
   }
 }
@@ -128,7 +131,7 @@ export default function Dashboard({ weather, location, units, kidMode, user, loa
     setDragging(null);
   };
 
-  const t = weather.fetchedAt ? new Date(weather.fetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  const at = weather.fetchedAt ? new Date(weather.fetchedAt).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }) : '';
 
   return (
     <div className="dash">
@@ -136,11 +139,11 @@ export default function Dashboard({ weather, location, units, kidMode, user, loa
         {canEdit ? (
           <>
             <button className={isEditing ? '' : 'ghost'} onClick={() => { setEditing(!isEditing); setAdding(false); }} aria-pressed={isEditing}>
-              {isEditing ? '✓ Done' : '✏️ Customize'}
+              {isEditing ? `✓ ${t('Done')}` : `✏️ ${t('Edit cards')}`}
             </button>
             {isEditing && (
               <>
-                <button className="ghost" onClick={() => setAdding(!adding)} aria-expanded={adding}>＋ Add cards{offList.length ? ` (${offList.length})` : ''}</button>
+                <button className="ghost" onClick={() => setAdding(!adding)} aria-expanded={adding}>{t('＋ Add cards')}{offList.length ? ` (${offList.length})` : ''}</button>
                 {dash.custom && <button className="link" onClick={() => dash.reset().catch(() => {})}>Reset to {dash.houseDefault ? 'house' : 'standard'} layout</button>}
                 {user.isAdmin && <button className="link" onClick={() => dash.shareAsDefault().catch(() => {})} title="Guests and new accounts start with this layout">Use for guests</button>}
                 {user.isAdmin && dash.houseDefault && <button className="link" onClick={() => dash.clearHouseDefault().catch(() => {})}>Clear guest layout</button>}
@@ -151,25 +154,25 @@ export default function Dashboard({ weather, location, units, kidMode, user, loa
             )}
           </>
         ) : (
-          <span className="hint">Want your own cards? <button className="link" onClick={onSignIn}>Sign in</button> to pick, move and resize them.</span>
+          <span className="hint">{t('Want your own cards?')} <button className="link" onClick={onSignIn}>{t('Sign in')}</button> {t('to pick, move and resize them.')}</span>
         )}
       </div>
 
       {isEditing && adding && (
         <div className="card dash-add">
-          <h2>Add a card</h2>
+          <h2>{t('Add a card')}</h2>
           {offList.length === 0 ? <p className="hint">Every card is already on your page.</p> : CARD_GROUPS.map(([g, label]) => {
             const list = offList.filter((c) => (c.group || 'weather') === g);
             if (!list.length) return null;
             return (
               <div key={g} className="dash-add-group">
-                <h3>{label}</h3>
+                <h3>{t(label)}</h3>
                 <ul>
                   {list.map((c) => (
                     <li key={c.id}>
                       <button className="ghost" onClick={() => update((l) => addCard(l, c.id, 0))}>
                         <span className="dash-add-emoji" aria-hidden>{c.emoji}</span>
-                        <span><strong>{c.title}</strong><small>{c.blurb}</small></span>
+                        <span><strong>{t(c.title)}</strong><small>{t(c.blurb)}</small></span>
                       </button>
                     </li>
                   ))}
@@ -190,7 +193,7 @@ export default function Dashboard({ weather, location, units, kidMode, user, loa
               {isEditing && (
                 <div className="dash-tools">
                   <button className="dash-handle" onPointerDown={(e) => startDrag(e, c.id)} aria-label={`Drag ${def.title}`} title="Drag to move">⠿</button>
-                  <span className="dash-name"><span aria-hidden>{def.emoji}</span> {def.title}</span>
+                  <span className="dash-name"><span aria-hidden>{def.emoji}</span> {t(def.title)}</span>
                   <button className="dash-icon" onClick={() => update((l) => nudgeCard(l, c.id, -1))} disabled={i === 0} aria-label={`Move ${def.title} earlier`}>◀</button>
                   <button className="dash-icon" onClick={() => update((l) => nudgeCard(l, c.id, 1))} disabled={i === layout.cards.length - 1} aria-label={`Move ${def.title} later`}>▶</button>
                   <span className="dash-sizes" role="group" aria-label={`${def.title} size`}>
@@ -217,7 +220,7 @@ export default function Dashboard({ weather, location, units, kidMode, user, loa
 
       <p className="source">
         Forecast: {weather.forecast.source}. Alerts: National Weather Service.
-        {loading ? ' Updating…' : ` Updated ${t}.`}
+        {loading ? ' Updating…' : ` ${t('Updated {t}', { t: at })}.`}
       </p>
     </div>
   );
