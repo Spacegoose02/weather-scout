@@ -13,10 +13,11 @@ describe('hazards in the web app', () => {
     expect(reportLine({ kind: 'snow', label: 'Snow', magnitude: 4, unit: 'INCH' })).toBe('Snow (4 inch)');
     expect(reportLine({ kind: 'rain', label: 'Rain' })).toBe('Rain');
   });
-  it('old saved map layers get the new hazard layers', () => {
-    const l = normalizeLayers({ buoys: false });
-    expect(l.reports).toBe(true);
-    expect(l.fires).toBe(true);
+  it('old saved map layers get the hazard layers, off until switched on', () => {
+    const l = normalizeLayers({ buoys: true });
+    expect(l.buoys).toBe(true);
+    expect(l.reports).toBe(false);
+    expect(l.fires).toBe(false);
     expect(l.gauges).toBe(false);
   });
   it('near lists and gauge ranks', () => {

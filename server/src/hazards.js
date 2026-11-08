@@ -20,6 +20,7 @@ export const LSR_URL = 'https://mesonet.agron.iastate.edu/geojson/lsr.php';
 export const NWPS_URL = 'https://api.water.noaa.gov/nwps/v1/gauges';
 export const ERO_URL = (day) => `https://www.wpc.ncep.noaa.gov/exper/eromap/geojson/Day${day}_Latest.geojson`;
 export const FIRES_URL = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0/query';
+export const PERIMETERS_URL = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query';
 const KEEP_DAYS = 30;
 const POST_GAP_MS = 2 * MIN; // one report per person every 2 minutes
 const MAX_BOX_ITEMS = 1500;
@@ -67,6 +68,50 @@ export function firesUrl(box) {
     f: 'geojson',
   });
   return `${FIRES_URL}?${p}`;
+}
+
+// Mapped fire edges (the latest perimeter each fire team has drawn), simplified
+// to about 200 m so a big fire stays a small download.
+export function perimetersUrl(box) {
+  const p = new URLSearchParams({
+    where: "attr_IncidentTypeCategory='WF'",
+    outFields: 'poly_IncidentName,poly_GISAcres,attr_PercentContained,poly_DateCurrent,attr_IrwinID',
+    geometry: [box.west, box.south, box.east, box.north].map((n) => n.toFixed(2)).join(','),
+    geometryType: 'esriGeometryEnvelope',
+    inSR: '4326',
+    spatialRel: 'esriSpatialRelIntersects',
+    outSR: '4326',
+    maxAllowableOffset: '0.002',
+    geometryPrecision: '4',
+    resultRecordCount: '200',
+    f: 'geojson',
+  });
+  return `${PERIMETERS_URL}?${p}`;
+}
+
+// GeoJSON polygons -> the few fields the map needs.
+export function parsePerimeters(geo) {
+  const out = [];
+  for (const f of geo?.features || []) {
+    const g = f.geometry;
+    if (!g || !['Polygon', 'MultiPolygon'].includes(g.type)) continue;
+    const p = f.properties || {};
+    const acres = Number(p.poly_GISAcres);
+    const pct = Number(p.attr_PercentContained);
+    const name = String(p.poly_IncidentName || 'Unnamed').trim().toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
+    out.push({
+      type: 'Feature',
+      geometry: g,
+      properties: {
+        id: String(p.attr_IrwinID || p.OBJECTID || out.length),
+        name: /fire$|complex$/i.test(name) ? name : `${name} Fire`,
+        acres: Number.isFinite(acres) ? Math.round(acres) : null,
+        contained: Number.isFinite(pct) ? Math.round(pct) : null,
+        updated: Number.isFinite(Number(p.poly_DateCurrent)) ? new Date(Number(p.poly_DateCurrent)).toISOString() : null,
+      },
+    });
+  }
+  return out;
 }
 
 // Snap a box outward to whole degrees so nearby views share one cached answer.
@@ -195,6 +240,11 @@ export class HazardService {
     return this.cache.wrap(`fires:${snapKey(s)}`, 15 * MIN, async () => parseFires(await fetchJson(firesUrl(s), { source: 'nifc', fetchImpl: this.fetchImpl, timeoutMs: 15000 })));
   }
 
+  async perimetersInBox(box) {
+    const s = snap(box);
+    return this.cache.wrap(`perims:${snapKey(s)}`, 30 * MIN, async () => parsePerimeters(await fetchJson(perimetersUrl(s), { source: 'nifc', fetchImpl: this.fetchImpl, timeoutMs: 20000 })));
+  }
+
   async firesNearPlace(place, { miles = 200, windFrom = null } = {}) {
     const fires = await this.firesInBox(boxAround(place, miles));
     return firesNear(fires, place, { miles, windFrom }).slice(0, 15);
@@ -235,6 +285,13 @@ export function registerHazards(app, { hazards, requireUser, latLonSchema, loc, 
     const all = await hazards.firesInBox(box(req.query));
     const inView = all.filter((f) => inBox(f, box(req.query)));
     return { fires: inView, total: inView.length, source: 'National Interagency Fire Center (WFIGS)' };
+  });
+  // Fire edges, for zoomed-in map views (a few degrees across at most).
+  app.get('/api/fires/perimeters', { schema: boxSchema }, async (req) => {
+    const q = req.query;
+    if ((q.north - q.south) > 8 || (q.east - q.west) > 12) return { type: 'FeatureCollection', features: [], zoomIn: true };
+    const features = await hazards.perimetersInBox(box(q));
+    return { type: 'FeatureCollection', features, source: 'National Interagency Fire Center (WFIGS perimeters)' };
   });
   app.get('/api/fires/near', { schema: nearSchema }, async (req) => {
     const l = loc(req.query);

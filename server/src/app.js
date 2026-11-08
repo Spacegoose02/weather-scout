@@ -49,6 +49,10 @@ import { AuroraService } from './aurora.js';
 import { HazardService, registerHazards } from './hazards.js';
 import { StormCellService, registerStormCells } from './stormcells.js';
 import { TripService, registerTrip } from './trip.js';
+import { AirSensorService, registerAirSensors } from './airsensors.js';
+import { BackyardTuning, registerTuning } from './tuning.js';
+import { registerOdds } from './odds.js';
+import { RadarNowcast, registerRadarNowcast } from './radarcast.js';
 import { nextRain, nextRainText, nextRainShort } from '../../shared/glance.js';
 import { getScorecard } from './scorecard.js';
 import { cleanOutfit, rockySvg } from '../../shared/rocky-outfit.js';
@@ -419,6 +423,15 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
   registerStormCells(app, { cells: stormCells, latLonSchema, loc, boxSchema });
   if (push) push.cellsFor = (place) => stormCells.approaching(place);
   registerTrip(app, { trips: new TripService(cache, fetchImpl, { userAgent: cfg.nwsUserAgent }), defaultUnits: cfg.units });
+  // v0.9: live air sensors and smoke, a forecast tuned to the backyard, forecast odds, radar rain timing.
+  const airSensors = new AirSensorService(cache, fetchImpl, { log: app.log, keys: () => ({ airnow: cfg.env.AIRNOW_API_KEY || '', purpleair: cfg.env.PURPLEAIR_API_KEY || '' }) });
+  registerAirSensors(app, { sensors: airSensors, latLonSchema, loc, boxSchema });
+  const tuning = new BackyardTuning(db, { stations, forecast: (p) => forecast(loc(p)), home: () => cfg.defaultLocation, log: app.log });
+  registerTuning(app, { tuning, latLonSchema, loc });
+  app.decorate('tuning', tuning);
+  app.addHook('onClose', async () => tuning.stop());
+  registerOdds(app, { cache, fetchImpl, latLonSchema, loc });
+  registerRadarNowcast(app, { nowcast: new RadarNowcast(cache, fetchImpl, { log: app.log }), latLonSchema, loc });
   // Northern lights tonight (NOAA SWPC Kp forecast and OVATION), with tonight's clouds.
   const aurora = new AuroraService(cache, fetchImpl);
   const auroraFor = (l, fc) => aurora.outlook(l, fc);
@@ -512,6 +525,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
     lightning.start();
     stations.start();
     homeAssistant.start();
+    tuning.start();
   });
 
   // Saved settings take effect without a restart: restart only what changed.
@@ -791,7 +805,7 @@ export async function buildApp({ config, fetchImpl = fetch, logger = true, pushS
 
   // Everything else an admin can set in the app (home place, cameras, Windy,
   // stations, Home Assistant, push, sign-out link, Android). Secrets are write-only.
-  const APP_GROUPS = ['home', 'cameras', 'maps', 'lightning', 'stations', 'homeassistant', 'apps'];
+  const APP_GROUPS = ['home', 'cameras', 'maps', 'pollen', 'air', 'lightning', 'stations', 'homeassistant', 'apps'];
   const valuesBody = { type: 'object', additionalProperties: { type: ['string', 'null'], maxLength: 800 } };
   app.get('/api/admin/settings', { preHandler: requireAdmin }, async () => ({ settings: settings.view(APP_GROUPS) }));
   app.put('/api/admin/settings', {
