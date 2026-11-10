@@ -30,7 +30,7 @@ export const FEEDS = [
   [/googleapis\.com$/, 'google', 'Pollen (Google)'],
   [/windy\.com$/, 'windy', 'Webcams (Windy)'],
   [/goes|noaa-goes|amazonaws\.com$/, 'glm', 'Satellite lightning (NOAA GOES)'],
-  [/anthropic\.com$/, 'ai', 'Ask an Expert (Anthropic)'],
+  [/anthropic\.com$/, 'ai', 'Ask Rocky (Anthropic)'],
   // State road camera systems all count as one feed.
   [/511|(^|\.)dot\.|gisserver|geodata|firstmap|iteris|traffic|cctv|camera|trafficland|skyvdn/i, 'cameras', 'Road cameras (state transportation departments)'],
 ];

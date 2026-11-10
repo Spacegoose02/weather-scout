@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { CLOUD_EMOJI, CLOUD_NAMES, speakable, suggestions, toHistory } from '../ai/logic.js';
 import SpeakButton from './kid/SpeakButton.jsx';
 import RockyFace from './RockyFace.jsx';
+import { t } from '../i18n.js';
 import '../ai/ask.css';
 
 const STORE = 'ws-ask-chat';
@@ -94,17 +95,17 @@ export default function AskExpert({ ai, weather, location, units, kidMode, tts }
     }
   };
 
-  const name = kidMode ? 'Rocky' : 'Weather expert';
+  const name = 'Rocky';
   const intro = kidMode
     ? "Hi, I'm Rocky! Ask me anything about weather, clouds or the sky. You can also snap a picture of the clouds and I'll tell you what they are!"
     : `Ask about the forecast for ${location?.name || 'your place'}, how weather works, or snap a cloud photo to identify it.${ai.search ? ' Turn on web search for news and deeper "why" questions.' : ''}`;
 
   return (
-    <section className={`ask card ${kidMode ? 'ask-kid' : ''}`} aria-label={kidMode ? 'Ask Rocky' : 'Ask a weather expert'}>
+    <section className={`ask card ${kidMode ? 'ask-kid' : ''}`} aria-label={t('Ask Rocky')}>
       <div className="ask-head">
         <div className="ask-title">
-          {kidMode ? <RockyFace className="ask-avatar" /> : <span className="ask-avatar" aria-hidden>🧑‍🔬</span>}
-          <h2>{kidMode ? 'Ask Rocky' : 'Ask a weather expert'}</h2>
+          <RockyFace className="ask-avatar" />
+          <h2>{t('Ask Rocky')}</h2>
         </div>
         {items.length > 0 && <button className="link" onClick={() => setItems([])}>New chat</button>}
       </div>

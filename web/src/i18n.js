@@ -58,7 +58,6 @@ export const ES = {
   Models: 'Modelos',
   'News & Videos': 'Noticias y videos',
   News: 'Noticias',
-  'Ask an Expert': 'Pregúntale a un experto',
   Ask: 'Preguntar',
   Play: 'Jugar',
   Explore: 'Explorar',

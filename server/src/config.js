@@ -42,7 +42,7 @@ export function loadConfig(env = process.env) {
       enabled: bool(env.PUSH_ENABLED, true),
       pollSeconds: Math.max(60, num(env.PUSH_POLL_SECONDS, 120)),
     },
-    // "Ask a weather expert" chat, cloud photo identifier and web search. Off without a key.
+    // "Ask Rocky" chat, cloud photo identifier and web search. Off without a key.
     ai: {
       // anthropic | ollama | off. Blank = whichever has a key/address (Claude first).
       provider: (env.AI_PROVIDER || '').toLowerCase(),
