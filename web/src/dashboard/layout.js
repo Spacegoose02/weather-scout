@@ -24,6 +24,7 @@ export const CARDS = [
   { id: 'cameras', group: 'weather', title: 'Nearby cameras', emoji: '📷', sizes: ['s', 'm', 'l'], blurb: 'The closest road cameras, live when they can be' },
   { id: 'reports', group: 'weather', title: 'Weather reports', emoji: '📣', sizes: ['s', 'm', 'l'], blurb: 'Report what is falling, and see family and NWS spotter reports nearby' },
   { id: 'cells', group: 'weather', title: 'Storm tracker', emoji: '⛈️', sizes: ['s', 'm', 'l'], blurb: 'Storms on the radar near you, which way they are moving and when they could arrive' },
+  { id: 'spc', group: 'weather', title: 'Severe storm outlook', emoji: '⛈️', sizes: ['s', 'm', 'l'], blurb: 'The Storm Prediction Center map for today through day 3, your risk level and storm reports' },
   { id: 'flood', group: 'weather', title: 'Flood & rivers', emoji: '🌊', sizes: ['s', 'm', 'l'], blurb: 'Flash flood risk today and tomorrow, and river gauges near you' },
   { id: 'fire', group: 'outdoors', title: 'Wildfires & smoke', emoji: '🔥', sizes: ['s', 'm', 'l'], blurb: 'Active wildfires within 200 miles and smoky-air hours ahead' },
   { id: 'winter', group: 'weather', title: 'Winter & roads', emoji: '❄️', sizes: ['s', 'm', 'l'], blurb: 'Snow totals, road ice risk and the chance of a snow day or delay' },

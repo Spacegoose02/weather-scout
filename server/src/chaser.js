@@ -7,6 +7,7 @@
 import { UpstreamError, fetchJson } from './cache.js';
 import * as severe from './providers/severe.js';
 import { STATES } from '../../shared/chase-states.js';
+import { inGeometry } from '../../shared/outlook.js';
 
 const MIN = 60_000;
 const SPC = 'https://www.spc.noaa.gov';
@@ -29,21 +30,7 @@ export function direction(a, b) {
   return DIRS[Math.round((((Math.atan2(y, x) * 180) / Math.PI + 360) % 360) / 45) % 8];
 }
 
-function inRing(lon, lat, ring) {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i];
-    const [xj, yj] = ring[j];
-    if ((yi > lat) !== (yj > lat) && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-// Point in a GeoJSON Polygon or MultiPolygon (holes respected).
-export function inGeometry(geom, lat, lon) {
-  if (!geom) return false;
-  const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.type === 'MultiPolygon' ? geom.coordinates : [];
-  return polys.some((rings) => rings.length && inRing(lon, lat, rings[0]) && !rings.slice(1).some((h) => inRing(lon, lat, h)));
-}
+export { inGeometry };
 
 export { STATES };
 export const STATE_NAME = Object.fromEntries(STATES.map((s) => [s.abbr, s.name]));

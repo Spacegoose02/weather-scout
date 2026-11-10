@@ -23,6 +23,7 @@ import GearChecklist from './GearChecklist.jsx';
 import BestTimes from './BestTimes.jsx';
 import Reports from '../hazards/Reports.jsx';
 import FloodCard from '../hazards/FloodCard.jsx';
+import SpcOutlookCard from '../hazards/SpcOutlookCard.jsx';
 import WinterCard from '../winter/WinterCard.jsx';
 import TripCard from '../winter/TripCard.jsx';
 import StormTracker from '../hazards/StormTracker.jsx';
@@ -66,6 +67,7 @@ function renderCard(id, size, ctx) {
     case 'cells': return location ? <StormTracker location={location} kidMode={kidMode} size={size} /> : null;
     case 'winter': return <WinterCard weather={weather} kidMode={kidMode} size={size} />;
     case 'trip': return location ? <TripCard location={location} units={units} size={size} /> : null;
+    case 'spc': return <SpcOutlookCard location={location} kidMode={kidMode} size={size} />;
     case 'flood': return location ? <FloodCard location={location} kidMode={kidMode} size={size} /> : null;
     case 'fire': return location ? <FireSmoke weather={weather} location={location} kidMode={kidMode} size={size} /> : null;
     case 'climate': return location ? <ClimateCard location={location} kidMode={kidMode} size={size} /> : null;

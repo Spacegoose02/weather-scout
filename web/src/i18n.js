@@ -156,6 +156,8 @@ export const ES = {
   'Report what is falling, and see family and NWS spotter reports nearby': 'Reporta lo que está cayendo y mira los reportes de tu familia y de los observadores del NWS',
   'Storm tracker': 'Rastreador de tormentas',
   'Storms on the radar near you, which way they are moving and when they could arrive': 'Tormentas en el radar cerca de ti, hacia dónde van y cuándo podrían llegar',
+  'Severe storm outlook': 'Pronóstico de tormentas severas',
+  'The Storm Prediction Center map for today through day 3, your risk level and storm reports': 'El mapa del Centro de Predicción de Tormentas de hoy al día 3, tu nivel de riesgo y reportes de tormentas',
   'Flood & rivers': 'Inundaciones y ríos',
   'Flash flood risk today and tomorrow, and river gauges near you': 'Riesgo de inundación repentina hoy y mañana, y medidores de ríos cercanos',
   'Wildfires & smoke': 'Incendios y humo',
