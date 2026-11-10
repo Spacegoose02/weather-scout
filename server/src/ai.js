@@ -1,4 +1,4 @@
-// AI helpers: "Ask a weather expert" chat (Rocky in Kid Mode), cloud photo
+// AI helpers: "Ask Rocky" chat (grown-up or kid voice), cloud photo
 // identifier, and optional web search. Runs on Claude (ANTHROPIC_API_KEY) or a
 // self-hosted Ollama (OLLAMA_URL). Everything here is off until one is set up;
 // keys never leave the server. Kept in its own file so it stays out of the way

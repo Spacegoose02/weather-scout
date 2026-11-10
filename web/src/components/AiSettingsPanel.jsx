@@ -92,7 +92,7 @@ export default function AiSettingsPanel() {
 
   const status = view.ai.enabled
     ? `🟢 On, using ${PROVIDER[view.ai.provider]}${view.ai.search ? ' with web search' : ''}.`
-    : '⚪ Off. Add a Claude key or an Ollama address to turn on Ask an Expert, Ask Rocky and the cloud photo identifier.';
+    : '⚪ Off. Add a Claude key or an Ollama address to turn on Ask Rocky and the cloud photo identifier.';
   const speed = Number(form.KOKORO_SPEED || DEFAULTS.KOKORO_SPEED);
   const voiceOptions = voices.length ? voices : (form.KOKORO_VOICE || DEFAULTS.KOKORO_VOICE) ? [{ id: form.KOKORO_VOICE || DEFAULTS.KOKORO_VOICE, label: voiceLabel(form.KOKORO_VOICE || DEFAULTS.KOKORO_VOICE) }] : [];
 

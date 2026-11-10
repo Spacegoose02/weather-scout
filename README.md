@@ -141,7 +141,7 @@ from free, official data sources.
   reads it in the Kokoro voice. In 🔔 alerts, tick *Rocky's morning briefing* and pick a time to get it
   as a notification every morning at that place's local time; tapping it opens the briefing ready to
   play. Works without AI; with the AI helper on, *Rocky's own words* lets Rocky retell it.
-- **Ask an Expert / Ask Rocky** (optional, runs on Claude or your own Ollama): a chat that answers weather
+- **Ask Rocky** (optional, runs on Claude or your own Ollama): a chat that answers weather
   questions using your live forecast and alerts, in kid language as Rocky when Kid Mode is on.
   Snap a photo of the sky and it names the cloud and what it means. Turn on web search for
   "why" and news questions (kid-safe science sites only in Kid Mode). See [AI helper](#ai-helper).
@@ -308,7 +308,7 @@ Feed health (camera counts and errors) shows under *Family & settings*.
 
 ## AI helper
 
-The **Ask an Expert** tab (called **Ask Rocky** in Kid Mode) appears once the server has either
+The **Ask Rocky** tab appears once the server has either
 an Anthropic API key (Claude) or the address of an Ollama server (models you run yourself).
 Without either, the tab is simply hidden and everything else works as before.
 
@@ -450,7 +450,7 @@ names also work as environment variables (`LIGHTNING_GLM`, `LIGHTNING_GLM_SATELL
 | Wind and model maps | [Windy](https://www.windy.com) embed, or the Map Forecast API | none for the embed, optional `WINDY_MAP_KEY` |
 | Cameras | VA, SC, MD, KY and DE public feeds; NC, NY, GA and OH with free keys; plus any state 511 feed you add | none for VA, SC, MD, KY, DE |
 | Webcams (optional) | [Windy Webcams API](https://api.windy.com/webcams) | a free Windy Webcams key, set in Family & settings |
-| Ask an Expert, cloud photos, web search (optional) | [Claude](https://www.anthropic.com/claude) via the Anthropic API, or your own [Ollama](https://ollama.com/) | `ANTHROPIC_API_KEY`, or `OLLAMA_URL` |
+| Ask Rocky, cloud photos, web search (optional) | [Claude](https://www.anthropic.com/claude) via the Anthropic API, or your own [Ollama](https://ollama.com/) | `ANTHROPIC_API_KEY`, or `OLLAMA_URL` |
 | Live storm chasers | YouTube live streams from a trusted chaser list, plus YouTube search with a key | none; optional `YOUTUBE_API_KEY` (set it in Family & settings) |
 | Read-aloud voice (optional) | Your own [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) | none |
 

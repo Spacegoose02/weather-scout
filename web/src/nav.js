@@ -7,7 +7,7 @@ export const ADULT_TABS = [
   { id: 'learn', label: 'Learn & Explore', short: 'Learn', emoji: '🎓' },
   { id: 'models', label: 'Models', short: 'Models', emoji: '📊' },
   { id: 'news', label: 'News & Videos', short: 'News', emoji: '📰' },
-  { id: 'ask', label: 'Ask an Expert', short: 'Ask', emoji: '💬', ai: true },
+  { id: 'ask', label: 'Ask Rocky', short: 'Ask', emoji: '💬', ai: true },
 ];
 
 export const KID_TABS = [

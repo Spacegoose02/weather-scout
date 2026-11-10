@@ -71,7 +71,7 @@ server/src/
   media.js          admin news/YouTube lists
   stormphoto.js     storm picture of the day (Wikimedia Commons, live credit/license, admin hide)
   push.js           Web Push: subscriptions, VAPID keys, alert loop
-  ai.js             Ask an Expert / Rocky chat, cloud photos, web search (Claude or Ollama)
+  ai.js             Ask Rocky chat, cloud photos, web search (Claude or Ollama)
   tts.js            Kokoro read-aloud proxy and voice list
   settings.js       Admin-saved settings (win over env vars), applied live; what stays env-only and why
   aisettings.js     Test connection and voice preview for Claude, Ollama and Kokoro
