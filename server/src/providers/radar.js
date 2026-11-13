@@ -140,10 +140,13 @@ export async function worldRadarFrames(fetchImpl) {
 
 // Where the US radars are (in and near the NEXRAD box), as [lat, lon], so the map
 // can blend the Canada/Mexico layer in past their range instead of at a straight line.
+// IEM lists radars by their 3-letter id (BUF, CBW), not the 4-letter call sign
+// (KBUF), so take both; the box keeps out Alaska, Hawaii and Puerto Rico.
+const RADAR_ID = /^(?:[A-Z]{3}|K[A-Z]{3})$/;
 export function nexradPoints(sites = []) {
   const b = NEXRAD_EXTENT;
   return sites
-    .filter((s) => /^K/.test(s.id) && s.lat >= b.south - 3 && s.lat <= b.north + 3 && s.lon >= b.west - 3 && s.lon <= b.east + 3)
+    .filter((s) => RADAR_ID.test(String(s.id || '')) && s.lat >= b.south - 3 && s.lat <= b.north + 3 && s.lon >= b.west - 3 && s.lon <= b.east + 3)
     .map((s) => [Math.round(s.lat * 100) / 100, Math.round(s.lon * 100) / 100]);
 }
 

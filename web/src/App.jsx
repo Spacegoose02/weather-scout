@@ -1,19 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { api } from './api.js';
 import { usePrefs } from './usePrefs.js';
 import Header from './components/Header.jsx';
 import AlertsBanner from './components/AlertsBanner.jsx';
-import WeatherMap from './components/WeatherMap.jsx';
-import KidMode from './components/KidMode.jsx';
+const WeatherMap = lazy(() => import('./components/WeatherMap.jsx'));
+const KidMode = lazy(() => import('./components/KidMode.jsx'));
 import DisplayName from './components/DisplayName.jsx';
 import SignIn from './components/SignIn.jsx';
-import Admin from './components/Admin.jsx';
-import News from './components/News.jsx';
-import ModelsView from './components/ModelsView.jsx';
+const Admin = lazy(() => import('./components/Admin.jsx'));
+const News = lazy(() => import('./components/News.jsx'));
+const ModelsView = lazy(() => import('./components/ModelsView.jsx'));
 import PushAlerts from './components/PushAlerts.jsx';
 import RockyFace from './components/RockyFace.jsx';
-import AskExpert from './components/AskExpert.jsx';
-import Learn from './components/learn/Learn.jsx';
+const AskExpert = lazy(() => import('./components/AskExpert.jsx'));
+const Learn = lazy(() => import('./components/learn/Learn.jsx'));
 import Dashboard from './components/dashboard/Dashboard.jsx';
 import SafetyCenter from './components/safety/SafetyCenter.jsx';
 import Badges, { BadgeCelebration } from './components/kid/Badges.jsx';
@@ -21,8 +21,12 @@ import Settings from './components/Settings.jsx';
 import { ThemeBuddy } from './components/ThemeChoices.jsx';
 import { useKidData } from './kid/useKidData.js';
 import { parseRoute, routeHash, tabsFor } from './nav.js';
-import Classroom from './components/classroom/Classroom.jsx';
+const Classroom = lazy(() => import('./components/classroom/Classroom.jsx'));
 import { t, pickLang, setLang } from './i18n.js';
+
+// The first screen (Today) ships in the main bundle; every other tab downloads
+// the first time it's opened, so phones start faster.
+const Loading = () => <div className="card skeleton">{t('Loading…')}</div>;
 import Briefing from './components/kid/Briefing.jsx';
 import Modal from './components/Modal.jsx';
 import LightningBanner from './components/LightningBanner.jsx';
@@ -139,7 +143,7 @@ export default function App() {
   if (/^#classroom/i.test(hash) && !blocked) {
     return (
       <>
-        <Classroom weather={weather} location={location} units={units} user={user} onSignIn={() => setModal('signin')} onExit={() => go('today')} />
+        <Suspense fallback={<Loading />}><Classroom weather={weather} location={location} units={units} user={user} onSignIn={() => setModal('signin')} onExit={() => go('today')} /></Suspense>
         {modal === 'signin' && <SignIn sso={config.auth.sso} onClose={() => setModal(null)} onDone={(u) => { setUser(u); setModal(null); }} />}
       </>
     );
@@ -195,6 +199,7 @@ export default function App() {
           )}
 
           <main id="main" tabIndex={-1}>
+            <Suspense fallback={<Loading />}>
             {!weather && !error && ['today', 'play', 'explore', 'chaser', 'learn', 'school'].includes(tab) && !(tab !== 'today' && route.section === 'ocean') && <div className="card skeleton">{t('Fetching the sky…')}</div>}
             {weather && kidMode && ['today', 'play', 'explore', 'chaser'].includes(tab) && (
               <KidMode tab={tab} weather={weather} user={user} location={location} kid={kidData} onAlerts={() => setModal('alerts')} />
@@ -220,6 +225,7 @@ export default function App() {
             {tab === 'models' && location && <ModelsView location={location} units={units} />}
             {tab === 'ask' && config.ai?.enabled && <AskExpert ai={config.ai} weather={weather} location={location} units={units} kidMode={kidMode} tts={config.tts} />}
             {tab === 'news' && <News isAdmin={!!user?.isAdmin} onAdmin={() => setModal('admin')} kidMode={kidMode} location={location} />}
+            </Suspense>
           </main>
         </>
       )}
@@ -285,7 +291,7 @@ export default function App() {
           <Briefing location={briefingPlace() || location} units={units} name={user?.displayName} highlight />
         </Modal>
       )}
-      {modal === 'admin' && user?.isAdmin && <Admin me={user} onClose={() => setModal(null)} />}
+      {modal === 'admin' && user?.isAdmin && <Suspense fallback={null}><Admin me={user} onClose={() => setModal(null)} /></Suspense>}
     </div>
   );
 }

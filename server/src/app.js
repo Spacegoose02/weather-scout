@@ -15,6 +15,7 @@ import { openDb, publicUser } from './db.js';
 import { AuthService, AuthError, SESSION_COOKIE } from './auth.js';
 import { CameraService } from './providers/cameras/index.js';
 import * as openMeteo from './providers/openmeteo.js';
+import { withHomeCoords } from '../../shared/homeplace.js';
 import * as nws from './providers/nws.js';
 import { radarFrames, SITE_CODES, siteProductCodes, siteScans, worldRadarFrames, withWorldRadar } from './providers/radar.js';
 import * as severe from './providers/severe.js';
@@ -275,6 +276,9 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   app.get('/api/alerts', { schema: latLonSchema }, async (req) => alerts(loc(req.query)));
   app.get('/api/air', { schema: latLonSchema }, async (req) => air(loc(req.query)));
   // US radar plus Canada/Mexico fill; if RainViewer can't be reached the US loop still shows.
+  // Fetch the radar list once at start, so the first radar map after a restart
+  // isn't left without it (and the Canada blend with it) by the 2-second wait below.
+  if (cfg.worldRadar) cache.wrap('nexrad-sites', 10 * MIN, () => severe.getNexradSites(fetchImpl)).catch(() => {});
   app.get('/api/radar', async () => {
     const radar = radarFrames();
     if (!cfg.worldRadar) return radar;
@@ -823,6 +827,18 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
 
   // Everything else an admin can set in the app (home place, cameras, Windy,
   // stations, Home Assistant, push, sign-out link, Android). Secrets are write-only.
+  const findPlace = (q) => cache.wrap(`geo:${q.toLowerCase()}`, 24 * 60 * MIN, () => openMeteo.geocode(q, fetchImpl));
+  // A home name with no coordinates anywhere (saved or env) falls back to the
+  // built-in Richmond ones. Look it up once at start and save what we find.
+  if (cfg.env.DEFAULT_LOCATION_NAME && !cfg.env.DEFAULT_LAT && !cfg.env.DEFAULT_LON) {
+    withHomeCoords({ DEFAULT_LOCATION_NAME: cfg.env.DEFAULT_LOCATION_NAME }, findPlace)
+      .then(({ values, found }) => {
+        if (!found) return;
+        settings.update({ DEFAULT_LAT: values.DEFAULT_LAT, DEFAULT_LON: values.DEFAULT_LON }, { only: ['home'] });
+        app.log.info({ name: cfg.env.DEFAULT_LOCATION_NAME, found: found.name }, 'home place had no coordinates; looked them up');
+      })
+      .catch((err) => app.log.warn({ err: err.message }, 'could not look up the home place'));
+  }
   const APP_GROUPS = ['home', 'cameras', 'maps', 'pollen', 'air', 'lightning', 'stations', 'homeassistant', 'apps'];
   const valuesBody = { type: 'object', additionalProperties: { type: ['string', 'null'], maxLength: 800 } };
   app.get('/api/admin/settings', { preHandler: requireAdmin }, async () => ({ settings: settings.view(APP_GROUPS) }));
@@ -830,13 +846,20 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
     preHandler: requireAdmin,
     schema: { body: { type: 'object', required: ['values'], properties: { values: valuesBody } } },
   }, async (req, reply) => {
+    let { values } = req.body;
     try {
-      settings.update(req.body.values, { only: APP_GROUPS });
+      // A new home name with no new coordinates: find the place, so the app
+      // doesn't keep showing the old town's weather under the new name.
+      if (typeof values.DEFAULT_LOCATION_NAME === 'string' && !('DEFAULT_LAT' in values) && !('DEFAULT_LON' in values)) {
+        const placed = !!(cfg.env.DEFAULT_LAT || cfg.env.DEFAULT_LON);
+        ({ values } = await withHomeCoords(values, findPlace, { strict: placed }));
+      }
+      settings.update(values, { only: APP_GROUPS });
     } catch (err) {
       if (err instanceof SettingsError) return reply.code(err.statusCode).send({ error: err.message });
       throw err;
     }
-    req.log.info({ keys: Object.keys(req.body.values), by: req.user.username }, 'settings changed');
+    req.log.info({ keys: Object.keys(values), by: req.user.username }, 'settings changed');
     return { settings: settings.view(APP_GROUPS) };
   });
   app.post('/api/admin/settings/test', {

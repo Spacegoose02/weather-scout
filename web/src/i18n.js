@@ -83,6 +83,7 @@ export const ES = {
   Close: 'Cerrar',
   'Skip to the weather': 'Ir al pronóstico',
   'Fetching the sky…': 'Consultando el cielo…',
+  'Loading…': 'Cargando…',
 
   // Settings
   '👤 Me': '👤 Yo',

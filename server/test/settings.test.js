@@ -163,3 +163,31 @@ test('admins pick the map layers everyone starts with', async () => {
   assert.equal((await app.inject('/api/config')).json().map.defaultLayers, null);
   await app.close();
 });
+
+test('renaming home without coordinates looks the place up', async () => {
+  const geo = { results: [
+    { name: 'Salem', admin1: 'Massachusetts', country_code: 'US', latitude: 42.52, longitude: -70.9 },
+    { name: 'Salem', admin1: 'Virginia', country_code: 'US', latitude: 37.2935, longitude: -80.0548 },
+  ] };
+  const fetchImpl = mockFetch({ 'geocoding-api.open-meteo.com': () => json(geo) });
+  const { app, call } = await admin({}, fetchImpl);
+  const res = await put(call, { DEFAULT_LOCATION_NAME: 'Salem, VA' });
+  assert.equal(res.statusCode, 200);
+  assert.equal(row(res, 'DEFAULT_LAT').value, '37.2935');
+  assert.equal(row(res, 'DEFAULT_LON').value, '-80.0548');
+  const cfg = (await app.inject('/api/config')).json();
+  assert.deepEqual(cfg.defaultLocation, { name: 'Salem, VA', lat: 37.2935, lon: -80.0548 });
+  // Now it has coordinates, a nickname keeps them.
+  const nick = await put(call, { DEFAULT_LOCATION_NAME: 'Grandma' });
+  assert.equal(row(nick, 'DEFAULT_LAT').value, '37.2935');
+  await app.close();
+});
+
+test('a home name set with no coordinates is looked up at start', async () => {
+  const geo = { results: [{ name: 'Salem', admin1: 'Virginia', country_code: 'US', latitude: 37.2935, longitude: -80.0548 }] };
+  const fetchImpl = mockFetch({ 'geocoding-api.open-meteo.com': () => json(geo) });
+  const { app } = await admin({ DEFAULT_LOCATION_NAME: 'Salem, VA' }, fetchImpl);
+  await new Promise((r) => setTimeout(r, 50));
+  assert.deepEqual((await app.inject('/api/config')).json().defaultLocation, { name: 'Salem, VA', lat: 37.2935, lon: -80.0548 });
+  await app.close();
+});

@@ -156,6 +156,16 @@ test('the radar blend gets the US radars in and near the NEXRAD box', () => {
     { id: 'TJUA', lat: 18.12, lon: -66.08 }, // Puerto Rico
   ]);
   assert.deepEqual(pts, [[46.04, -67.81], [42.95, -78.74]]);
+  // IEM's own list uses 3-letter ids; those must count too, or the blend is off
+  // and the Canada layer is cut at a straight line along 50°N and 65°W.
+  const iem = nexradPoints([
+    { id: 'CBW', lat: 46.0392, lon: -67.8066 },
+    { id: 'MVX', lat: 47.5278, lon: -97.3253 },
+    { id: 'HKI', lat: 21.89, lon: -159.55 },
+    { id: 'JUA', lat: 18.12, lon: -66.08 },
+    { id: 'TBWI', lat: 39.09, lon: -76.63 }, // a TDWR, not a NEXRAD
+  ]);
+  assert.deepEqual(iem, [[46.04, -67.81], [47.53, -97.33]]);
   const r = withWorldRadar(radarFrames(), [{ time: new Date().toISOString(), url: 'x' }], [{ id: 'KBUF', lat: 42.9489, lon: -78.7367 }]);
   assert.deepEqual(r.fill.sites, [[42.95, -78.74]]);
 });
