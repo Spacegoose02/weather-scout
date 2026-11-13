@@ -201,14 +201,17 @@ test('/api/forecast/backyard explains what is needed when no station reports', a
 });
 
 // ---- forecast odds -------------------------------------------------------------
-function fakeEnsemble({ members = 10, wet = 7 } = {}) {
-  const time = Array.from({ length: 72 }, (_, i) => `2026-11-${String(8 + Math.floor(i / 24)).padStart(2, '0')}T${String(i % 24).padStart(2, '0')}:00`);
+function fakeEnsemble({ members = 10, wet = 7, start = '2026-11-08' } = {}) {
+  // Three days of hours from `start`; day 2 is the interesting one.
+  const day = (n) => new Date(Date.parse(`${start}T00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+  const time = Array.from({ length: 72 }, (_, i) => `${day(Math.floor(i / 24))}T${String(i % 24).padStart(2, '0')}:00`);
+  const day2 = day(1);
   const hourly = { time };
   for (let m = 0; m < members; m++) {
     const suffix = m === 0 ? '' : `_member${String(m).padStart(2, '0')}`;
-    // Day 2 (Nov 9): `wet` members bring 0.6 in of rain; lows at 30 for half of them.
-    hourly[`precipitation${suffix}_ecmwf_ifs025`] = time.map((t) => (t.startsWith('2026-11-09') && m < wet ? 0.025 : 0));
-    hourly[`temperature_2m${suffix}_ecmwf_ifs025`] = time.map((t) => (t.startsWith('2026-11-09') && m < members / 2 ? 30 : 45));
+    // Day 2 (Nov 9 by default): `wet` members bring 0.6 in of rain; lows at 30 for half of them.
+    hourly[`precipitation${suffix}_ecmwf_ifs025`] = time.map((t) => (t.startsWith(day2) && m < wet ? 0.025 : 0));
+    hourly[`temperature_2m${suffix}_ecmwf_ifs025`] = time.map((t) => (t.startsWith(day2) && m < members / 2 ? 30 : 45));
     hourly[`snowfall${suffix}_ecmwf_ifs025`] = time.map(() => 0);
   }
   hourly.precipitation_probability = time.map(() => 50); // must not count as a member
@@ -235,7 +238,8 @@ test('ensemble runs become daily chances, spreads and highlights', () => {
 });
 
 test('/api/forecast/odds pools ECMWF and GFS', async () => {
-  const fetchImpl = mockFetch({ 'ensemble-api.open-meteo.com': (u) => { assert.match(u, /models=ecmwf_ifs025%2Cgfs_seamless/); return json(fakeEnsemble()); } });
+  const fetchImpl = mockFetch({ 'ensemble-api.open-meteo.com': (u) => { assert.match(u, /models=ecmwf_ifs025%2Cgfs_seamless/); return json(fakeEnsemble({ start: new Date().toISOString().slice(0, 10) })); } });
+  // The route drops days already past, so the fake run has to start today.
   const { app } = await testApp({ fetchImpl });
   const res = await app.inject({ url: '/api/forecast/odds?lat=44.98&lon=-93.27' });
   assert.equal(res.statusCode, 200);
