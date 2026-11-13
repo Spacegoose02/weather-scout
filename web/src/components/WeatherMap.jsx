@@ -19,7 +19,7 @@ import { useAirLayers } from './map/airLayers.js';
 import { AQI_LEVELS } from '../../../shared/aqi.js';
 import { PTYPES } from '../../../shared/stormcells.js';
 import { legendFor, productGroups, shortName } from './map/radarGuide.js';
-import { fillLayer } from './map/radarFill.js';
+import { radarLoop } from './map/radarLoop.js';
 import { inView, limitToCoverage } from './map/limitView.js';
 
 window.L = L; // leaflet.markercluster is a classic plugin that extends the global L
@@ -63,6 +63,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   const radar = useRef([]);
   // Canada/Mexico fill under the US loop: one layer per distinct frame, and which one each US frame shows.
   const fill = useRef({ layers: [], byFrame: [] });
+  const loop = useRef(null);
   const radarMeta = useRef(null);
   const camLayer = useRef(null);
   const webcamLayer = useRef(null);
@@ -116,10 +117,12 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
     const unlimit = inView(center.lat, center.lon) ? limitToCoverage(m) : () => {};
 
     let cancelled = false;
-    const fillKey = (r) => (r.frames || []).map((f) => f.fill || '').join('|');
+    // New fill frames, or the US radar list arriving late (the blend needs it).
+    const fillKey = (r) => `${r.fill?.sites?.length || 0}:${(r.frames || []).map((f) => f.fill || '').join('|')}`;
     api('/api/radar').then((r) => {
       if (cancelled) return;
       radarMeta.current = r;
+      if (r.fill && !r.fill.sites?.length) setTimeout(() => !cancelled && refreshRadar(), 30_000);
       if (r.satellite) {
         satLayer.current = L.tileLayer.wms(r.satellite.wms, {
           layers: r.satellite.layers, format: 'image/png', transparent: true, opacity: 0.65, zIndex: 5, attribution: r.satellite.attribution,
@@ -127,12 +130,14 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
       }
       setProducts(r.products || [{ id: 'composite', name: 'Radar', legend: 'dbz', frames: r.frames }]);
     });
-    // The Canada/Mexico frames are fixed snapshots, so pick up new ones every 10 minutes.
-    const radarTimer = setInterval(() => api('/api/radar').then((r) => {
+    // The Canada/Mexico frames are fixed snapshots, so pick up new ones every 10 minutes
+    // (and sooner if the server didn't have the US radar list yet).
+    const refreshRadar = () => api('/api/radar').then((r) => {
       if (cancelled || !r.fill || fillKey(r) === fillKey(radarMeta.current || {})) return;
       radarMeta.current = { ...radarMeta.current, ...r, satellite: radarMeta.current?.satellite };
       setProducts(r.products);
-    }).catch(() => {}), 10 * 60_000);
+    }).catch(() => {});
+    const radarTimer = setInterval(refreshRadar, 10 * 60_000);
 
     // Nationwide warning polygons, refreshed every 2 minutes.
     const loadNational = () => api('/api/alerts/national').then((n) => !cancelled && setNational(n)).catch(() => {});
@@ -341,6 +346,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
       stormLayer.current = null;
       buoyLayer.current = null;
       radar.current = [];
+      loop.current = null;
       fill.current = { layers: [], byFrame: [] };
       satLayer.current = null;
       camLayer.current = null;
@@ -377,23 +383,13 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
       : siteScan.frames.length ? siteScan.frames
         : siteScan.failed ? [{ time: null, url: product.template.replace('{site}', site.id) }] : [];
     const meta = radarMeta.current || {};
-    radar.current.forEach((l) => l.remove());
+    loop.current?.remove();
     // Every frame is its own layer; they load tiles once a pan or zoom ends, not
     // during it, so dragging the map stays smooth.
     const idle = { updateWhenIdle: true, updateWhenZooming: false, keepBuffer: 1 };
-    radar.current = list.map((f, i) => L.tileLayer(f.url, { ...idle, opacity: 0, className: 'radar-tiles', maxNativeZoom: meta.maxNativeZoom || 12, maxZoom: 18, zIndex: 10, attribution: i === 0 ? meta.attribution : '' }).addTo(m));
-    // Canada and Mexico, cut out where a US radar sees well and blended in past that.
-    fill.current.layers.forEach((l) => l.remove());
-    const made = new Map();
-    const byFrame = list.map((f) => {
-      if (!f.fill || !meta.fill) return null;
-      if (!made.has(f.fill)) {
-        // Just over the US loop: past the US radars' range it has the fuller picture.
-        made.set(f.fill, fillLayer(f.fill, { ...idle, opacity: 0, className: 'radar-tiles', maxNativeZoom: meta.fill.maxNativeZoom, maxZoom: 18, zIndex: 11, sites: meta.fill.sites, attribution: made.size === 0 ? meta.fill.attribution : '' }).addTo(m));
-      }
-      return made.get(f.fill);
-    });
-    fill.current = { layers: [...made.values()], byFrame };
+    loop.current = radarLoop(m, list, meta, { idle, first: product.future ? 0 : Math.max(0, list.length - 1) });
+    radar.current = loop.current.radar;
+    fill.current = loop.current.fill;
     setFrames(list);
     setFrame(product.future ? 0 : Math.max(0, list.length - 1));
     setLayerSet((n) => n + 1);

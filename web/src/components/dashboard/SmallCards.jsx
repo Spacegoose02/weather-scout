@@ -3,6 +3,7 @@ import L from 'leaflet';
 import { api } from '../../api.js';
 import { round, icon } from '../../format.js';
 import { baseMap } from '../basemap.js';
+import { radarLoop } from '../map/radarLoop.js';
 import LiveCam from '../kid/LiveCam.jsx';
 import Raccoon from '../Raccoon.jsx';
 import RockyFace from '../RockyFace.jsx';
@@ -13,12 +14,12 @@ import { openSafety } from '../../safety/useSafetyPlan.js';
 const darkQuery = () => window.matchMedia?.('(prefers-color-scheme: dark)');
 
 // ---- radar ---------------------------------------------------------------------
-// A small looping NEXRAD map. Tap through to the full-screen radar for products,
+// A small looping radar map. Tap through to the full-screen radar for products,
 // sites and warnings.
 export function RadarCard({ location, size, onOpen }) {
   const el = useRef(null);
   const map = useRef(null);
-  const layers = useRef([]);
+  const loop = useRef(null);
   const [frames, setFrames] = useState([]);
   const [frame, setFrame] = useState(0);
 
@@ -31,8 +32,9 @@ export function RadarCard({ location, size, onOpen }) {
     let live = true;
     const load = () => api('/api/radar').then((r) => {
       if (!live) return;
-      layers.current.forEach((x) => x.remove());
-      layers.current = r.frames.map((f, i) => L.tileLayer(f.url, { opacity: 0, className: 'radar-tiles', maxNativeZoom: r.maxNativeZoom || 12, maxZoom: 18, zIndex: 10, attribution: i === 0 ? r.attribution : '' }).addTo(m));
+      loop.current?.remove();
+      // The same look as the full radar, Canada and Mexico included.
+      loop.current = radarLoop(m, r.frames, r);
       setFrames(r.frames);
       setFrame(r.frames.length - 1);
     }).catch(() => {});
@@ -46,6 +48,7 @@ export function RadarCard({ location, size, onOpen }) {
       clearInterval(refresh);
       ro.disconnect();
       m.remove();
+      loop.current = null;
     };
   }, [location.lat, location.lon]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -58,7 +61,10 @@ export function RadarCard({ location, size, onOpen }) {
 
   const shown = Math.min(frame, frames.length - 1);
   useEffect(() => {
-    layers.current.forEach((layer, i) => layer.setOpacity(i === shown ? 0.75 : 0));
+    const l = loop.current;
+    if (!l) return;
+    l.radar.forEach((layer, i) => layer.setOpacity(i === shown ? 0.75 : 0));
+    l.fill.layers.forEach((layer) => layer.setOpacity(layer === l.fill.byFrame[shown] ? 0.75 : 0));
   }, [shown, frames.length]);
 
   const t = frames[shown]?.time;
@@ -151,11 +157,13 @@ export function AlertsCard({ weather, kidMode, onAlerts }) {
       </div>
       {!weather.alertsAvailable && <p className="hint">The National Weather Service did not answer. Alerts will show again soon.</p>}
       {weather.alertsAvailable && list.length === 0 && <p className="dash-calm">✅ {kidMode ? 'No weather warnings. All calm!' : 'No watches, warnings or advisories here right now.'}</p>}
+      {list.length > 0 && <p className="hint">Tap the alert at the top of the page for the details and what to do.</p>}
       <ul className="dash-alert-list">
         {list.map((a) => (
+          // The full alert is already in the banner at the top of the page, so
+          // the card keeps to one line each: what it is and when it ends.
           <li key={a.id} className={`alert ${SEV[a.severity] || 'minor'}`}>
             <strong>{a.event}</strong>
-            <span>{kidMode ? a.kid : a.headline}</span>
             {a.ends && <small>Until {new Date(a.ends).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}</small>}
           </li>
         ))}
