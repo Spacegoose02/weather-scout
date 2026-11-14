@@ -1,9 +1,10 @@
-// Weather Scout Android app (Trusted Web Activity). Build settings come from
-// Gradle properties so one project works for every family's server:
+// Weather Scout Android app (Trusted Web Activity). One APK works for every
+// family's server: the first time it opens, it asks for the server's address,
+// checks it and remembers it (long-press the app icon, "Change server", to
+// switch later). Optional build settings, as Gradle properties:
 //
-//   ./gradlew assembleRelease -PwsUrl=https://weather.example.com
+//   ./gradlew assembleRelease -PwsAppName="Weather Scout"
 //
-//   wsUrl          your Weather Scout address (https, required)
 //   wsAppName      launcher name (default "Weather Scout")
 //   wsPackageName  Android package id (default app.weatherscout.android;
 //                  must match ANDROID_PACKAGE_NAME on the server)
@@ -17,10 +18,6 @@ plugins {
 
 def prop = { String name, String fallback -> project.findProperty(name)?.toString()?.trim() ?: fallback }
 
-def wsUrl = new URI(prop('wsUrl', 'https://weather-scout.example.com').replaceAll('/+$', ''))
-if (wsUrl.scheme != 'https') throw new GradleException("wsUrl must start with https:// (got ${wsUrl}). GPS and alerts need https.")
-def origin = "https://${wsUrl.host}${wsUrl.port > 0 && wsUrl.port != 443 ? ":${wsUrl.port}" : ''}"
-def launchUrl = "${origin}${wsUrl.path ?: ''}/"
 def packageId = prop('wsPackageName', 'app.weatherscout.android')
 def signing = System.getenv('WS_KEYSTORE_FILE')
 
@@ -35,13 +32,7 @@ android {
         versionCode prop('wsVersionCode', '1').toInteger()
         versionName prop('wsVersionName', '0.1.0')
 
-        manifestPlaceholders = [hostName: wsUrl.host]
         resValue 'string', 'appName', prop('wsAppName', 'Weather Scout')
-        resValue 'string', 'launchUrl', launchUrl
-        // Tells Android this app and the server trust each other. The server
-        // answers back from /.well-known/assetlinks.json.
-        resValue 'string', 'assetStatements',
-            "[{ \\\"relation\\\": [\\\"delegate_permission/common.handle_all_urls\\\"], \\\"target\\\": {\\\"namespace\\\": \\\"web\\\", \\\"site\\\": \\\"${origin}\\\"}}]"
     }
 
     signingConfigs {

@@ -7,7 +7,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.view.View;
 import android.widget.RemoteViews;
 
@@ -25,7 +24,8 @@ import java.util.Date;
  * ("Rain in 15 min"), today's high and low and the top alert. Android refreshes
  * it about every 30 minutes; tapping it opens the app, and the small "↻" button
  * refreshes now. Data comes from GET /api/connect/widget on your server. When the
- * server needs sign-in, add an app key in the widget's setup screen (⚙).
+ * server needs sign-in, add an app key in the widget's setup screen (⚙). The
+ * server is the one picked in the app's setup screen (ServerConfig).
  */
 public class WeatherWidget extends AppWidgetProvider {
     static final String ACTION_REFRESH = "app.weatherscout.android.WIDGET_REFRESH";
@@ -67,16 +67,22 @@ public class WeatherWidget extends AppWidgetProvider {
 
     private static RemoteViews build(Context context) {
         RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.widget_weather);
-        String base = context.getString(R.string.launchUrl);
+        String base = ServerConfig.get(context);
         int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
 
-        Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse(base))
-            .setClassName(context, "com.google.androidbrowserhelper.trusted.LauncherActivity");
+        Intent open = new Intent(context, StartActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         v.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(context, 0, open, flags));
         Intent again = new Intent(context, WeatherWidget.class).setAction(ACTION_REFRESH);
         v.setOnClickPendingIntent(R.id.widget_refresh, PendingIntent.getBroadcast(context, 1, again, flags));
         Intent setup = new Intent(context, WidgetSetupActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         v.setOnClickPendingIntent(R.id.widget_setup, PendingIntent.getActivity(context, 2, setup, flags));
+
+        if (base == null) {
+            v.setTextViewText(R.id.widget_label, context.getString(R.string.widgetNoServer));
+            v.setTextViewText(R.id.widget_rain, "");
+            v.setViewVisibility(R.id.widget_alert, View.GONE);
+            return v;
+        }
 
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String key = prefs.getString(KEY_APP_KEY, "");

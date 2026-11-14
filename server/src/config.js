@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { parseLayerList } from '../../shared/maplayers.js';
+import { RELEASE_ANDROID_APP, parseFingerprints } from '../../shared/android-app.js';
 
 const bool = (v, d = false) => (v === undefined || v === '' ? d : /^(1|true|yes|on)$/i.test(v));
 const num = (v, d) => (v === undefined || v === '' || Number.isNaN(Number(v)) ? d : Number(v));
@@ -98,9 +99,17 @@ export function loadConfig(env = process.env) {
     },
     // Android app (Trusted Web Activity) link. Fingerprints come from the APK's
     // signing key; see docs/APPS.md. Comma-separated if you sign with more than one.
+    // `release` is the project's own released APK (shared/android-app.js), which
+    // every server trusts; ANDROID_RELEASE_CERT_SHA256 overrides it (tests, forks).
     android: {
       packageName: env.ANDROID_PACKAGE_NAME || 'app.weatherscout.android',
-      certFingerprints: String(env.ANDROID_CERT_SHA256 || '').split(/[\s,]+/).map((f) => f.trim().toUpperCase()).filter(Boolean),
+      certFingerprints: parseFingerprints(env.ANDROID_CERT_SHA256),
+      release: {
+        packageName: RELEASE_ANDROID_APP.packageName,
+        certFingerprints: env.ANDROID_RELEASE_CERT_SHA256 !== undefined
+          ? parseFingerprints(env.ANDROID_RELEASE_CERT_SHA256)
+          : parseFingerprints(RELEASE_ANDROID_APP.certSha256.join(',')),
+      },
     },
     // Windy maps. Blank = the free Windy embed; a key turns on the Map Forecast API.
     lightning: {

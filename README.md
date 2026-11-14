@@ -234,8 +234,9 @@ Behind https, also set `SECURE_COOKIES=true`.
 
 ### Android app and Windows 11 widget
 
-Once you have https, GitHub Actions can build an **Android app** (APK) that opens your server
-full screen, with a **home-screen widget** (temperature, rain in the next 2 hours, alerts).
+Once you have https, the **Android app** (an APK attached to each GitHub release) opens your
+server full screen: it asks for your address the first time, so one APK works for everyone who
+hosts Weather Scout. It comes with a **home-screen widget** (temperature, rain in the next 2 hours, alerts).
 Windows 11 can show a **Weather Scout today** card on the Widgets board, and **`/watch.html`**
 is a big-type view for watches and other tiny screens.
 Setup, signing keys and install steps are in [docs/APPS.md](docs/APPS.md).
