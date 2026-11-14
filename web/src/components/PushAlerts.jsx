@@ -25,7 +25,7 @@ export default function PushAlerts({ location, saved, onClose, lightningMiles = 
   const [briefingTime, setBriefingTime] = useState('07:00');
   const [boltPush, setBoltPush] = useState(false);
   const ruleUnits = units === 'metric' ? 'metric' : 'imperial';
-  const [rules, setRules] = useState(() => ({ units: ruleUnits, rain: false, freeze: null, gust: null, heat: null, snow: false, aurora: false, cell: false, quiet: true }));
+  const [rules, setRules] = useState(() => ({ units: ruleUnits, rain: false, freeze: null, gust: null, heat: null, snow: false, aurora: false, cell: false, nice: false, snowday: false, school: false, quiet: true }));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -196,6 +196,9 @@ function PersonalAlerts({ rules, onChange }) {
       {flag('snow')}
       {flag('aurora')}
       {flag('cell')}
+      {flag('nice')}
+      {flag('snowday')}
+      {flag('school')}
       <label className="check">
         <input type="checkbox" checked={rules.quiet !== false} onChange={(e) => set({ quiet: e.target.checked })} />
         <span><strong>🌙 Quiet hours</strong> <span className="tile-note">Hold these from 9 PM to 7 AM. NWS warnings still come through.</span></span>

@@ -15,6 +15,10 @@ import ThunderCounter from './kid/ThunderCounter.jsx';
 import SpeakButton from './kid/SpeakButton.jsx';
 import Briefing from './kid/Briefing.jsx';
 import StormChaser from './kid/chaser/StormChaser.jsx';
+import NiceDay from './dashboard/NiceDay.jsx';
+import SpaceWeather from './dashboard/SpaceWeather.jsx';
+import SeasonOdds from './history/SeasonOdds.jsx';
+import SchoolCard from './winter/SchoolCard.jsx';
 import '../kid/kid.css';
 import { openSafety } from '../safety/useSafetyPlan.js';
 
@@ -71,6 +75,12 @@ export default function KidMode({ tab = 'today', weather, user, location, onAler
       )}
 
       {tab === 'today' && <KidToday weather={weather} name={user?.displayName} kid={kidData} today={today} location={location} onAlerts={onAlerts} isAdmin={!!user?.isAdmin} />}
+      {tab === 'today' && (
+        <div className="kid-grid">
+          <NiceDay weather={weather} kidMode size="m" />
+          {location && snowSeason(weather) && <SchoolCard location={location} kidMode size="m" />}
+        </div>
+      )}
       {tab === 'play' && (
         <div className="kid-grid">
           <WhatToWear raccoon={weather.kid.raccoon} kid={kidData} />
@@ -85,6 +95,8 @@ export default function KidMode({ tab = 'today', weather, user, location, onAler
           <Seasons user={user} weather={weather} kid={kidData} today={today} />
           <TimeMachine location={location} units={weather.location.units} kid={kidData} today={today} />
           <ThunderCounter />
+          <SpaceWeather kidMode size="m" />
+          {location && <SeasonOdds location={location} units={weather.location.units} kidMode size="m" />}
           {!storm?.active && !drill && (
             <section className="card drill-card">
               <h2>Storm drill</h2>
@@ -100,6 +112,12 @@ export default function KidMode({ tab = 'today', weather, user, location, onAler
     </div>
   );
 }
+
+// The snow day meter shows in the colder months, or any time snow is in the forecast.
+const snowSeason = (weather) => {
+  const month = Number((weather.forecast.daily?.[0]?.time || '').slice(5, 7));
+  return [11, 12, 1, 2, 3].includes(month) || (weather.forecast.daily || []).some((d) => (d.snowTotal || 0) > 0);
+};
 
 function KidToday({ weather, name, kid: kidData, today, location, onAlerts, isAdmin }) {
   const { kid, forecast } = weather;

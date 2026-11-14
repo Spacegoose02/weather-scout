@@ -84,7 +84,7 @@ export const listWords = (xs) => (xs.length <= 1 ? xs.join('') : xs.length === 2
 export function convectiveDay(now = Date.now()) {
   return new Date(now - 12 * 3600_000).toISOString().slice(0, 10);
 }
-const addDays = (day, n) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86400_000).toISOString().slice(0, 10);
+export const addDays = (day, n) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86400_000).toISOString().slice(0, 10);
 // Picks for today's chase close at 20Z (3 PM Central in summer), before most storms fire.
 export const PICK_CLOSE_HOUR = 20;
 export function picksCloseAt(day) {
@@ -416,6 +416,18 @@ export function warningSummary(national) {
   return { tornado: tornado.length, severe: severe_.length, active: tornado.length + severe_.length > 0, states: [...states].slice(0, 6) };
 }
 
+// One convective day of SPC storm reports, cached (shared with the country view).
+export function stormReports({ cache, fetchImpl }, day) {
+  const now = Date.now();
+  const live = day >= addDays(convectiveDay(now), -1);
+  return cache.wrap(`chaser:reports:${day}`, live ? 5 * MIN : 12 * 60 * MIN, async () => {
+    const res = await fetchImpl(reportsUrl(day, now), { signal: AbortSignal.timeout(15000) });
+    if (res.status === 404) return [];
+    if (!res.ok) throw new UpstreamError('Storm Prediction Center', res.status);
+    return parseReports(await res.text(), day);
+  });
+}
+
 export function registerChaser(app, { cache, fetchImpl, latLonSchema, loc, chasers, nwsUserAgent }) {
   const spcJson = (url) => fetchJson(url, { source: 'Storm Prediction Center', fetchImpl, timeoutMs: 15000 });
   const spcText = async (url) => {
@@ -444,18 +456,7 @@ export function registerChaser(app, { cache, fetchImpl, latLonSchema, loc, chase
 
   // ---- storm reports (for the target game map and scoring) -------------------------
   const daySchema = { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' };
-  const getReports = (day) => {
-    const now = Date.now();
-    const live = day >= addDays(convectiveDay(now), -1);
-    return cache.wrap(`chaser:reports:${day}`, live ? 5 * MIN : 12 * 60 * MIN, async () => {
-      try {
-        return parseReports(await spcText(reportsUrl(day, now)), day);
-      } catch (e) {
-        if (e.status === 404) return [];
-        throw e;
-      }
-    });
-  };
+  const getReports = (day) => stormReports({ cache, fetchImpl }, day);
   const checkDay = (day, reply) => {
     if (day > convectiveDay()) {
       reply.code(400).send({ error: 'That day has not happened yet.' });

@@ -6,7 +6,28 @@ import { REPORT_COLOR, REPORT_NAME, inConus } from '../../kid/chaser/live.js';
 import { CAT_NAME, catLevel, outlookSummary } from '../../../../shared/outlook.js';
 import '../../kid/chaser/chaser.css';
 
-const DAYS = [[1, 'Today'], [2, 'Tomorrow'], [3, 'Day 3']];
+const DAYS = [[1, 'Today'], [2, 'Tomorrow'], [3, 'Day 3'], ['week', 'Week']];
+const EXT_KEY = [['15%', '#ffeb80'], ['30%', '#ff9a7a']];
+const SEV_COLOR = ['transparent', '#4daa4d', '#f5d327', '#f39020', '#e0312b', '#c42fc4'];
+const dayShort = (date, i) => (i === 0 ? 'Today' : i === 1 ? 'Tmrw' : new Date(`${date}T12:00Z`).toLocaleDateString([], { weekday: 'short', timeZone: 'UTC' }));
+const dayLong = (date) => new Date(`${date}T12:00Z`).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+// One day in the storm week strip: the highest risk anywhere, and at home.
+function WeekDay({ d, i, active, onPick }) {
+  const cat = d.kind === 'category';
+  const lvl = cat ? d.topLevel || 0 : d.top >= 30 ? 4 : d.top >= 15 ? 2 : 0;
+  const word = !d.available ? '–' : cat ? (d.topLevel ? `${d.topLevel}/5` : d.top === 'TSTM' ? 'T-storms' : 'Quiet') : d.top ? `${d.top}%` : 'Quiet';
+  const here = d.here == null ? null : cat ? (d.hereLevel ? `${d.hereLevel}/5 here` : '') : d.here ? `${d.here}% here` : '';
+  return (
+    <li>
+      <button type="button" className={`week-day ${active ? 'active' : ''}`} onClick={() => onPick(d)} aria-pressed={active} style={{ '--lvl': SEV_COLOR[lvl] }}>
+        <span className="week-name">{dayShort(d.date, i)}</span>
+        <b>{word}</b>
+        {here && <span className="week-here">🏠 {here}</span>}
+      </button>
+    </li>
+  );
+}
 const HEIGHT = { s: 220, m: 300, l: 400 };
 const riskText = (label) => (label === 'NONE' ? CAT_NAME.NONE : catLevel(label) ? `${CAT_NAME[label]} (${catLevel(label)} of 5)` : CAT_NAME[label]);
 
@@ -20,8 +41,20 @@ export default function SpcOutlookCard({ location, kidMode, size }) {
   const [reports, setReports] = useState(null);
   const [err, setErr] = useState('');
 
-  const outlook = outlooks[day];
+  const [week, setWeek] = useState(null);
+  const [extDay, setExtDay] = useState(4);
+  const isWeek = day === 'week';
+  const outlook = isWeek ? outlooks[`x${extDay}`] : outlooks[day];
   useEffect(() => {
+    if (!isWeek) return undefined;
+    let live = true;
+    const q = location ? `?lat=${location.lat}&lon=${location.lon}` : '';
+    api(`/api/outlook/week${q}`).then((w) => live && (setWeek(w), setErr(''))).catch((e) => live && setErr(e.message));
+    api(`/api/outlook/extended?day=${extDay}`).then((o) => live && setOutlooks((m) => ({ ...m, [`x${extDay}`]: o }))).catch(() => {});
+    return () => { live = false; };
+  }, [isWeek, extDay, location?.lat, location?.lon]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (day === 'week') return undefined;
     let live = true;
     const load = () => api(`/api/outlook?day=${day}`)
       .then((o) => live && (setOutlooks((m) => ({ ...m, [day]: o })), setErr('')))
@@ -46,7 +79,8 @@ export default function SpcOutlookCard({ location, kidMode, size }) {
   }, [location?.lat, location?.lon]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const covered = location && inConus(location.lat, location.lon);
-  const sum = outlook ? outlookSummary(outlook, covered ? location : null) : null;
+  const sum = outlook && !isWeek ? outlookSummary(outlook, covered ? location : null) : null;
+  const watchDay = week?.days?.find((d) => d.day === week.watch);
   const where = day === 1 && chase?.where?.length ? ` around ${chase.where.join(', ')}` : '';
   const p = day === 1 ? chase?.probabilities : null;
   const alarm = sum && catLevel(sum.here) >= 2;
@@ -63,8 +97,23 @@ export default function SpcOutlookCard({ location, kidMode, size }) {
         </div>
       </div>
 
-      {err && !outlook && <p className="hint">The Storm Prediction Center could not be reached right now. {err}</p>}
-      {!err && !outlook && <p className="hint">Loading the Storm Prediction Center outlook…</p>}
+      {isWeek && (
+        <div className="spc-week">
+          {week ? (
+            <>
+              <p>{watchDay
+                ? <>Day to watch: <strong>{watchDay.day === 1 ? 'today' : watchDay.day === 2 ? 'tomorrow' : dayLong(watchDay.date)}</strong>{watchDay.states?.length ? ` around ${watchDay.states.join(', ')}` : ''}.</>
+                : 'No organized severe weather in the 8-day outlook right now.'}</p>
+              <ol className="week-strip" aria-label="Severe storm risk for the next 8 days">
+                {week.days.map((d, i) => <WeekDay key={d.day} d={d} i={i} active={d.day === extDay} onPick={(x) => (x.day <= 3 ? setDay(x.day) : setExtDay(x.day))} />)}
+              </ol>
+              <p className="hint small">Days 1 to 3 show the risk level (1 to 5). Days 4 to 8 show where the chance of severe storms reaches 15% or 30%; the map shows {dayLong(week.days[extDay - 1].date)}.</p>
+            </>
+          ) : <p className="hint">{err || 'Loading the 8-day outlook…'}</p>}
+        </div>
+      )}
+      {err && !outlook && !isWeek && <p className="hint">The Storm Prediction Center could not be reached right now. {err}</p>}
+      {!err && !outlook && !isWeek && <p className="hint">Loading the Storm Prediction Center outlook…</p>}
       {sum && (
         <div className="spc-risk">
           {covered && <p className={`spc-here lvl${catLevel(sum.here)}`}>At your place: <strong>{riskText(sum.here)}</strong>{day === 1 && chase?.home?.tornado > 0 ? ` · ${chase.home.tornado}% tornado chance` : ''}</p>}
@@ -80,8 +129,8 @@ export default function SpcOutlookCard({ location, kidMode, size }) {
         </div>
       )}
 
-      <ChaseMap outlook={outlook} reports={showReports ? reports : null} home={location} height={HEIGHT[size] || HEIGHT.m} label={`Severe storm outlook map, ${DAYS[day - 1][1].toLowerCase()}`} />
-      <OutlookKey />
+      <ChaseMap outlook={outlook} reports={showReports ? reports : null} home={location} height={HEIGHT[size] || HEIGHT.m} label={isWeek ? `Severe storm outlook map, day ${extDay}` : `Severe storm outlook map, ${DAYS[day - 1][1].toLowerCase()}`} />
+      {isWeek ? <div className="outlook-key" aria-hidden>{EXT_KEY.map(([l, c]) => <span key={l}><i style={{ background: c }} />{l} chance of severe storms</span>)}</div> : <OutlookKey />}
       {showReports && (
         <div className="report-key" aria-hidden>
           {Object.entries(REPORT_COLOR).map(([k, c]) => <span key={k}><i style={{ background: c }} />{REPORT_NAME[k]} ({reports.filter((r) => r.type === k).length})</span>)}

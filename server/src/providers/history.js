@@ -370,3 +370,35 @@ export function kidHistory({ years, records, normal, compare, trend, label, this
   }
   return { headline, facts };
 }
+
+// Daily values from the nearest ThreadEx station for a date range (US only), for
+// the season odds card: [{ date, low, snow, depth }] in °F and inches.
+export async function getOfficialSeries(l, sdate, edate, fetchImpl) {
+  if (!inUS(l)) return null;
+  const bbox = [l.lon - 1, l.lat - 1, l.lon + 1, l.lat + 1].map((x) => x.toFixed(2)).join(',');
+  const meta = await fetchJson(acisUrl('StnMeta', { bbox, meta: 'name,sids,ll,valid_daterange', elems: 'mint' }), { source: 'NOAA ACIS', timeoutMs: 15_000, fetchImpl });
+  const station = nearestThreadEx(meta, l);
+  if (!station) return null;
+  const data = await fetchJson(acisUrl('StnData', { sid: station.sid, sdate, edate, elems: ['mint', 'snow', 'snwd'].map((name) => ({ name, interval: 'dly', duration: 'dly' })) }), { source: 'NOAA ACIS', timeoutMs: 25_000, fetchImpl });
+  const rows = (data?.data || []).map(([date, lo, sn, sd]) => ({ date: String(date), low: acisNumber(lo), snow: acisNumber(sn), depth: acisNumber(sd) }));
+  if (rows.filter((r) => r.low != null).length < 365 * 10) return null;
+  return { station: { name: station.name, sid: station.sid, km: station.km }, rows };
+}
+
+// The Open-Meteo archive as the same rows (°F and inches; no snow depth).
+export function archiveRows(archive) {
+  if (!archive?.n) return [];
+  const t0 = Date.parse(`${archive.start}T00:00:00Z`);
+  const out = new Array(archive.n);
+  for (let i = 0; i < archive.n; i++) {
+    const lo = archive.low[i];
+    const sn = archive.snow[i];
+    out[i] = {
+      date: new Date(t0 + i * DAY_MS).toISOString().slice(0, 10),
+      low: Number.isNaN(lo) ? null : lo * 9 / 5 + 32,
+      snow: Number.isNaN(sn) ? null : sn / 2.54, // cm of snowfall -> inches
+      depth: null,
+    };
+  }
+  return out;
+}

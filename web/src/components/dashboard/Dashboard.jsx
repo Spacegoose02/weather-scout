@@ -31,6 +31,11 @@ import FireSmoke from '../hazards/FireSmoke.jsx';
 import Aurora from './Aurora.jsx';
 import Scorecard from './Scorecard.jsx';
 import StormPhoto from '../kid/StormPhoto.jsx';
+import NiceDay from './NiceDay.jsx';
+import SpaceWeather from './SpaceWeather.jsx';
+import SeasonOdds from '../history/SeasonOdds.jsx';
+import SchoolCard from '../winter/SchoolCard.jsx';
+import NationalCard from '../national/NationalCard.jsx';
 import { useDashboard } from '../../dashboard/useDashboard.js';
 import { CARD, CARD_GROUPS, SIZE_NAMES, hidden, addCard, removeCard, moveCard, nudgeCard, resizeCard } from '../../dashboard/layout.js';
 import { usePackedGrid } from '../../dashboard/usePackedGrid.js';
@@ -78,6 +83,11 @@ function renderCard(id, size, ctx) {
     case 'plan': return <BestTimes weather={weather} units={units} kidMode={kidMode} size={size} />;
     case 'aurora': return location ? <Aurora location={location} kidMode={kidMode} size={size} /> : null;
     case 'scorecard': return location ? <Scorecard location={location} units={units} kidMode={kidMode} size={size} /> : null;
+    case 'national': return <NationalCard location={location} kidMode={kidMode} size={size} />;
+    case 'nice': return <NiceDay weather={weather} kidMode={kidMode} size={size} />;
+    case 'space': return <SpaceWeather kidMode={kidMode} size={size} />;
+    case 'season': return location ? <SeasonOdds location={location} units={units} kidMode={kidMode} size={size} /> : null;
+    case 'school': return location ? <SchoolCard location={location} kidMode={kidMode} size={size} isAdmin={!!user?.isAdmin} onAdmin={ctx.onAdmin} /> : null;
     default: return null;
   }
 }

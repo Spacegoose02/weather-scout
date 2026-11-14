@@ -116,3 +116,50 @@ export async function getNexradSites(fetchImpl, now = Date.now()) {
     return { id, name: f.properties?.sname || id, lat, lon, latest: v || null, online: v ? now - Date.parse(v) < 30 * 60_000 : null };
   }).filter((s) => /^[A-Z0-9]{3,4}$/.test(s.id) && Number.isFinite(s.lat) && Number.isFinite(s.lon));
 }
+
+// ---- Storm week ahead: SPC Day 4-8 outlooks ------------------------------------------
+// Past day 3 the SPC only draws where severe storms have at least a 15% or 30%
+// chance within 25 miles of a point. Days with too little predictability (or no
+// risk) come back with no areas at all.
+export const SPC_EXTENDED = (day) => `https://www.spc.noaa.gov/products/exper/day4-8/day${day}prob.lyr.geojson`;
+export const EXTENDED_DAYS = [4, 5, 6, 7, 8];
+const EXT_STYLE = {
+  15: { fill: '#ffeb80', stroke: '#e0b000', name: '15% severe chance', meaning: 'Severe storms possible somewhere in this area.' },
+  30: { fill: '#ff9a7a', stroke: '#e0402a', name: '30% severe chance', meaning: 'Severe storms more likely; a bigger day is possible.' },
+};
+
+// The chance in a Day 4-8 feature: LABEL is "0.15" or "0.30" (sometimes "15", "30%" or text).
+export function extendedChance(props = {}) {
+  for (const v of [props.LABEL, props.LABEL2, props.label]) {
+    const m = String(v ?? '').match(/(0?\.\d+|\d+)\s*%?/);
+    if (!m) continue;
+    let n = Number(m[1]);
+    if (n < 1) n *= 100;
+    n = Math.round(n);
+    if (n >= 30) return 30;
+    if (n >= 15) return 15;
+  }
+  return null;
+}
+
+export function normalizeExtended(raw, day) {
+  const features = [];
+  for (const f of raw?.features || []) {
+    const chance = f.geometry ? extendedChance(f.properties) : null;
+    if (!chance) continue;
+    const s = EXT_STYLE[chance];
+    const p = f.properties || {};
+    features.push({
+      type: 'Feature',
+      geometry: f.geometry,
+      // `label` is not an SPC category, so maps and summaries treat it as its own scale.
+      properties: { label: `P${chance}`, chance, name: s.name, meaning: s.meaning, fill: s.fill, stroke: s.stroke, valid: p.VALID_ISO || p.VALID || null, expires: p.EXPIRE_ISO || p.EXPIRE || null },
+    });
+  }
+  features.sort((a, b) => a.properties.chance - b.properties.chance);
+  return { type: 'FeatureCollection', day, features, source: 'NOAA Storm Prediction Center' };
+}
+
+export async function getExtendedOutlook(day, fetchImpl) {
+  return normalizeExtended(await fetchJson(SPC_EXTENDED(day), { source: 'Storm Prediction Center', fetchImpl, timeoutMs: 15000 }), day);
+}

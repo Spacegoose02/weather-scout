@@ -71,6 +71,11 @@ server/src/
   media.js          admin news/YouTube lists
   stormphoto.js     storm picture of the day (Wikimedia Commons, live credit/license, admin hide)
   push.js           Web Push: subscriptions, VAPID keys, alert loop
+  national.js       Across the US summary (states at risk, ranked warnings, storm reports) and the SPC week ahead
+  spaceweather.js   NOAA space weather scales, flares, solar wind and Kp
+  seasonodds.js     white Christmas and first/last freeze and snow odds from 30 seasons
+  email.js          warning emails over SMTP, recipients, no-sign-in manage page and unsubscribe
+  school.js         school closings read from the district's page or feed, manual status, push
   ai.js             Ask Rocky chat, cloud photos, web search (Claude or Ollama)
   tts.js            Kokoro read-aloud proxy and voice list
   settings.js       Admin-saved settings (win over env vars), applied live; what stays env-only and why
@@ -115,6 +120,13 @@ public/             Rocky art, app icons, favicon (built by scripts/make-brand-a
 | `GET /api/tides?lat&lon&units` | Nearest tide station within 60 miles and its next highs and lows (60 min cache) |
 | `GET /api/models/scorecard?lat&lon&units` | Each model's day-before forecast vs what happened over the last 7 days (NWS station in the US, else Open-Meteo's record), ranked (3 h cache) |
 | `GET /api/sky/aurora?lat&lon` | Northern lights tonight: Kp forecast, the Kp this place needs, chance, OVATION, tonight's clouds (30 min cache) |
+| `GET /api/sky/space` | Space weather: NOAA R/S/G scales now and 3 days ahead, flares, solar wind, Kp, plain and kid words |
+| `GET /api/national?lat&lon` | Across the US: states by SPC and WPC risk today and tomorrow, ranked warnings and counts, today's storm reports |
+| `GET /api/outlook/week?lat&lon`, `GET /api/outlook/extended?day=4..8` | SPC days 1 to 8 at the place with the day to watch, and a day 4 to 8 outlook as GeoJSON |
+| `GET /api/history/season?lat&lon` | Season odds: white Christmas, first/last freeze and first snow (typical, earliest, latest, this season) and the next ones in the forecast |
+| `GET`/`POST /api/admin/email-alerts`, `PATCH`/`DELETE /api/admin/email-alerts/:id`, `POST /api/admin/email-alerts/:id/test` | Admin only: warning email recipients |
+| `GET`/`POST /api/email-alerts/manage/:token` | No sign-in: a recipient changes or stops their emails (`?stop=1` and RFC 8058 one-click unsubscribe) |
+| `GET /api/school`, `PUT /api/admin/school/status`, `POST /api/admin/school/check` | School closings status (read from the district page or set by an admin) |
 | `GET /api/models?lat&lon&units` | Daily and 72-hour forecasts from each model (ECMWF, GFS, ICON, GEM, HRRR, AIGFS, AIFS) plus day-by-day agreement (30 min cache) |
 | `GET /api/ensemble?lat&lon&units&model=ecmwf_ifs025\|gfs_seamless` | Ensemble 10th/50th/90th percentiles, confidence and rain chance (60 min cache) |
 | `GET /api/radar` | Radar products for the map (composite loop, single site, echo tops, rain totals, future radar) and the satellite layer |
