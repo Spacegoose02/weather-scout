@@ -27,7 +27,7 @@ test('widget summary follows the sign-in rule', async () => {
 });
 
 test('assetlinks.json links the Android app only once a fingerprint is set', async () => {
-  const off = await testApp();
+  const off = await testApp({ env: { ANDROID_RELEASE_CERT_SHA256: '' } });
   assert.equal((await off.app.inject('/.well-known/assetlinks.json')).statusCode, 404);
   await off.app.close();
 
@@ -40,4 +40,26 @@ test('assetlinks.json links the Android app only once a fingerprint is set', asy
   assert.equal(link.target.package_name, 'app.weatherscout.android');
   assert.deepEqual(link.target.sha256_cert_fingerprints, [fp.toUpperCase(), '11:22']);
   await app.close();
+});
+
+test('assetlinks.json always vouches for the released APK, beside a server\'s own', async () => {
+  const release = 'AA:BB';
+  const only = await testApp({ env: { ANDROID_RELEASE_CERT_SHA256: release } });
+  const [link] = (await only.app.inject('/.well-known/assetlinks.json')).json();
+  assert.equal(link.target.package_name, 'app.weatherscout.android');
+  assert.deepEqual(link.target.sha256_cert_fingerprints, [release]);
+  await only.app.close();
+
+  // Same package: one statement with both keys, no duplicates.
+  const same = await testApp({ env: { ANDROID_RELEASE_CERT_SHA256: release, ANDROID_CERT_SHA256: '11:22,aa:bb' } });
+  const links = (await same.app.inject('/.well-known/assetlinks.json')).json();
+  assert.equal(links.length, 1);
+  assert.deepEqual(links[0].target.sha256_cert_fingerprints, ['11:22', release]);
+  await same.app.close();
+
+  // A server that builds its own app under another package keeps both.
+  const own = await testApp({ env: { ANDROID_RELEASE_CERT_SHA256: release, ANDROID_CERT_SHA256: '11:22', ANDROID_PACKAGE_NAME: 'net.example.wx' } });
+  const both = (await own.app.inject('/.well-known/assetlinks.json')).json();
+  assert.deepEqual(both.map((l) => l.target.package_name), ['net.example.wx', 'app.weatherscout.android']);
+  await own.app.close();
 });

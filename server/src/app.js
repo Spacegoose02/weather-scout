@@ -981,12 +981,19 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   // Activity). When the APK's signing fingerprint is listed here, Android opens
   // the app full screen with no browser bar. See docs/APPS.md.
   app.get('/.well-known/assetlinks.json', async (req, reply) => {
-    const { packageName, certFingerprints } = cfg.android;
-    if (!certFingerprints.length) return reply.code(404).send({ error: 'Set ANDROID_CERT_SHA256 to link the Android app.' });
-    return [{
+    const { packageName, certFingerprints, release } = cfg.android;
+    // This server's own APK (if it set a fingerprint) plus the project's released
+    // APK, which works with any server. One statement per package name.
+    const byPackage = new Map();
+    for (const [pkg, fps] of [[packageName, certFingerprints], [release?.packageName, release?.certFingerprints || []]]) {
+      if (!pkg || !fps.length) continue;
+      byPackage.set(pkg, [...new Set([...(byPackage.get(pkg) || []), ...fps])]);
+    }
+    if (!byPackage.size) return reply.code(404).send({ error: 'Set ANDROID_CERT_SHA256 to link the Android app.' });
+    return [...byPackage].map(([pkg, fps]) => ({
       relation: ['delegate_permission/common.handle_all_urls'],
-      target: { namespace: 'android_app', package_name: packageName, sha256_cert_fingerprints: certFingerprints },
-    }];
+      target: { namespace: 'android_app', package_name: pkg, sha256_cert_fingerprints: fps },
+    }));
   });
 
   // ---- web app ---------------------------------------------------------------

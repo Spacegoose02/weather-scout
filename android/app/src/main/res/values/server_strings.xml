@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="serverSetupTitle">Choose your server</string>
+    <string name="serverSetupWelcome">Welcome to Weather Scout</string>
+    <string name="serverSetupChange">Change server</string>
+    <string name="serverSetupHelp">Weather Scout runs on your family\'s own server. Type its address, the same one you open in a web browser.</string>
+    <string name="serverSetupHint">wx.example.com</string>
+    <string name="serverSetupCurrent">Now using %1$s</string>
+    <string name="serverSetupConnect">Connect</string>
+    <string name="serverSetupCancel">Cancel</string>
+    <string name="serverSetupChecking">Checking %1$s…</string>
+    <string name="serverSetupEmpty">Type your Weather Scout address first.</string>
+    <string name="serverSetupBadAddress">That doesn\'t look like a web address. Try something like https://wx.example.com</string>
+    <string name="serverSetupNotFound">Couldn\'t find %1$s. Check the spelling and that this phone is online (and on your VPN, if the server needs one).</string>
+    <string name="serverSetupNoAnswer">%1$s didn\'t answer. Check that the server is running and reachable from this phone.</string>
+    <string name="serverSetupCert">%1$s answered, but its security certificate isn\'t trusted by this phone. Weather Scout needs a real https certificate (see "HTTPS" in the README).</string>
+    <string name="serverSetupHttpError">%1$s answered with error %2$d. Is this the right address?</string>
+    <string name="serverSetupNotWeatherScout">%1$s answered, but it isn\'t a Weather Scout server. Check the address.</string>
+    <string name="serverSetupInsecureTitle">Not a secure address</string>
+    <string name="serverSetupInsecure">This address uses http, not https. The app will open it with a browser bar, and \"Use my location\" and alerts won\'t work. Use it anyway?</string>
+    <string name="serverSetupInsecureOk">Use it anyway</string>
+    <string name="serverSetupSignInTitle">Sign-in page found</string>
+    <string name="serverSetupSignIn">%1$s sent the app to a sign-in page, so it couldn\'t check that Weather Scout is behind it. If you sign in there in your browser, use it anyway.</string>
+    <string name="serverShortcutShort">Change server</string>
+    <string name="serverShortcutLong">Change Weather Scout server</string>
+    <string name="widgetNoServer">Open Weather Scout to choose your server.</string>
+</resources>

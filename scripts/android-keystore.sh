@@ -19,5 +19,6 @@ echo "  ANDROID_KEYSTORE_BASE64   (the output of: base64 -w0 $out)"
 echo "  ANDROID_KEYSTORE_PASSWORD (the password you just typed)"
 echo "  ANDROID_KEY_ALIAS         $alias"
 echo
-echo "And on the Weather Scout server:"
-echo "  ANDROID_CERT_SHA256=$fp"
+echo "Then, so every Weather Scout server trusts the app, put this fingerprint in"
+echo "certSha256 in shared/android-app.js (or ANDROID_CERT_SHA256 on one server):"
+echo "  $fp"

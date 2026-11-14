@@ -4,6 +4,7 @@ import { openSafety } from '../safety/useSafetyPlan.js';
 import EasierToSee from './EasierToSee.jsx';
 import DataFeeds from './DataFeeds.jsx';
 import { t, LANGS } from '../i18n.js';
+import { inAndroidApp, CHANGE_SERVER_URL } from '../androidApp.js';
 
 // The ⚙️ window: every setting a person can change, in one place. Alerts, the
 // safety plan and Family & settings open their own windows from here.
@@ -40,6 +41,12 @@ export default function Settings({ user, sso, units, onUnits, language = 'en', o
               <span className="seg" role="group" aria-label={t('Language')}>
                 {LANGS.map((l) => <button key={l.id} lang={l.id} className={language === l.id ? 'active' : 'ghost'} aria-pressed={language === l.id} onClick={() => onLanguage(l.id)}>{l.label}</button>)}
               </span>
+            </div>
+          )}
+          {inAndroidApp() && (
+            <div className="prefs-row">
+              <span>{t('📱 This app opens {server}', { server: window.location.host })}<small className="hint" style={{ display: 'block' }}>{t('Switch the Android app to a different Weather Scout server. You can also long-press the app icon and pick Change server.')}</small></span>
+              <a className="button ghost" href={CHANGE_SERVER_URL}>{t('Change server')}</a>
             </div>
           )}
         </section>
