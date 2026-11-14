@@ -338,3 +338,67 @@
 .dash-spc .spc-here.lvl4 strong, .dash-spc .spc-here.lvl5 strong { color: #c0392b; }
 .dash-spc .chase-map { margin-top: 8px; }
 .dash-spc .spc-summary { margin-top: 8px; }
+
+/* Nice-day score */
+.nice-pill { font-weight: 800; color: #fff; padding: 3px 12px; border-radius: 999px; text-shadow: 0 1px 1px rgba(0, 0, 0, .25); }
+.nice-days { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 4px; padding: 0; margin: 10px 0 6px; }
+.nice-days li { display: grid; justify-items: center; gap: 3px; text-align: center; padding: 4px 2px; border-radius: 10px; }
+.nice-days li.best { background: color-mix(in srgb, #1a9e5c 14%, transparent); }
+.nice-day-name { font-size: .78rem; opacity: .8; }
+.nice-bar { display: flex; align-items: flex-end; width: 18px; height: 64px; border-radius: 6px; background: color-mix(in srgb, currentColor 10%, transparent); overflow: hidden; }
+.nice-bar i { display: block; width: 100%; border-radius: 6px 6px 0 0; }
+.nice-why { font-size: .7rem; opacity: .75; line-height: 1.2; }
+.nice-key { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .75rem; opacity: .85; margin: 4px 0; }
+.nice-key i, .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+.nice-kid { display: flex; gap: 10px; align-items: center; }
+
+/* Space weather */
+.space-pills { display: flex; gap: 4px; }
+.space-scale { display: inline-block; min-width: 2.2em; text-align: center; font-weight: 800; font-size: .8rem; color: #fff; padding: 2px 6px; border-radius: 6px; text-shadow: 0 1px 1px rgba(0, 0, 0, .3); }
+.space-facts { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .9rem; margin: 6px 0; }
+.space-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 8px; }
+.space-tile { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, #f0a020 8%, transparent); }
+.space-tile p { margin: 2px 0; }
+
+/* Season odds */
+.white-xmas { display: flex; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, #3d7dff 9%, transparent); margin-bottom: 8px; }
+.white-xmas-big { font-size: 2rem; font-weight: 800; line-height: 1; }
+.white-xmas p { margin: 2px 0; }
+.season-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.season-row { display: flex; gap: 10px; align-items: flex-start; }
+.season-row p { margin: 2px 0; }
+.season-emoji { font-size: 1.4rem; line-height: 1.2; }
+
+/* School tomorrow */
+.dash-school.alarm { border-left: 5px solid #3d7dff; }
+.school-status { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; margin-bottom: 8px; background: color-mix(in srgb, #3d7dff 12%, transparent); }
+.school-status.st-open { background: color-mix(in srgb, #2fa84f 12%, transparent); }
+.school-status p { margin: 2px 0; }
+.school-emoji { font-size: 1.8rem; line-height: 1; }
+.snowday { display: grid; gap: 4px; }
+.snowday.big .winter-big { font-size: 2.6rem; }
+.snowday.big .snowday-meter { height: 16px; border-radius: 8px; }
+
+/* Across the US */
+.nat-count { font-weight: 700; font-size: .85rem; }
+.nat-risks { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 8px; }
+.nat-risk { padding: 8px 10px; border-radius: 12px; border-left: 5px solid var(--lvl, #9bd39b); background: color-mix(in srgb, var(--lvl, #9bd39b) 10%, transparent); }
+.nat-risk p { margin: 2px 0; }
+.nat-level { display: block; font-size: 1.1rem; }
+.nat-h { font-size: 1rem; margin: 10px 0 4px; }
+.nat-kinds { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .85rem; margin: 2px 0 6px; }
+.nat-warnings, .nat-reports { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; }
+.nat-warnings li { border-left: 4px solid var(--c, #ccc); padding-left: 6px; margin-left: -4px; }
+.nat-warnings li.emergency { background: color-mix(in srgb, #c42fc4 14%, transparent); border-radius: 4px; }
+.nat-area { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nat-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 720px) { .nat-cols { grid-template-columns: 1fr; } }
+
+/* Storm week ahead (severe outlook card) */
+.spc-week p { margin: 4px 0; }
+.week-strip { list-style: none; padding: 0; margin: 6px 0; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+.week-day { width: 100%; display: grid; gap: 2px; justify-items: center; padding: 6px 2px; border-radius: 10px; border: 1px solid var(--line, #ccd); background: color-mix(in srgb, var(--lvl) 30%, transparent); color: inherit; font: inherit; font-size: .8rem; cursor: pointer; }
+.week-day.active { outline: 2px solid var(--brand, #3d7dff); outline-offset: 1px; }
+.week-name { opacity: .8; }
+.week-here { font-size: .68rem; }
+@media (max-width: 480px) { .week-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

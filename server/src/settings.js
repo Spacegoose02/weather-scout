@@ -97,6 +97,19 @@ export const SETTINGS = [
   { key: 'HA_TOKEN', group: 'homeassistant', label: 'Home Assistant long-lived token', secret: true, test: 'homeassistant' },
   { key: 'HA_PUBLISH_SECONDS', group: 'homeassistant', label: 'Send every (seconds)', range: [60, 86400], integer: true, placeholder: '300' },
 
+  // ---- email alerts ----
+  { key: 'PUBLIC_URL', group: 'email', label: 'Weather Scout web address', url: ['http:', 'https:'], placeholder: 'https://weather.example.com', help: 'The address family members open Weather Scout at. Emails use it for the radar link and the link to change or stop emails.' },
+  { key: 'SMTP_HOST', group: 'email', label: 'Mail server (SMTP)', placeholder: 'smtp.gmail.com', pattern: /^[\w.-]{1,200}$/, test: 'email', help: 'Your email provider’s outgoing mail server. Gmail: smtp.gmail.com with an app password. Many providers list theirs under "SMTP settings".' },
+  { key: 'SMTP_PORT', group: 'email', label: 'Port', range: [1, 65535], integer: true, placeholder: '587' },
+  { key: 'SMTP_SECURITY', group: 'email', label: 'Security', options: ['auto', 'starttls', 'ssl', 'none'], choices: ['Automatic (SSL on 465, else STARTTLS when offered)', 'STARTTLS required', 'SSL/TLS', 'None (home network relay only)'] },
+  { key: 'SMTP_USERNAME', group: 'email', label: 'Username', max: 200, test: 'email' },
+  { key: 'SMTP_PASSWORD', group: 'email', label: 'Password or app password', secret: true, test: 'email' },
+  { key: 'EMAIL_FROM', group: 'email', label: 'From address', placeholder: 'Weather Scout <you@example.com>', max: 200, test: 'email', help: 'Most providers only send from your own address.' },
+
+  // ---- school closings ----
+  { key: 'SCHOOL_NAME', group: 'school', label: 'School or district name', placeholder: 'Henrico County Public Schools', max: 100 },
+  { key: 'SCHOOL_STATUS_URL', group: 'school', label: 'Where the district posts closings', url: ['http:', 'https:'], placeholder: 'https://www.example.k12.va.us/closings', test: 'school', help: 'The district’s closings page, alerts page or news feed (RSS). Checked every 10 minutes for closed, delayed, early dismissal or virtual-day wording that names a day. Use Check now to see what it finds.' },
+
   // ---- alerts, sign-in and apps ----
   { key: 'PUSH_ENABLED', group: 'apps', label: 'Severe weather push alerts', options: ['true', 'false'], choices: ['On', 'Off'] },
   { key: 'PUSH_POLL_SECONDS', group: 'apps', label: 'Check alerts every (seconds)', range: [60, 3600], integer: true, placeholder: '120' },

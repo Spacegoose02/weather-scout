@@ -3,6 +3,8 @@ import { api } from '../api.js';
 import { changedValues } from '../ai/settings.js';
 import { Source, Secret, Result } from './SettingsFields.jsx';
 import DefaultLayersField from './map/DefaultLayersField.jsx';
+import EmailRecipients from './EmailRecipients.jsx';
+import SchoolStatusPanel from './SchoolStatusPanel.jsx';
 
 // Family & settings: everything else that used to need the Unraid template
 // (home place, road camera keys, Windy, weather stations, Home Assistant, push,
@@ -16,9 +18,11 @@ const GROUPS = [
   { id: 'lightning', title: '⚡ Live lightning', intro: 'Lightning on the Radar & Cams map and the "lightning within X miles" alerts. Each person picks their own alert distance under 🔔 Alerts.' },
   { id: 'stations', title: '🌡️ Weather stations', intro: 'Ecowitt and Ambient stations can upload straight to Weather Scout. Cloud accounts (Ambient, Tempest) are checked on a timer.' },
   { id: 'homeassistant', title: '🏡 Home Assistant', intro: 'Send the weather to Home Assistant over MQTT (sensors appear on their own) and/or straight to its REST API.' },
+  { id: 'email', title: '📧 Email alerts', intro: 'A second way warnings get through, for family without the app (grandparents, a sitter). Weather Scout emails them when the National Weather Service warns their place. It sends through your own email account’s outgoing mail server.' },
+  { id: 'school', title: '🏫 School closings', intro: 'There is no free national list of school closings, so point Weather Scout at your district’s own closings page or news feed. The School tomorrow card shows what it finds next to the snow day meter, and devices with 🏫 school alerts on get a notification.' },
   { id: 'apps', title: '🔔 Alerts, sign-out & Android app', intro: '' },
 ];
-const TEST_LABEL = { ambient: 'Test Ambient', tempest: 'Test Tempest', mqtt: 'Test MQTT', homeassistant: 'Test Home Assistant', webcams: 'Test Webcams key' };
+const TEST_LABEL = { email: 'Send a test email', school: 'Check now', ambient: 'Test Ambient', tempest: 'Test Tempest', mqtt: 'Test MQTT', homeassistant: 'Test Home Assistant', webcams: 'Test Webcams key' };
 const testLabel = (t) => TEST_LABEL[t] || (t.startsWith('camera:') ? `Test ${t.slice(7).toUpperCase()} key` : 'Test');
 
 function Field({ ctx, r }) {
@@ -164,6 +168,8 @@ export default function AppSettingsPanel() {
                 {targets.map((t) => <Result key={t} ctx={ctx} target={t} />)}
               </>
             )}
+            {g.id === 'email' && <EmailRecipients PlaceFinder={PlaceFinder} />}
+            {g.id === 'school' && <SchoolStatusPanel />}
           </details>
         );
       })}

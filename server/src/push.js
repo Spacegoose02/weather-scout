@@ -385,6 +385,21 @@ export class PushService {
     return { places: groups.size, sent };
   }
 
+  // Send one event to every device that turned a personal alert on (school closings),
+  // once per device per key.
+  async broadcastRule(rule, key, payload) {
+    const rows = this.db.prepare('SELECT * FROM push_subscriptions WHERE rules IS NOT NULL').all();
+    const sentBefore = this.db.prepare('SELECT 1 FROM push_sent WHERE subscription_id = ? AND alert_id = ?');
+    const markSent = this.db.prepare('INSERT OR IGNORE INTO push_sent (subscription_id, alert_id) VALUES (?, ?)');
+    let sent = 0;
+    for (const sub of rows) {
+      if (!parseRules(sub.rules)?.[rule] || sentBefore.get(sub.id, key)) continue;
+      markSent.run(sub.id, key);
+      if (await this.deliver(sub, payload)) sent++;
+    }
+    return { sent };
+  }
+
   start(getAlerts, everyMs, getBriefing, lightning, getForecast, getAurora) {
     const run = () => this.check(getAlerts).catch((err) => this.log.error?.(err, 'push check failed'));
     this.timer = setInterval(run, everyMs);

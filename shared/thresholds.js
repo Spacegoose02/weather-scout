@@ -6,8 +6,10 @@
 //
 // Pure functions only, shared by the server (push loop) and the web app (form).
 import { CELL_LEVELS, cellSummary, etaText } from './stormcells.js';
+import { niceDays } from './niceday.js';
+import { snowDayOdds } from './winter.js';
 
-export const RULE_IDS = ['rain', 'freeze', 'gust', 'heat', 'snow', 'aurora', 'cell'];
+export const RULE_IDS = ['rain', 'freeze', 'gust', 'heat', 'snow', 'aurora', 'cell', 'nice', 'snowday', 'school'];
 
 // Default numbers, and what each person can pick from.
 export const RULE_CHOICES = {
@@ -31,7 +33,13 @@ export const RULE_INFO = {
   snow: { emoji: '❄️', name: 'Snow on the way', note: 'When snow will pile up in the next 12 hours.' },
   aurora: { emoji: '🌌', name: 'Northern lights possible', note: 'When the space weather forecast says the aurora may reach your sky tonight and it is not too cloudy.' },
   cell: { emoji: '⛈️', name: 'Storm heading your way', note: 'When a strong storm on the radar is on track to reach you within about an hour (US radar only).' },
+  nice: { emoji: '☀️', name: 'Nice day tomorrow', note: 'In the late afternoon, when tomorrow scores Beautiful or better (78+) on the nice-day score.' },
+  snowday: { emoji: '🛷', name: 'Snow day chance', note: 'In the late afternoon, when the chance of a snow day or delay for the next school morning reaches 50%.' },
+  school: { emoji: '🏫', name: 'School closings and delays', note: 'When your school district posts a closing or delay, or a grown-up sets one (set up in Family & settings).' },
 };
+
+// Evening alerts about tomorrow go out from 4 PM until quiet hours start.
+export const EVENING_FROM = 16;
 
 // Wet enough to count as "it's raining" in one 15-minute slot.
 const WET = { imperial: 0.005, metric: 0.1 };
@@ -58,12 +66,15 @@ export function cleanRules(input, units = 'imperial') {
     snow: !!input.snow,
     aurora: !!input.aurora,
     cell: !!input.cell,
+    nice: !!input.nice,
+    snowday: !!input.snowday,
+    school: !!input.school,
     quiet: input.quiet !== false,
   };
   return anyRule(r) ? r : null;
 }
 
-export const anyRule = (r) => !!r && (r.rain || r.freeze != null || r.gust != null || r.heat != null || r.snow || r.aurora || r.cell);
+export const anyRule = (r) => !!r && (r.rain || r.freeze != null || r.gust != null || r.heat != null || r.snow || r.aurora || r.cell || r.nice || r.snowday || r.school);
 
 // Local wall-clock helpers. Open-Meteo times are local strings like 2026-11-04T17:00.
 const localIso = (epoch, offsetSec) => new Date(epoch + offsetSec * 1000).toISOString().slice(0, 16);
@@ -190,6 +201,33 @@ export function evaluateRules(fc, rules, { now = Date.now(), aurora = null, cell
       body: `${cell.miles} miles ${cell.dir}${cell.mph ? `, moving ${cell.moving} at ${cell.mph} mph` : ''}${cellSummary(cell) ? ` (${cellSummary(cell)})` : ''}. Head indoors before it arrives.`,
       url: '/#map',
     });
+  }
+
+  const evening = localHour(now, off) >= EVENING_FROM && localHour(now, off) < QUIET_FROM;
+  if (rules.nice && evening) {
+    const tomorrow = niceDays(fc, { days: 2 }).days[1];
+    if (tomorrow && tomorrow.score >= 78) {
+      out.push({
+        rule: 'nice',
+        key: `nice:${tomorrow.date}`,
+        title: `☀️ Tomorrow looks ${tomorrow.tier.label.toLowerCase()}: ${tomorrow.score} out of 100`,
+        body: `A great day to plan something outside at {place}. ${tomorrow.why === 'comfortable all around' ? 'Comfortable all day.' : `Just ${tomorrow.why}.`}`,
+        url: '/?nice=1',
+      });
+    }
+  }
+
+  if (rules.snowday && evening) {
+    const sd = snowDayOdds(fc, now);
+    if (sd.chance != null && sd.chance >= 50 && sd.name === 'tomorrow') {
+      out.push({
+        rule: 'snowday',
+        key: `snowday:${sd.date}`,
+        title: `🛷 ${sd.chance}% chance of a snow day or delay tomorrow`,
+        body: `${sd.reason[0].toUpperCase()}${sd.reason.slice(1)}. This is a guess from the forecast; watch for the official word from your school district.`,
+        url: '/?school=1',
+      });
+    }
   }
 
   return out;

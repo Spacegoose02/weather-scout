@@ -150,6 +150,27 @@ from free, official data sources.
 - **Your own weather station** (Ecowitt, Ambient Weather, Tempest, or anything that speaks the
   Weather Underground protocol) next to the forecast, and **Home Assistant** sensors over MQTT
   with auto-discovery, or its REST API ([docs/HOME-ASSISTANT.md](docs/HOME-ASSISTANT.md)).
+- **Across the US** (dashboard card): every state under a severe or flood risk today and tomorrow, the
+  most dangerous active warnings (tornado emergencies and PDS warnings first), counts by kind, and
+  today's storm reports on a small map.
+- **Storm week ahead** (Severe outlook card › Week): SPC days 1 to 8 as a strip with the risk at your
+  place each day, the day to watch, and the day 4 to 8 15% and 30% areas on the map.
+- **Nice-day score** (dashboard card, kids view and personal alert): each of the next 7 days scored 0 to
+  100 and graded A+ to F from feels-like, mugginess, rain, sky, wind, UV and air quality, with the
+  reasons a day lost points. Tick *Nice day tomorrow* in 🔔 alerts for an evening heads-up.
+- **Space weather** (dashboard card, kids view › Explore): NOAA's radio, radiation and geomagnetic
+  storm scales now and for 3 days, the latest and biggest flares, solar wind, Bz and Kp. Kids get *Sun storms*.
+- **Season odds** (dashboard card, kids view › Explore): the chance of a white Christmas and the
+  typical, earliest and latest first freeze, first snow and last freeze over 30 seasons (NOAA ThreadEx
+  via ACIS in the US, ERA5 elsewhere), whether each has happened yet this season, and the next one in
+  the forecast.
+- **Email alerts** (Family & settings › Email alerts): warning emails for family without the app.
+  Pick each person's place and which warnings (tornado, severe, flood, other, watches). Sends through
+  your own mail server (SMTP). Each email has a no-sign-in link to change or stop them, plus one-click
+  unsubscribe.
+- **School closings** (School tomorrow card, kids view and push alert): point it at your district's
+  closings page or RSS feed and it reads closed, delayed, early dismissal or virtual-day notices that
+  name a day, next to the snow day meter. An admin can also set the status by hand.
 - Installable as a phone/desktop app (PWA manifest with Rocky app icons), light and dark themes.
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for everything else on the board and when it lands,
@@ -435,7 +456,7 @@ names also work as environment variables (`LIGHTNING_GLM`, `LIGHTNING_GLM_SATELL
 | Watches, warnings, advisories | [api.weather.gov](https://www.weather.gov/documentation/services-web-api) | none, but set `NWS_USER_AGENT` |
 | Radar outside the US (Canada, Mexico) | [RainViewer](https://www.rainviewer.com/api.html) free tiles (Environment Canada, CONAGUA/SMN), zoom 7 max, personal/educational use | none; `WORLD_RADAR=off` hides it |
 | Satellite | NASA [GIBS](https://earthdata.nasa.gov/gibs) GOES-East infrared | none |
-| Aurora (Kp forecast, OVATION) | NOAA [Space Weather Prediction Center](https://www.swpc.noaa.gov/) | none |
+| Aurora and space weather (Kp, OVATION, storm scales, flares, solar wind) | NOAA [Space Weather Prediction Center](https://www.swpc.noaa.gov/) | none |
 | Forecast scorecard | Open-Meteo [Previous Runs API](https://open-meteo.com/en/docs/previous-runs-api), NWS station observations | none |
 | Storm reports | NWS local storm reports via [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/request/gis/lsrs.phtml) | none |
 | River gauges and flood stage | NOAA [National Water Prediction Service](https://water.noaa.gov/) | none |
@@ -444,7 +465,10 @@ names also work as environment variables (`LIGHTNING_GLM`, `LIGHTNING_GLM_SATELL
 | Rain / snow / mix / ice layer | Open-Meteo current weather on a grid (HRRR blend in the US) | none |
 | Driving routes (trip forecast) | [OSRM](https://project-osrm.org/) demo server, OpenStreetMap data (light use) | none |
 | Wildfires | [NIFC WFIGS](https://data-nifc.opendata.arcgis.com/) current incident locations | none |
-| Severe outlooks | NOAA [Storm Prediction Center](https://www.spc.noaa.gov/) | none |
+| Severe outlooks (days 1 to 8) and storm reports | NOAA [Storm Prediction Center](https://www.spc.noaa.gov/) | none |
+| Season odds (first freeze, first snow, white Christmas) | NOAA ThreadEx stations via [ACIS](https://www.rcc-acis.org/), else Open-Meteo ERA5 | none |
+| Email alerts | Your own mail server (SMTP) | `SMTP_HOST` and friends, set in Family & settings |
+| School closings | Your district's own closings page or RSS feed | none; set `SCHOOL_STATUS_URL` in Family & settings |
 | Lightning | NOAA [GOES GLM](https://registry.opendata.aws/noaa-goes/) on AWS Open Data; optional [Blitzortung.org](https://www.blitzortung.org/) (private, non-commercial use) | none |
 | Radar loop | NEXRAD composite tiles from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) | none |
 | Map | OpenStreetMap | none |

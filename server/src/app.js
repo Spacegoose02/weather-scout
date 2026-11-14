@@ -62,6 +62,11 @@ import { ClimateService, registerClimate } from './climate.js';
 import { registerClassroom } from './classroom.js';
 import { nextRain, nextRainText, nextRainShort } from '../../shared/glance.js';
 import { getScorecard } from './scorecard.js';
+import { registerNational } from './national.js';
+import { SpaceWeatherService, registerSpaceWeather } from './spaceweather.js';
+import { registerSeasonOdds } from './seasonodds.js';
+import { EmailAlertService, registerEmailAlerts } from './email.js';
+import { SchoolService, registerSchool, schoolPushPayload } from './school.js';
 import { cleanOutfit, rockySvg } from '../../shared/rocky-outfit.js';
 
 const MIN = 60_000;
@@ -73,7 +78,7 @@ function rockyPath({ items, mood }) {
   return `/api/connect/rocky.svg?${q}`;
 }
 
-export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = true, pushSend, mqttConnect, WebSocketImpl } = {}) {
+export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = true, pushSend, mqttConnect, WebSocketImpl, mailTransport } = {}) {
   const cfg = config || loadConfig();
   const app = Fastify({ logger, trustProxy: true });
   const cache = new TtlCache();
@@ -125,7 +130,7 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   const OPEN = new Set(['/api/health', '/api/status', '/api/config', '/api/auth/login', '/api/auth/logout', '/api/auth/me', '/api/auth/setup']);
   app.addHook('preHandler', async (req, reply) => {
     if (!cfg.auth.required || !req.url.startsWith('/api/')) return;
-    if (OPEN.has(req.url.split('?')[0]) || req.user || req.url.startsWith('/api/connect/') || req.url.startsWith('/api/stations/push')) return;
+    if (OPEN.has(req.url.split('?')[0]) || req.user || req.url.startsWith('/api/connect/') || req.url.startsWith('/api/stations/push') || req.url.startsWith('/api/email-alerts/manage/')) return;
     reply.code(401).send({ error: 'Please sign in.' });
   });
 
@@ -432,6 +437,8 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   // Crowd reports, rivers and flash floods, wildfires (v0.7).
   const hazards = new HazardService(db, cache, fetchImpl, { log: app.log });
   registerHazards(app, { hazards, requireUser, latLonSchema, loc, boxSchema, forecast, settle });
+  // Across the US, and the storm week ahead (SPC days 1-8).
+  registerNational(app, { cache, fetchImpl, hazards, nwsUserAgent: cfg.nwsUserAgent, latLonSchema, loc, settle });
   const stormCells = new StormCellService(cache, fetchImpl, { log: app.log });
   registerStormCells(app, { cells: stormCells, latLonSchema, loc, boxSchema });
   if (push) push.cellsFor = (place) => stormCells.approaching(place);
@@ -462,10 +469,13 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
     const fc = await settle(forecast(l));
     return auroraFor(l, fc);
   });
+  // Space weather: NOAA scales, flares, the solar wind and Kp.
+  registerSpaceWeather(app, { space: new SpaceWeatherService(cache, fetchImpl, { aurora, log: app.log }) });
   const safety = registerSafetyPlan(app, { db, requireUser, requireAdmin });
   if (push) push.shelterFor = safety.shelterFor;
   const shelterFor = safety.shelterFor;
   registerHistory(app, { cache, fetchImpl, latLonSchema, loc, forecast, settle });
+  registerSeasonOdds(app, { cache, fetchImpl, latLonSchema, loc, forecast, settle });
   registerChaser(app, { cache, fetchImpl, latLonSchema, loc, chasers, nwsUserAgent: cfg.nwsUserAgent });
 
   // ---- AI weather expert, cloud photos, web search ---------------------------
@@ -535,6 +545,28 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   app.decorate('pushAlerts', pushAlerts);
   app.addHook('onClose', async () => push?.stop());
 
+  // ---- email alerts (a second way warnings get through) ------------------------
+  const email = new EmailAlertService(db, cfg, { log: app.log, transport: mailTransport });
+  registerEmailAlerts(app, { email, requireAdmin });
+  app.decorate('emailAlerts', email);
+  app.addHook('onClose', async () => email.stop());
+  const timeZoneFor = async (l) => (await forecast(loc(l))).timezone;
+
+  // ---- school closings and the snow day meter ----------------------------------
+  const school = new SchoolService(db, cfg, {
+    fetchImpl, forecast: (l) => forecast(loc(l)), log: app.log,
+    onChange: async (ev) => {
+      if (!push) return;
+      const morning = ev.date;
+      const today = new Date(Date.now() + ((await settle(forecast(loc(cfg.defaultLocation))))?.utcOffsetSeconds || 0) * 1000).toISOString().slice(0, 10);
+      const dayWord = morning === today ? 'today' : morning > today ? (Date.parse(morning) - Date.parse(today) <= 86400_000 ? 'tomorrow' : `on ${new Date(`${morning}T12:00Z`).toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })}`) : '';
+      await push.broadcastRule('school', ev.key, schoolPushPayload({ ...ev, dayWord }, school.name));
+    },
+  });
+  registerSchool(app, { school, requireAdmin, latLonSchema, loc, forecast });
+  app.decorate('school', school);
+  app.addHook('onClose', async () => school.stop());
+
   // ---- background work (started from index.js, so tests stay quiet) ---------
   let started = false;
   const pushForecast = (l) => forecast(loc(l));
@@ -548,6 +580,8 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
     stations.start();
     homeAssistant.start();
     tuning.start();
+    email.start(pushAlerts, cfg.push.pollSeconds * 1000, { shelterFor, timeZoneFor });
+    school.start();
   });
 
   // Saved settings take effect without a restart: restart only what changed.
@@ -558,6 +592,7 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
       chasers.reset();
     }
     if (changed.has('cameras')) cameras.reset();
+    if (changed.has('school') && started) school.check().catch(() => {});
     if (changed.has('lightning')) lightning.configure(cfg.lightning);
     if (changed.has('stations') && started) {
       stations.stop();
@@ -839,7 +874,7 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
       })
       .catch((err) => app.log.warn({ err: err.message }, 'could not look up the home place'));
   }
-  const APP_GROUPS = ['home', 'cameras', 'maps', 'pollen', 'air', 'lightning', 'stations', 'homeassistant', 'apps'];
+  const APP_GROUPS = ['home', 'cameras', 'maps', 'pollen', 'air', 'lightning', 'stations', 'homeassistant', 'email', 'school', 'apps'];
   const valuesBody = { type: 'object', additionalProperties: { type: ['string', 'null'], maxLength: 800 } };
   app.get('/api/admin/settings', { preHandler: requireAdmin }, async () => ({ settings: settings.view(APP_GROUPS) }));
   app.put('/api/admin/settings', {
@@ -864,11 +899,22 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   });
   app.post('/api/admin/settings/test', {
     preHandler: requireAdmin,
-    schema: { body: { type: 'object', required: ['target'], properties: { target: { type: 'string', pattern: '^(camera:[a-z]{2}|ambient|tempest|homeassistant|mqtt|webcams)$' }, values: valuesBody } } },
+    schema: { body: { type: 'object', required: ['target'], properties: { target: { type: 'string', pattern: '^(camera:[a-z]{2}|ambient|tempest|homeassistant|mqtt|webcams|email|school)$' }, values: valuesBody } } },
   }, async (req, reply) => {
     const draft = draftOf(req, reply);
     if (!draft) return reply;
     if (req.body.target === 'webcams') return testWebcamsKey(draft, fetchImpl);
+    if (req.body.target === 'email') return email.testSettings(draft.env, email.list()[0]?.email);
+    if (req.body.target === 'school') {
+      const url = String(draft.env.SCHOOL_STATUS_URL || '').trim();
+      if (!url) return { ok: false, message: 'Add the district page first.' };
+      try {
+        const found = await school.read(url);
+        return { ok: true, message: found ? `Read the page. Found: ${found.status} for ${found.date}: “${found.text}”` : 'Read the page. No closing or delay with a day is posted there right now.' };
+      } catch (err) {
+        return { ok: false, message: `Could not read it: ${err.message}` };
+      }
+    }
     return testIntegration(req.body.target, draft, { fetchImpl, cameras, ...(mqttConnect ? { connect: mqttConnect } : {}) });
   });
 

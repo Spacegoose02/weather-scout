@@ -4,7 +4,7 @@
 .ai-settings legend { font-weight: 800; padding: 0 6px; }
 .ai-settings label { display: grid; gap: 4px; font-weight: 700; min-width: 0; }
 .ai-settings label > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
-.ai-settings input[type='text'], .ai-settings input[type='password'], .ai-settings input[type='number'], .ai-settings select {
+.ai-settings input[type='text'], .ai-settings input[type='password'], .ai-settings input[type='number'], .ai-settings input[type='email'], .ai-settings input[type='date'], .ai-settings select {
   padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-weight: 400; min-width: 0; width: 100%; box-sizing: border-box;
 }
 .ai-settings input[type='range'] { width: 100%; }
@@ -34,3 +34,6 @@
 .default-layer-group { display: grid; align-content: start; }
 .default-layer-group > b { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted, #5b6479); margin: 4px 0 2px; }
 .ai-settings .default-layers label.layer-row { grid-template-columns: auto 22px 1fr; gap: 4px 8px; font-weight: 500; }
+
+/* Email alerts: which warnings, one per row with the box first */
+.ai-settings .email-kinds label { display: flex; align-items: center; gap: 8px; font-weight: 500; }
