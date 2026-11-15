@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { round, dayLabel, hourLabel } from '../format.js';
 import ModelMap from './ModelMap.jsx';
+import LongRangeOutlook from './longrange/LongRangeOutlook.jsx';
 import Scorecard from './dashboard/Scorecard.jsx';
 
 // Fixed slot per model (color follows the model, never its rank or what's toggled).
@@ -17,6 +18,7 @@ export default function ModelsView({ location, units }) {
   const [ensId, setEnsId] = useState('ecmwf_ifs025');
   const [hidden, setHidden] = useState(() => new Set());
   const [error, setError] = useState('');
+  const [jump, setJump] = useState(null);
   const q = `lat=${location.lat}&lon=${location.lon}&units=${units}`;
 
   useEffect(() => {
@@ -80,7 +82,16 @@ export default function ModelsView({ location, units }) {
         {data.missing.length > 0 && <p className="hint">Not available here: {data.missing.map((m) => m.name).join(', ')}.</p>}
       </section>
 
-      <ModelMap location={location} units={units} />
+      <LongRangeOutlook
+        location={location}
+        units={units}
+        onShowMap={(time) => {
+          setJump({ time });
+          document.getElementById('forecast-maps')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }}
+      />
+
+      <ModelMap location={location} units={units} jump={jump} />
 
       <section className="card">
         <h2 className="card-title">Daily highs, next 10 days</h2>

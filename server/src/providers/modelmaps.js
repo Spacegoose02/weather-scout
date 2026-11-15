@@ -3,7 +3,9 @@
 // Open-Meteo answers many coordinates at once with a list of forecasts.
 import { UpstreamError, fetchJson } from '../cache.js';
 import { unitParams } from './openmeteo.js';
-import { MAP_MODELS, MAP_VARS, STEP_HOURS, gridFor, pointsFor } from '../../../shared/modelmap.js';
+import {
+  MAP_MODELS, MAP_VARS, STEP_HOURS, callWeight, daysFor, fieldsFor, gridFor, modelsFor, pointsFor, rangeOf, snowShare, varsFor,
+} from '../../../shared/modelmap.js';
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const HOUR = 3600_000;
@@ -55,17 +57,21 @@ export class BusyError extends Error {
   }
 }
 
-export function modelMapUrl(model, grid, units, keep = pointsFor(model, grid)) {
+export function modelMapUrl(model, grid, units, keep = pointsFor(model, grid), range = 'short') {
   // The grid points the model covers, row by row (north to south, west to east).
   const cols = grid.lons.length;
   const latitude = keep.map((k) => grid.lats[Math.floor(k / cols)]);
   const longitude = keep.map((k) => grid.lons[k % cols]);
+  const long = range === 'long';
   const p = new URLSearchParams({
     latitude: latitude.join(','),
     longitude: longitude.join(','),
-    hourly: Object.values(MAP_VARS).join(','),
+    hourly: varsFor(range).map((v) => MAP_VARS[v]).join(','),
     models: model.id,
-    forecast_days: String(model.days + 1),
+    // Two weeks: exactly the model's days, every 6 hours (rain summed over each 6),
+    // so the answer stays a few MB instead of 15 days of every hour.
+    forecast_days: String(long ? daysFor(model, range) : model.days + 1),
+    ...(long ? { temporal_resolution: 'hourly_6' } : {}),
     timezone: 'GMT',
     timeformat: 'unixtime',
     cell_selection: 'nearest',
@@ -74,54 +80,75 @@ export function modelMapUrl(model, grid, units, keep = pointsFor(model, grid)) {
   return `${FORECAST_URL}?${p}`;
 }
 
-const round = (v, d) => (v == null || Number.isNaN(v) ? null : Math.round(v * 10 ** d) / 10 ** d);
-const DIGITS = { temp: 1, precip: 3, wind: 0, windDir: 0, clouds: 0, pressure: 1 };
+/** Open-Meteo calls one map costs (each point is one, more for long requests). */
+export const mapCost = (model, points, range) => Math.ceil(points * callWeight(varsFor(range).length, range === 'long' ? daysFor(model, range) : model.days + 1));
 
-// Open-Meteo's list (one forecast per grid point) -> one flat grid per field per 3-hour step.
-export function normalizeModelMap(raw, model, grid, units, now = Date.now()) {
+const round = (v, d) => (v == null || Number.isNaN(v) ? null : Math.round(v * 10 ** d) / 10 ** d);
+const DIGITS = { temp: 1, precip: 3, wind: 0, windDir: 0, clouds: 0, pressure: 1, snow: 2, thick: 1 };
+const toC = (t, units) => (t == null ? null : units === 'metric' ? t : ((t - 32) * 5) / 9);
+
+// Open-Meteo's list (one forecast per grid point) -> one flat grid per field per step
+// (3 hours, or 6 for the two-week maps).
+export function normalizeModelMap(raw, model, grid, units, now = Date.now(), range = 'short') {
   const points = Array.isArray(raw) ? raw : [raw];
   const n = grid.rows * grid.cols;
   if (points.length !== n) throw new Error(`Expected ${n} grid points, got ${points.length}`);
+  const step = rangeOf(range).step || STEP_HOURS;
   const times = (points[0].hourly?.time || []).map((t) => t * 1000);
-  const first = Math.floor(now / HOUR) * HOUR;
-  const end = first + model.days * 24 * HOUR;
-  // Steps every 3 hours, starting with the current hour.
+  // How many hours each answer covers (1, or 6 when asked for 6-hourly data).
+  const dt = times.length > 1 ? Math.max(1, Math.round((times[1] - times[0]) / HOUR)) : 1;
+  const per = Math.max(1, Math.round(step / dt));
+  // Short maps step from the current hour; two-week maps from the last 6-hour mark (00, 06, 12, 18 UTC).
+  const first = range === 'long' ? Math.floor(now / (step * HOUR)) * step * HOUR : Math.floor(now / HOUR) * HOUR;
+  const end = first + daysFor(model, range) * 24 * HOUR;
   const steps = [];
   times.forEach((t, i) => {
-    if (t >= first && t <= end && (t - first) % (STEP_HOURS * HOUR) === 0) steps.push(i);
+    if (t >= first && t <= end && (t - first) % (step * HOUR) === 0) steps.push(i);
   });
 
-  const fields = Object.fromEntries(Object.keys(MAP_VARS).map((f) => [f, []]));
+  const names = fieldsFor(range);
+  const fields = Object.fromEntries(names.map((f) => [f, []]));
   let filled = 0;
   for (const i of steps) {
-    for (const [f, v] of Object.entries(MAP_VARS)) {
-      const row = new Array(n);
-      for (let k = 0; k < n; k++) {
-        const h = points[k].hourly || {};
+    const rows = Object.fromEntries(names.map((f) => [f, new Array(n)]));
+    for (let k = 0; k < n; k++) {
+      const h = points[k].hourly || {};
+      const at = (f) => h[MAP_VARS[f]]?.[i] ?? null;
+      // Rain and snow are totals for the step ending here (the first step looks at the time just gone).
+      const sum = (f) => {
+        let x = null;
+        for (let j = Math.max(0, i - per + 1); j <= i; j++) if (h[MAP_VARS[f]]?.[j] != null) x = (x || 0) + h[MAP_VARS[f]][j];
+        return x;
+      };
+      const z500 = at('z500');
+      const z1000 = at('z1000');
+      const thick = z500 != null && z1000 != null ? (z500 - z1000) / 10 : null;
+      const precip = sum('precip');
+      for (const f of names) {
         let x;
-        if (f === 'precip') {
-          // Total for the 3 hours ending at this step (the first step looks at the hour just gone).
-          x = null;
-          for (let j = Math.max(0, i - STEP_HOURS + 1); j <= i; j++) if (h[v]?.[j] != null) x = (x || 0) + h[v][j];
-        } else x = h[v]?.[i] ?? null;
-        row[k] = round(x, DIGITS[f]);
-        if (f === 'temp' && x != null) filled++;
+        if (f === 'precip') x = precip;
+        else if (f === 'thick') x = thick;
+        else if (f === 'snow') x = snowShare({ precip, snowfall: sum('snow'), thick, tempC: toC(at('temp'), units) }, units);
+        else x = at(f);
+        rows[f][k] = round(x, DIGITS[f]);
       }
-      fields[f].push(row);
+      if (rows.temp[k] != null) filled++;
     }
+    for (const f of names) fields[f].push(rows[f]);
   }
   const coverage = steps.length ? filled / (steps.length * n) : 0;
   return {
     model: model.id,
     name: model.name,
     note: model.note,
+    range,
     area: grid.area,
     center: grid.center,
     rows: grid.rows,
     cols: grid.cols,
     lats: grid.lats,
     lons: grid.lons,
-    step: STEP_HOURS,
+    step,
     times: steps.map((i) => times[i]),
     coverage: Math.round(coverage * 100) / 100,
     units,
@@ -129,9 +156,14 @@ export function normalizeModelMap(raw, model, grid, units, now = Date.now()) {
   };
 }
 
-export async function getModelMap({ lat, lon, units, model: id, area }, fetchImpl, points = budget) {
+export async function getModelMap({ lat, lon, units, model: id, area, range = 'short' }, fetchImpl, points = budget) {
   const model = MAP_MODELS.find((m) => m.id === id) || MAP_MODELS[0];
-  const grid = gridFor(lat, lon, area);
+  if (!modelsFor(range).includes(model)) {
+    const err = new Error(`${model.name} doesn't forecast two weeks ahead. Try ECMWF or GFS.`);
+    err.statusCode = 400;
+    throw err;
+  }
+  const grid = gridFor(lat, lon, area, range);
   const noData = () => {
     const err = new Error(model.usOnly ? `${model.name} only covers the United States. Try another model.` : `${model.name} has no data for this area right now. Try another model.`);
     err.statusCode = 404;
@@ -141,9 +173,9 @@ export async function getModelMap({ lat, lon, units, model: id, area }, fetchImp
   const keep = pointsFor(model, grid);
   if (!keep.length) throw noData();
   let raw;
-  await points.take(keep.length, { maxWaitMs: 6000 });
+  await points.take(mapCost(model, keep.length, range), { maxWaitMs: 6000 });
   try {
-    raw = await fetchJson(modelMapUrl(model, grid, units, keep), { source: `Open-Meteo ${model.name} map`, fetchImpl, timeoutMs: 25000 });
+    raw = await fetchJson(modelMapUrl(model, grid, units, keep, range), { source: `Open-Meteo ${model.name} ${range === 'long' ? '2-week ' : ''}map`, fetchImpl, timeoutMs: range === 'long' ? 40000 : 25000 });
   } catch (err) {
     // Open-Meteo answers 400 when a model has nothing for these points.
     if (err instanceof UpstreamError && err.status === 400) throw noData();
@@ -157,7 +189,7 @@ export async function getModelMap({ lat, lon, units, model: id, area }, fetchImp
   // Every point needs the time axis; borrow it from one that has it.
   const time = answers[0]?.hourly?.time;
   for (const p of full) if (!p.hourly.time) p.hourly = { ...p.hourly, time };
-  const map = normalizeModelMap(full, model, grid, units);
+  const map = normalizeModelMap(full, model, grid, units, Date.now(), range);
   if (!map.times.length || map.coverage === 0) throw noData();
   return map;
 }

@@ -1,0 +1,62 @@
+/* Rocky's 2-week outlook (Models tab). */
+.longrange .card-title { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
+.lr-rocky { display: flex; gap: 12px; align-items: flex-start; margin: 8px 0 12px; }
+.lr-rocky img { flex: none; width: 88px; height: auto; }
+.lr-bubble { position: relative; flex: 1; min-width: 0; background: color-mix(in srgb, var(--brand) 9%, var(--card)); border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--line));
+  border-radius: 14px; padding: 10px 14px; }
+.lr-bubble::before { content: ''; position: absolute; left: -8px; top: 22px; width: 14px; height: 14px; background: inherit; border-left: inherit; border-bottom: inherit; transform: rotate(45deg); }
+.lr-headline { display: block; font-size: 1.1rem; margin-bottom: 2px; }
+.lr-bubble p { margin: 4px 0 8px; line-height: 1.5; }
+
+.lr-sure { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 800; color: #10151f; white-space: nowrap; }
+.lr-sure.good { background: #5ccf7b; }
+.lr-sure.fair { background: #f2c14e; }
+.lr-sure.hint { background: #b9c0cc; }
+
+.lr-weeks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.lr-week { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.lr-week-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-bottom: 6px; }
+.lr-week-head .lr-sure { margin-left: auto; }
+.lr-week-temp { display: flex; gap: 8px; align-items: center; }
+.lr-emoji { font-size: 1.6rem; }
+.lr-agree, .lr-snow { margin: 6px 0 0; font-size: 0.88rem; font-weight: 600; }
+.lr-agree.no { color: var(--muted); }
+
+.lr-strip { display: grid; grid-template-columns: repeat(15, minmax(44px, 1fr)); gap: 3px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.lr-day { display: grid; justify-items: center; gap: 1px; padding: 4px 0 0; border-radius: 8px; background: color-mix(in srgb, var(--ink) 3%, transparent); font-size: 0.78rem; }
+.lr-day.hint { opacity: 0.85; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ink) 4%, transparent) 0 6px, transparent 6px 12px); }
+.lr-dname { font-weight: 800; }
+.lr-ddate { color: var(--muted); font-size: 0.7rem; }
+.lr-bar { position: relative; width: 14px; height: 76px; margin: 4px 0; }
+.lr-range { position: absolute; left: 3px; right: 3px; border-radius: 4px; background: color-mix(in srgb, var(--brand) 40%, transparent); }
+.lr-day.hint .lr-range { background: color-mix(in srgb, var(--muted) 45%, transparent); }
+.lr-mid { position: absolute; left: 0; right: 0; height: 3px; margin-top: -1px; border-radius: 2px; background: var(--brand); }
+.lr-normal { position: absolute; left: -4px; right: -4px; height: 0; border-top: 2px dashed var(--muted); }
+.lr-high { font-size: 0.92rem; }
+.lr-wet { color: var(--muted); }
+.lr-wet.maybe { color: var(--ink); font-weight: 700; }
+.lr-wet.likely { color: #2f7fe0; font-weight: 800; }
+.lr-flake { min-height: 1.1em; font-size: 0.72rem; }
+.lr-conf { display: block; width: 100%; height: 5px; border-radius: 0 0 8px 8px; margin-top: 2px; }
+.lr-day.good .lr-conf { background: #5ccf7b; }
+.lr-day.fair .lr-conf { background: #f2c14e; }
+.lr-day.hint .lr-conf { background: #b9c0cc; }
+.lr-strip-key { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); font-size: 0.75rem; margin-top: 4px; }
+.lr-strip-key i { display: inline-block; width: 14px; height: 8px; border-radius: 3px; vertical-align: middle; margin-right: 3px; }
+.lr-strip-key .k-range { background: color-mix(in srgb, var(--brand) 40%, transparent); height: 12px; }
+.lr-strip-key .k-normal { height: 0; border-top: 2px dashed var(--muted); border-radius: 0; }
+.lr-strip-key .k-good { background: #5ccf7b; }
+.lr-strip-key .k-fair { background: #f2c14e; }
+.lr-strip-key .k-hint { background: #b9c0cc; }
+
+.lr-storms h3 { margin: 14px 0 6px; font-size: 1rem; }
+.lr-storms ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lr-storms li { display: flex; gap: 10px; align-items: center; justify-content: space-between; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+.lr-storms li .chip { flex: none; cursor: pointer; }
+.lr-foot { margin-top: 10px; }
+
+@media (max-width: 700px) {
+  .lr-weeks { grid-template-columns: minmax(0, 1fr); }
+  .lr-rocky img { width: 60px; }
+  .lr-storms li { flex-wrap: wrap; }
+}
