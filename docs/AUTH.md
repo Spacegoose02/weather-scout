@@ -28,7 +28,16 @@ Weather Scout has three ways to sign in. They all work together.
      provider. Their first sign-in is remembered from then on.
    - On: anyone the provider lets in gets a new, non-admin profile. Only do this for a provider that
      only lets in people you trust (your own Tinyauth). Never for Google.
-4. Untick **Show on the sign-in page** to hide a provider's button without deleting it.
+4. Link existing profiles. Either way works:
+   - **The person links it themselves.** Signed in with their password, they open
+     *Settings → 🔐 Sign-in accounts* and tap **Link Tinyauth**. After the trip to Tinyauth, that
+     Tinyauth account signs in to their profile. They can unlink it there too, unless it is their
+     only way in (no password and nothing else linked).
+   - **An admin links it.** Under *People*, click **link** and type the person's username or email
+     at the provider; it links on their next sign-in. Linked accounts are listed under it, each with
+     an **unlink** button. Admins can unlink anyone.
+   One provider account can only be linked to one profile.
+5. Untick **Show on the sign-in page** to hide a provider's button without deleting it.
 
 Sign-in uses the authorization code flow with PKCE. The ID token's signature, issuer, audience,
 expiry and nonce are all checked before anyone is signed in.

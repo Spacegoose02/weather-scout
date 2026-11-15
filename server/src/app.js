@@ -242,6 +242,7 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
       ssoLogoutUrl: cfg.auth.ssoLogoutUrl || null,
       needsSetup: auth.userCount() === 0 && !cfg.auth.trustProxyHeaders,
       oidc: oidc.buttons(),
+      oidcLinking: oidc.list().length > 0, // any provider, even ones without a button
     },
     user: publicUser(req.user),
     ai: ai.status(),
@@ -766,7 +767,7 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   // ---- admin -----------------------------------------------------------------
   app.get('/api/admin/users', { preHandler: requireAdmin }, async () => {
     const via = oidc.identitiesByUser();
-    return { users: auth.listUsers().map((u) => ({ ...u, signInWith: via[u.id] || [] })) };
+    return { users: auth.listUsers().map((u) => ({ ...u, linked: via[u.id] || [] })) };
   });
   app.post('/api/admin/users', {
     preHandler: requireAdmin,
@@ -781,11 +782,8 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
     },
   }, async (req) => ({ user: publicUser(await auth.createUser(req.body)) }));
   app.patch('/api/admin/users/:id', { preHandler: requireAdmin, schema: { body: { type: 'object' } } }, async (req) => {
-    const before = auth.userById(Number(req.params.id));
-    const user = publicUser(await auth.updateUser(Number(req.params.id), req.body));
-    // Changing or clearing the SSO link also forgets the provider sign-ins it made.
-    if (req.body.ssoSubject !== undefined && (before?.sso_subject || null) !== user.ssoSubject) oidc.unlinkUser(user.id);
-    return { user };
+    // Linked sign-in accounts stay put; admins unlink them one by one.
+    return { user: publicUser(await auth.updateUser(Number(req.params.id), req.body)) };
   });
   app.delete('/api/admin/users/:id', { preHandler: requireAdmin }, async (req) => {
     auth.deleteUser(Number(req.params.id));
