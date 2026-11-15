@@ -5,13 +5,25 @@ import { inView } from './radarcoverage.js';
 
 // Models that can be mapped. `windy` is the matching Windy model, when there is one.
 export const MAP_MODELS = [
-  { id: 'ecmwf_ifs025', name: 'ECMWF', windy: 'ecmwf', days: 5, note: 'Europe. Often the best global model past 3 days.' },
-  { id: 'gfs_seamless', name: 'GFS', windy: 'gfs', days: 5, note: 'USA (NOAA). The main US global model.' },
-  { id: 'icon_seamless', name: 'ICON', windy: 'icon', days: 5, note: 'Germany (DWD). Strong on fronts and temperatures.' },
-  { id: 'gem_seamless', name: 'GEM', days: 5, note: 'Canada (ECCC). Good on winter storms.' },
+  { id: 'ecmwf_ifs025', name: 'ECMWF', windy: 'ecmwf', days: 5, longDays: 15, note: 'Europe. Often the best global model past 3 days.' },
+  { id: 'gfs_seamless', name: 'GFS', windy: 'gfs', days: 5, longDays: 16, note: 'USA (NOAA). The main US global model.' },
+  { id: 'icon_seamless', name: 'ICON', windy: 'icon', days: 5, longDays: 7, note: 'Germany (DWD). Strong on fronts and temperatures.' },
+  { id: 'gem_seamless', name: 'GEM', days: 5, longDays: 10, note: 'Canada (ECCC). Good on winter storms.' },
   { id: 'gfs_hrrr', name: 'HRRR', days: 2, usOnly: true, domain: 'hrrr', note: 'USA (NOAA), 3 km. Storm detail for the next 2 days, US only.' },
-  { id: 'ecmwf_aifs025_single', name: 'AIFS', days: 5, ai: true, note: "ECMWF's AI model." },
+  { id: 'ecmwf_aifs025_single', name: 'AIFS', days: 5, longDays: 15, ai: true, note: "ECMWF's AI model." },
 ];
+
+// How far ahead to map. "long" is the two-week look the pros use for patterns:
+// every 6 hours, as far as each model goes (ECMWF and AIFS 15 days, GFS 16,
+// GEM 10, ICON 7). HRRR stops at 2 days, so it isn't offered there.
+export const MAP_RANGES = [
+  { id: 'short', name: 'Next 5 days', step: 3 },
+  { id: 'long', name: '2 weeks', step: 6 },
+];
+export const rangeOf = (id) => MAP_RANGES.find((r) => r.id === id) || MAP_RANGES[0];
+export const modelsFor = (range) => (range === 'long' ? MAP_MODELS.filter((m) => m.longDays) : MAP_MODELS);
+/** Days a model is mapped for in a range. */
+export const daysFor = (model, range) => (range === 'long' ? model.longDays || 0 : model.days);
 
 // 176 points per map. Open-Meteo counts each point as one call (600 a minute
 // for free), so two maps side by side stay well under the limit.
@@ -80,7 +92,10 @@ export function pointsFor(model, grid) {
 export const defaultArea = (lat, lon) => (inConus(lat, lon) ? 'country' : 'region');
 export const STEP_HOURS = 3;
 
-// Open-Meteo hourly variable for each field.
+// Open-Meteo hourly variable for each raw field. `snow` (snowfall) and the two
+// heights are only read to work out the precipitation type and the
+// 1000-500 mb thickness; the map gets `snow` (share of it falling as snow) and
+// `thick` (decameters) instead.
 export const MAP_VARS = {
   temp: 'temperature_2m',
   precip: 'precipitation',
@@ -88,7 +103,69 @@ export const MAP_VARS = {
   windDir: 'wind_direction_10m',
   clouds: 'cloud_cover',
   pressure: 'pressure_msl',
+  snow: 'snowfall',
+  z500: 'geopotential_height_500hPa',
+  z1000: 'geopotential_height_1000hPa',
 };
+// Two weeks of six variables, so a whole-US map is still about one Open-Meteo
+// call per point (more than 10 variables or 14 days costs extra).
+export const LONG_VARS = ['temp', 'precip', 'pressure', 'snow', 'z500', 'z1000'];
+export const varsFor = (range) => (range === 'long' ? LONG_VARS : Object.keys(MAP_VARS));
+/** Fields the server sends for a range (raw heights become `thick`). */
+export const fieldsFor = (range) => [...varsFor(range).filter((f) => f !== 'z500' && f !== 'z1000'), 'thick'];
+
+/**
+ * How many Open-Meteo calls one point costs: more than 10 variables or more
+ * than 14 days counts extra (their fair-use weighting).
+ */
+export const callWeight = (vars, days) => Math.max(1, vars / 10) * Math.max(1, days / 14);
+
+/**
+ * Share of a step's precipitation that fell as snow (0 to 1), or null when dry.
+ * Open-Meteo's snowfall is 7 times the water (0.7 cm per mm, 7 in. per inch).
+ * Models without snowfall fall back on the thickness: below about 5,360 m it's
+ * snow, above 5,440 m it's rain; and it's rain anyway when it's warm at the ground.
+ */
+export function snowShare({ precip, snowfall, thick, tempC }, units) {
+  if (precip == null || precip <= (units === 'metric' ? 0.05 : 0.002)) return null;
+  if (tempC != null && tempC >= 4) return 0;
+  if (snowfall != null) {
+    const water = snowfall / (units === 'metric' ? 0.7 : 7);
+    return Math.round(Math.max(0, Math.min(1, water / precip)) * 100) / 100;
+  }
+  if (thick == null) return null;
+  return Math.round(Math.max(0, Math.min(1, (544 - thick) / 8)) * 100) / 100;
+}
+
+/**
+ * Rain, snow, sleet or freezing rain at a spot, from the snow share and the
+ * ground temperature in °F. Freezing rain is rain falling on frozen ground.
+ */
+export function precipType(share, tempF) {
+  if (share == null) return 'rain';
+  if (share >= 0.7) return 'snow';
+  if (share >= 0.3) return 'sleet';
+  if (tempF != null && tempF <= 32) return 'frzr';
+  return 'rain';
+}
+
+export const PRECIP_TYPES = [
+  { id: 'rain', name: 'Rain', color: [70, 200, 90] },
+  { id: 'snow', name: 'Snow', color: [110, 150, 255] },
+  { id: 'sleet', name: 'Sleet', color: [250, 160, 60] },
+  { id: 'frzr', name: 'Freezing rain', color: [240, 90, 190] },
+];
+
+/**
+ * How much to trust a map this far ahead. Forecasts lose detail day by day:
+ * after about a week a model's map shows the pattern (where storms and cold
+ * air may be), not the exact weather at your house.
+ */
+export function leadConfidence(hoursAhead) {
+  if (hoursAhead <= 72) return { id: 'good', label: 'Pretty sure', kid: 'The next 3 days are usually close to right.' };
+  if (hoursAhead <= 168) return { id: 'fair', label: 'Good idea', kid: 'Days 4 to 7: the big picture is often right, the details can move.' };
+  return { id: 'hint', label: 'Just a hint', kid: 'Past a week, maps are clues, not promises. Storms can shift hundreds of miles or vanish.' };
+}
 
 // Map layers. `windy` is the matching Windy overlay, `kid` the one-line explainer.
 export const MAP_FIELDS = [
@@ -97,7 +174,14 @@ export const MAP_FIELDS = [
   { id: 'wind', name: 'Wind', emoji: '💨', windy: 'wind', kid: 'Arrows point where the wind is blowing to. Hotter colors mean stronger wind.' },
   { id: 'clouds', name: 'Clouds', emoji: '☁️', windy: 'clouds', kid: 'White means cloudy sky. Where you can see the map, the sky is clear.' },
   { id: 'pressure', name: 'Pressure', emoji: '🧭', windy: 'pressure', kid: 'The lines connect places with the same air pressure. L is low pressure, which often brings storms; H is high pressure, which brings calm.' },
+  {
+    id: 'pattern', name: 'Storm pattern', emoji: '🗺️', windy: 'rain', long: true,
+    kid: 'The map the pros use. Green is rain, blue is snow, orange is sleet and pink is freezing rain. White lines are air pressure (L marks a storm). The dashed lines show how cold the air is up high: the blue 540 line is the snow line, and north of it it is usually cold enough to snow.',
+  },
 ];
+// Layers offered on the 2-week maps (no wind or cloud there: too fine a detail that far out).
+export const LONG_FIELDS = ['pattern', 'precip', 'temp', 'pressure'];
+export const fieldsOffered = (range) => (range === 'long' ? MAP_FIELDS.filter((f) => LONG_FIELDS.includes(f.id)) : MAP_FIELDS);
 
 const toF = (c) => (c * 9) / 5 + 32;
 const toMm = (inch) => inch * 25.4;
@@ -155,11 +239,14 @@ export function colorAt(field, v) {
 }
 
 /** Legend for a field in the app's units: CSS gradient and a few labeled values. */
-export function legendFor(field, units) {
+export function legendFor(field, units, step = 3) {
+  if (field === 'pattern') field = 'precip';
   const metric = units === 'metric';
+  // Rain over 6 hours is colored as its 3-hour equivalent, and labeled per 6 hours.
+  const per = step / 3;
   const L = {
     temp: metric ? { unit: '°C', ticks: [-20, -10, 0, 10, 20, 30, 40] } : { unit: '°F', ticks: [0, 20, 40, 60, 80, 100] },
-    precip: metric ? { unit: 'mm in 3 h', ticks: [0.2, 1, 5, 10, 20, 40] } : { unit: 'in. in 3 h', ticks: [0.01, 0.05, 0.2, 0.5, 1] },
+    precip: metric ? { unit: `mm in ${step} h`, ticks: [0.2, 1, 5, 10, 20, 40].map((t) => t * per) } : { unit: `in. in ${step} h`, ticks: [0.01, 0.05, 0.2, 0.5, 1].map((t) => Math.round(t * per * 100) / 100) },
     wind: metric ? { unit: 'km/h', ticks: [0, 20, 40, 60, 80, 120] } : { unit: 'mph', ticks: [0, 10, 20, 30, 50, 75] },
     clouds: { unit: '% of sky', ticks: [0, 25, 50, 75, 100] },
     pressure: { unit: 'hPa (millibars)', ticks: [985, 1000, 1013, 1025, 1035] },
@@ -169,7 +256,7 @@ export function legendFor(field, units) {
   // placed between the stops they fall in, so labels line up with the colors.
   const n = s.length - 1;
   const pos = (raw) => {
-    const v = scaleValue(field, raw, units);
+    const v = scaleValue(field, field === 'precip' ? raw / per : raw, units);
     if (v <= s[0][0]) return 0;
     for (let i = 1; i <= n; i++) if (v <= s[i][0]) return (i - 1 + (v - s[i - 1][0]) / (s[i][0] - s[i - 1][0])) / n;
     return 1;
@@ -180,10 +267,14 @@ export function legendFor(field, units) {
 
 // Grid of points around a center: rows from north to south, columns west to east.
 // The center is snapped so nearby lookups share one cached grid.
-export function gridFor(lat, lon, areaId = 'region') {
+export function gridFor(lat, lon, areaId = 'region', range = 'short') {
   const area = MAP_AREAS.find((a) => a.id === areaId) || MAP_AREAS[1];
-  const rows = area.rows || GRID_ROWS;
-  const cols = area.cols || GRID_COLS;
+  // Two-week maps use about two thirds of the points each way (half as many in all): at that range
+  // only the big pattern matters, and it keeps the Models tab (a 5-day map,
+  // a 2-week map and Rocky's outlook) under Open-Meteo's 600 calls a minute.
+  const thin = (n) => (range === 'long' ? Math.max(7, Math.round(n * 0.65) | 1) : n);
+  const rows = thin(area.rows || GRID_ROWS);
+  const cols = thin(area.cols || GRID_COLS);
   const r3 = (n) => Math.round(n * 1000) / 1000;
   const spread = (from, to, n) => Array.from({ length: n }, (_, i) => r3(from + ((to - from) * i) / (n - 1)));
   if (area.id === 'country' && inConus(lat, lon)) {
@@ -311,4 +402,49 @@ export function pressureCenters(values, rows, cols) {
     }
   }
   return out;
+}
+
+// Storm pattern colors: light to dark by how heavy it is (mm per 3 hours), one hue per type.
+const PATTERN = {
+  rain: [[0.08, [160, 230, 160]], [1, [80, 200, 95]], [5, [25, 150, 65]], [20, [10, 100, 45]]],
+  snow: [[0.08, [190, 210, 255]], [1, [115, 155, 255]], [5, [90, 85, 225]], [20, [125, 45, 175]]],
+  sleet: [[0.08, [255, 215, 160]], [1, [250, 165, 65]], [5, [230, 115, 30]], [20, [185, 75, 20]]],
+  frzr: [[0.08, [255, 185, 232]], [1, [240, 95, 195]], [5, [210, 40, 145]], [20, [150, 20, 95]]],
+};
+
+/** RGBA for precipitation of a type, `v` already in mm per 3 hours. Fades in like the rain map. */
+export function patternColor(type, v) {
+  const alpha = colorAt('precip', v)[3];
+  if (!alpha) return [0, 0, 0, 0];
+  const s = PATTERN[type] || PATTERN.rain;
+  let rgb = s[s.length - 1][1];
+  if (v <= s[0][0]) rgb = s[0][1];
+  else {
+    for (let i = 1; i < s.length; i++) {
+      if (v <= s[i][0]) {
+        const t = (v - s[i - 1][0]) / (s[i][0] - s[i - 1][0]);
+        rgb = s[i - 1][1].map((c, k) => Math.round(c + (s[i][1][k] - c) * t));
+        break;
+      }
+    }
+  }
+  return [...rgb, Math.max(alpha, 150)];
+}
+
+/** Distance in miles between two places (for "a storm 200 miles south of you"). */
+export function milesApart(a, b) {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLon = (b.lon - a.lon) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+  return 3958.8 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Compass word for where `b` is from `a` ("south", "northeast"...). */
+export function directionWord(a, b) {
+  const y = b.lat - a.lat;
+  const x = (b.lon - a.lon) * Math.cos(((a.lat + b.lat) / 2) * (Math.PI / 180));
+  const deg = (Math.atan2(x, y) * 180) / Math.PI;
+  const words = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+  return words[Math.round(((deg + 360) % 360) / 45) % 8];
 }

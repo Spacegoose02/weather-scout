@@ -55,6 +55,16 @@ from free, official data sources.
   side by side) across the region for temperature, rain and snow, wind, clouds or pressure, every
   3 hours with a play button. US places start on the whole lower 48. Keyless (Open-Meteo grid on Esri/OSM tiles); ECMWF, GFS and ICON
   also open in Windy.
+  A **2 weeks** switch maps ECMWF and AIFS (15 days), GFS (16), GEM (10) and ICON (7) every 6 hours,
+  with a **Storm pattern** layer like the pros' maps: rain, snow, sleet and freezing rain by color,
+  isobars with L and H, and 1000-500 mb thickness lines with the 540 "snow line". A ribbon under the
+  slider shows how sure each stretch is (pretty sure, good idea, just a hint).
+- **Rocky's 2-week outlook** (Models tab): the ECMWF ensemble (51 runs, ECMWF open data, CC-BY 4.0)
+  and NOAA's GEFS (31 runs) for your place, compared with the 1991-2020 normals: this week and week 2
+  warmer or colder than usual, whether the European and American models agree, a 15-day strip with
+  the spread of the runs, and storms to watch (with the low on the ECMWF map, and a button to open
+  that day on the 2-week map). Rocky says it in plain words, clear that past a week it's a clue, not
+  a promise; with AI on, in Rocky's own words. Keyless, via Open-Meteo.
 - **Health & sky**: pressure-swing warnings for migraine-sensitive folks, wet-bulb globe temperature
   heat stress, moon phase and sunrise/sunset.
 - **Every hazard**: three new dashboard cards and map layers. 📣 **Weather reports** lets signed-in family

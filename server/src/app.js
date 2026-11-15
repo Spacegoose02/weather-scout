@@ -25,7 +25,8 @@ import * as discoveries from './providers/discoveries.js';
 import * as models from './providers/models.js';
 import { getGooglePollen } from './providers/pollen.js';
 import * as modelMaps from './providers/modelmaps.js';
-import { MAP_AREAS, MAP_MODELS, defaultArea, gridFor } from '../../shared/modelmap.js';
+import { MAP_AREAS, MAP_MODELS, MAP_RANGES, defaultArea, gridFor } from '../../shared/modelmap.js';
+import { registerLongRange } from './longrange.js';
 import { kidReport } from './kid.js';
 import { AppKeys } from './appkeys.js';
 import { healthReport } from './health.js';
@@ -400,7 +401,16 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
     return cache.wrap(key(`ens:${id}`, l), 60 * MIN, () => models.getEnsemble(l, id, fetchImpl));
   });
 
-  // Forecast model maps: a grid of points every 3 hours for one model (Models tab).
+  // Forecast model maps: a grid of points every 3 hours for one model (Models tab),
+  // or every 6 hours out to two weeks (`range=long`).
+  // Models run every 6 hours, so a copy up to 6 hours old is still worth showing
+  // at once; after an hour the server fetches a new one in the background.
+  // Rocky's two-week outlook reads the same cached ECMWF map.
+  const modelMap = ({ model, area, range = 'short', ...l }) => {
+    const g = gridFor(l.lat, l.lon, area, range);
+    return cache.wrapStale(`mmap:${model}:${range}:${area}:${g.center.lat},${g.center.lon},${l.units}`, 60 * MIN, 6 * 60 * MIN,
+      () => modelMaps.getModelMap({ ...l, model, area, range }, fetchImpl));
+  };
   app.get('/api/modelmap', {
     schema: {
       querystring: {
@@ -409,6 +419,7 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
           ...latLonSchema.querystring.properties,
           model: { type: 'string', enum: MAP_MODELS.map((m) => m.id) },
           area: { type: 'string', enum: MAP_AREAS.map((a) => a.id) },
+          range: { type: 'string', enum: MAP_RANGES.map((r) => r.id) },
         },
       },
     },
@@ -416,19 +427,16 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
     const l = loc(req.query);
     const model = req.query.model || MAP_MODELS[0].id;
     const area = req.query.area || defaultArea(l.lat, l.lon);
-    const g = gridFor(l.lat, l.lon, area);
     reply.header('cache-control', 'private, max-age=600');
-    // Models run every 6 hours, so a copy up to 6 hours old is still worth showing
-    // at once; after an hour the server fetches a new one in the background.
     try {
-      return await cache.wrapStale(`mmap:${model}:${area}:${g.center.lat},${g.center.lon},${l.units}`, 60 * MIN, 6 * 60 * MIN,
-        () => modelMaps.getModelMap({ ...l, model, area }, fetchImpl));
+      return await modelMap({ ...l, model, area, range: req.query.range || 'short' });
     } catch (err) {
       if (!(err instanceof modelMaps.BusyError)) throw err;
       reply.header('retry-after', String(err.retryAfter));
       return reply.code(503).send({ error: err.message, retryAfter: err.retryAfter });
     }
   });
+  registerLongRange(app, { cache, fetchImpl, ai, latLonSchema, loc, settle, modelMap });
 
   // ---- kid zone (saved progress, seasons photos, forecaster, field trips) ----
   registerKidZone(app, { db, cameras, cache, fetchImpl, requireUser, latLonSchema, loc });

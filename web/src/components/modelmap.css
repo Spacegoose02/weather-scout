@@ -47,7 +47,36 @@
 .mm-time input[type='range'] { flex: 1; min-width: 0; accent-color: var(--brand); }
 .mm-when { flex: none; min-width: 9.5em; text-align: right; }
 
+/* Two-week maps */
+.mm-range { display: inline-flex; width: fit-content; border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; background: var(--card); }
+.mm-range button { border: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 800; padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.mm-range button.on { background: var(--brand); color: var(--brand-ink); }
+.mm-days { opacity: 0.75; font-weight: 600; color: inherit; }
+.mm-chip.on .mm-days { color: var(--brand-ink); opacity: 0.85; }
+.mm-caution { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 10px; padding: 8px 12px; border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 10%, var(--card)); border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line)); font-size: 0.92rem; }
+.mm-caution img { flex: none; margin-top: 2px; }
+.mm-sure { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 800; color: #10151f; }
+.mm-sure.good, .mm-ribbon .good { background: #5ccf7b; }
+.mm-sure.fair, .mm-ribbon .fair { background: #f2c14e; }
+.mm-sure.hint, .mm-ribbon .hint { background: #b9c0cc; }
+.mm-ribbon { position: relative; height: 18px; margin: 6px 0 0 50px; }
+.mm-ribbon span { position: absolute; top: 0; height: 18px; line-height: 18px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; color: #10151f;
+  text-align: center; overflow: hidden; white-space: nowrap; }
+.mm-ribbon i { position: absolute; top: -3px; width: 3px; height: 24px; margin-left: -1px; background: var(--ink); border-radius: 2px; }
+.mm-pattern-key { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 10px; margin: 12px 0 4px; font-size: 0.8rem; }
+.mm-type { display: grid; gap: 2px; font-weight: 700; }
+.mm-type i { display: block; height: 10px; border-radius: 5px; border: 1px solid var(--line); }
+.mm-type-ticks { grid-column: 1 / -1; display: flex; justify-content: space-between; color: var(--muted); font-size: 0.72rem; margin-top: -2px; }
+.mm-lines { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--muted); }
+.mm-lines .ln { display: inline-block; width: 22px; height: 0; vertical-align: middle; margin-right: 4px; border-top: 2px solid; }
+.mm-lines .iso { border-color: #fff; box-shadow: 0 0 0 1px #556; }
+.mm-lines .l540 { border-color: #50aaff; border-top-width: 3px; }
+.mm-lines .thk { border-color: #ff6e46; border-top-style: dashed; }
+
 @media (max-width: 700px) {
+  .mm-pattern-key { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mm-ribbon { margin-left: 0; }
   .mm-maps.two { grid-template-columns: minmax(0, 1fr); }
   .mm-map, .mm-maps.two .mm-map { height: 320px; }
   .mm-windy { margin-left: 0; }
