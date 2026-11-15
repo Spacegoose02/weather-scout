@@ -36,6 +36,7 @@
 | Guest | Default. Weather is visible on your LAN; prefs stay in the browser. |
 | Local | Username + password (scrypt). Signed, httpOnly session cookie, 30 days. 5 bad tries locks that username for a minute. |
 | tinyauth SSO | tinyauth authenticates at the proxy and forwards `Remote-User`/`Remote-Email`/`Remote-Name`. With `AUTH_TRUST_PROXY_HEADERS=true` the server maps `Remote-User` to a user's `sso_subject`, creating the user on first visit if `AUTH_AUTO_CREATE_SSO_USERS=true`. |
+| Sign in with… (OIDC) | Admins add OpenID Connect providers (Tinyauth, Authelia, Authentik, Google…) in *Family & settings*. Code flow with PKCE; the ID token's signature, issuer, audience, expiry and nonce are checked. People are matched by the provider's `sub`, or on first sign-in by the SSO link (`preferred_username` or verified email). See [AUTH.md](AUTH.md). |
 | Linking | An admin sets a user's SSO identity in *Family & settings*, so an existing local profile works through SSO too. |
 | Locked down | `AUTH_REQUIRED=true` blocks all weather endpoints for guests. |
 

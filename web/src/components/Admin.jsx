@@ -5,11 +5,13 @@ import IntegrationsPanel from './stations/IntegrationsPanel.jsx';
 import StormPhotoAdmin from './kid/StormPhotoAdmin.jsx';
 import AiSettingsPanel from './AiSettingsPanel.jsx';
 import AppSettingsPanel from './AppSettingsPanel.jsx';
+import SignInProviders from './SignInProviders.jsx';
 import './ai-settings.css';
 
 // The jump bar at the top of this long window.
 const ADMIN_SECTIONS = [
   ['people', '👪 People'],
+  ['signin', '🔐 Sign-in'],
   ['ai', '🤖 AI & voice'],
   ['app', '⚙️ App'],
   ['apps', '🔑 Connected apps'],
@@ -71,7 +73,7 @@ export default function Admin({ me, onClose }) {
   };
 
   const link = (u) => {
-    const subject = prompt(`SSO identity for ${u.username} (the tinyauth username or email). Leave empty to unlink.`, u.ssoSubject || '');
+    const subject = prompt(`SSO identity for ${u.username} (their username or email at tinyauth or your sign-in provider). Leave empty to unlink.`, u.ssoSubject || '');
     if (subject === null) return;
     act(() => api(`/api/admin/users/${u.id}`, { method: 'PATCH', body: { ssoSubject: subject } }));
   };
@@ -104,7 +106,7 @@ export default function Admin({ me, onClose }) {
             <tr key={u.id}>
               <td>{u.displayName} <button className="link" onClick={() => rename(u)}>rename</button></td>
               <td>{u.username}</td>
-              <td>{u.ssoSubject || <em>none</em>} <button className="link" onClick={() => link(u)}>{u.ssoSubject ? 'change' : 'link'}</button></td>
+              <td>{u.ssoSubject || <em>none</em>} <button className="link" onClick={() => link(u)}>{u.ssoSubject ? 'change' : 'link'}</button>{u.signInWith?.length > 0 && <div className="hint">signs in with {u.signInWith.join(', ')}</div>}</td>
               <td>
                 <label><input type="checkbox" checked={u.isAdmin} disabled={u.id === me.id} onChange={(e) => act(() => api(`/api/admin/users/${u.id}`, { method: 'PATCH', body: { isAdmin: e.target.checked } }))} /> admin</label>
               </td>
@@ -126,6 +128,9 @@ export default function Admin({ me, onClose }) {
         <label><input type="checkbox" checked={form.isAdmin} onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })} /> admin</label>
         <button type="submit">Add</button>
       </form>
+
+      <span id="fam-signin" className="admin-anchor" />
+      <SignInProviders />
 
       <span id="fam-ai" className="admin-anchor" />
       <AiSettingsPanel />

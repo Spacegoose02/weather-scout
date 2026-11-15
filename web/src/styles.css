@@ -690,3 +690,16 @@ a.button { display: inline-block; padding: 8px 14px; border-radius: 10px; backgr
 .email-recipients .row-actions { display: inline-flex; gap: 8px; margin-left: 8px; }
 .email-add, .school-manual { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-top: 8px; }
 .email-kinds { display: grid; gap: 2px; margin: 6px 0; }
+
+/* Sign in with … (OpenID Connect providers) */
+.oidc-buttons { display: grid; gap: 8px; margin-bottom: 12px; }
+.oidc-button { text-align: center; padding: 11px 14px; }
+.oidc-or { display: flex; align-items: center; gap: 10px; margin: 6px 0 0; font-size: .88rem; }
+.oidc-or::before, .oidc-or::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+.oidc-form .check { display: flex; gap: 10px; align-items: center; }
+.oidc-form .check input { width: 18px; height: 18px; margin: 0; }
+.oidc-form .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.oidc-form .oidc-warn { margin: -4px 0 4px 28px; font-size: .88rem; }
+.oidc-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.oidc-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.oidc-list .pill { font-size: .75rem; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
