@@ -6,6 +6,7 @@ import AlertsBanner from './components/AlertsBanner.jsx';
 const WeatherMap = lazy(() => import('./components/WeatherMap.jsx'));
 const KidMode = lazy(() => import('./components/KidMode.jsx'));
 import DisplayName from './components/DisplayName.jsx';
+import LinkedAccounts from './components/LinkedAccounts.jsx';
 import SignIn from './components/SignIn.jsx';
 const Admin = lazy(() => import('./components/Admin.jsx'));
 const News = lazy(() => import('./components/News.jsx'));
@@ -49,15 +50,17 @@ export default function App() {
   const [hash, setHash] = useState(() => window.location.hash);
   const [modal, setModal] = useState(null); // 'signin' | 'settings' | 'admin' | 'alerts' | 'briefing' | 'profile' | 'badges'
   // A "Sign in with …" provider sent us back with a problem (/?signin_error=…).
-  const [signInError] = useState(() => {
+  // Same for linking an account from Sign-in accounts (/?accounts_linked=… or /?accounts_error=…).
+  const [returned] = useState(() => {
     const q = new URLSearchParams(window.location.search);
-    const msg = q.get('signin_error') || '';
-    if (msg) {
-      q.delete('signin_error');
+    const out = { signInError: q.get('signin_error') || '', linked: q.get('accounts_linked'), linkError: q.get('accounts_error') || '' };
+    if (out.signInError || out.linked !== null || out.linkError) {
+      for (const k of ['signin_error', 'accounts_linked', 'accounts_error']) q.delete(k);
       window.history.replaceState(null, '', `${window.location.pathname}${q.size ? `?${q}` : ''}${window.location.hash}`);
     }
-    return msg;
+    return out;
   });
+  const { signInError } = returned;
 
   useEffect(() => {
     api('/api/config')
@@ -65,6 +68,7 @@ export default function App() {
         setConfig(c);
         setUser(c.user);
         if (c.auth.needsSetup || (c.auth.required && !c.user) || (signInError && !c.user)) setModal('signin');
+        else if (c.user && (returned.linked !== null || returned.linkError)) setModal('accounts');
         else if (new URLSearchParams(window.location.search).has('briefing')) setModal('briefing'); // tapped the morning push
       })
       .catch((e) => setError(e.message));
@@ -258,6 +262,9 @@ export default function App() {
           }}
         />
       )}
+      {modal === 'accounts' && user && (
+        <LinkedAccounts notice={returned.linked || ''} initialError={returned.linkError} onClose={() => setModal(null)} />
+      )}
       {modal === 'profile' && user && (
         <DisplayName user={user} onClose={() => setModal(null)} onSaved={(u) => { setUser(u); setModal(null); }} />
       )}
@@ -273,6 +280,7 @@ export default function App() {
           a11y={{ value: prefs.a11y, onChange: (a) => setPrefs({ a11y: a }) }}
           places={{ list: prefs.saved || [], onChange: (list) => setPrefs({ saved: list }) }}
           onProfile={() => setModal('profile')}
+          onAccounts={config.auth.oidcLinking ? () => setModal('accounts') : null}
           onAlerts={() => setModal('alerts')}
           onAdmin={() => setModal('admin')}
           onSignIn={() => setModal('signin')}

@@ -8,7 +8,7 @@ import { inAndroidApp, CHANGE_SERVER_URL } from '../androidApp.js';
 
 // The ⚙️ window: every setting a person can change, in one place. Alerts, the
 // safety plan and Family & settings open their own windows from here.
-export default function Settings({ user, sso, units, onUnits, language = 'en', onLanguage, theme, a11y, places, onProfile, onAlerts, onAdmin, onSignIn, onSignOut, onClose }) {
+export default function Settings({ user, sso, units, onUnits, language = 'en', onLanguage, theme, a11y, places, onProfile, onAccounts, onAlerts, onAdmin, onSignIn, onSignOut, onClose }) {
   return (
     <Modal title={t('Settings')} onClose={onClose} wide>
       <div className="prefs">
@@ -19,6 +19,7 @@ export default function Settings({ user, sso, units, onUnits, language = 'en', o
               <span>{t('Signed in as')} <strong>{user.displayName}</strong>{user.displayName !== user.username && <> ({user.username})</>}</span>
               <span className="row-actions">
                 <button className="ghost" onClick={onProfile}>{t('✏️ Change my name')}</button>
+                {onAccounts && <button className="ghost" onClick={onAccounts}>{t('🔐 Sign-in accounts')}</button>}
                 <button className="ghost" onClick={() => { onClose(); onSignOut(); }}>{t('Sign out')}</button>
               </span>
             </div>

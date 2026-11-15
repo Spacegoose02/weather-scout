@@ -703,3 +703,4 @@ a.button { display: inline-block; padding: 8px 14px; border-radius: 10px; backgr
 .oidc-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .oidc-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
 .oidc-list .pill { font-size: .75rem; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.linked-account { font-size: .9rem; margin-top: 2px; }

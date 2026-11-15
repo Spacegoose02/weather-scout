@@ -72,8 +72,14 @@ export default function Admin({ me, onClose }) {
     });
   };
 
+  const unlinkAccount = (u, l) => {
+    const last = !u.hasPassword && u.linked.length <= 1;
+    if (!confirm(`Unlink ${u.username}'s ${l.name} account${l.label ? ` (${l.label})` : ''}?${last ? ' It is their only way to sign in, so set a password for them first.' : ''}`)) return;
+    act(() => api(`/api/admin/users/${u.id}/identities/${l.providerId}`, { method: 'DELETE' }));
+  };
+
   const link = (u) => {
-    const subject = prompt(`SSO identity for ${u.username} (their username or email at tinyauth or your sign-in provider). Leave empty to unlink.`, u.ssoSubject || '');
+    const subject = prompt(`Link ${u.username} to a Tinyauth or sign-in provider account: type their username or email there. It links on their next sign-in (with the Sign in with… button or the tinyauth headers). Leave empty to clear.`, u.ssoSubject || '');
     if (subject === null) return;
     act(() => api(`/api/admin/users/${u.id}`, { method: 'PATCH', body: { ssoSubject: subject } }));
   };
@@ -100,13 +106,21 @@ export default function Admin({ me, onClose }) {
       <span id="fam-people" className="admin-anchor" />
       <h3>People</h3>
       <table className="users">
-        <thead><tr><th>Name</th><th>Username</th><th>SSO link</th><th>Role</th><th /></tr></thead>
+        <thead><tr><th>Name</th><th>Username</th><th title="A Tinyauth username or email links that person on their next sign-in. Linked accounts are listed under it.">SSO link &amp; accounts</th><th>Role</th><th /></tr></thead>
         <tbody>
           {users.map((u) => (
             <tr key={u.id}>
               <td>{u.displayName} <button className="link" onClick={() => rename(u)}>rename</button></td>
               <td>{u.username}</td>
-              <td>{u.ssoSubject || <em>none</em>} <button className="link" onClick={() => link(u)}>{u.ssoSubject ? 'change' : 'link'}</button>{u.signInWith?.length > 0 && <div className="hint">signs in with {u.signInWith.join(', ')}</div>}</td>
+              <td>
+                {u.ssoSubject || <em>none</em>} <button className="link" onClick={() => link(u)}>{u.ssoSubject ? 'change' : 'link'}</button>
+                {u.linked?.map((l) => (
+                  <div key={l.providerId} className="linked-account">
+                    🔐 {l.name}{l.label && <span className="hint"> · {l.label}</span>}{' '}
+                    <button className="link danger" onClick={() => unlinkAccount(u, l)}>unlink</button>
+                  </div>
+                ))}
+              </td>
               <td>
                 <label><input type="checkbox" checked={u.isAdmin} disabled={u.id === me.id} onChange={(e) => act(() => api(`/api/admin/users/${u.id}`, { method: 'PATCH', body: { isAdmin: e.target.checked } }))} /> admin</label>
               </td>

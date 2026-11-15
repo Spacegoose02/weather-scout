@@ -119,7 +119,7 @@ test('sign-in sends PKCE and the client secret, and links through the SSO link',
   r = await signIn(app, fp, provider.id);
   assert.equal((await app.inject({ url: '/api/auth/me', headers: { cookie: sessionCookie(r.back) } })).json().user.id, samId);
   const users = (await app.inject({ url: '/api/admin/users', headers: { cookie: admin } })).json().users;
-  assert.deepEqual(users.find((u) => u.id === samId).signInWith, ['Tinyauth']);
+  assert.deepEqual(users.find((u) => u.id === samId).linked.map((l) => [l.name, l.label]), [['Tinyauth', 'samuel']]);
   await app.close();
 });
 
@@ -164,5 +164,73 @@ test('provider sign-in works when the server requires sign-in', async () => {
   const { app } = await testApp({ fetchImpl: fp.fetchImpl, env: { AUTH_REQUIRED: 'true' } });
   assert.equal((await app.inject('/api/auth/oidc/99/login')).statusCode, 302);
   assert.equal((await app.inject('/api/auth/oidc/callback')).statusCode, 302);
+  await app.close();
+});
+
+// Start "Link Tinyauth" from a signed-in profile and come back.
+async function linkFrom(app, fp, providerId, cookie, tamper = (q) => q) {
+  const start = await app.inject({ url: `/api/auth/oidc/${providerId}/link`, headers: { cookie } });
+  assert.equal(start.statusCode, 302);
+  const to = new URL(start.headers.location);
+  fp.state.nonce = to.searchParams.get('nonce');
+  const q = tamper({ code: 'the-code', state: to.searchParams.get('state') });
+  return app.inject({ url: `/api/auth/oidc/callback?${new URLSearchParams(q)}`, headers: { cookie: `${cookie}; ${cookieFrom(start)}` } });
+}
+
+test('a signed-in person links their own Tinyauth account, then signs in with it', async () => {
+  const { app, admin, provider, fp } = await setup();
+  await app.inject({ method: 'POST', url: '/api/admin/users', headers: { cookie: admin }, payload: { username: 'mom', password: 'password123' } });
+  const mom = cookieFrom(await app.inject({ method: 'POST', url: '/api/auth/login', payload: { username: 'mom', password: 'password123' } }));
+  // Not linked yet: sign-in with Tinyauth is turned away.
+  assert.match((await signIn(app, fp, provider.id)).back.headers.location, /signin_error/);
+
+  const back = await linkFrom(app, fp, provider.id, mom);
+  assert.equal(back.headers.location, '/?accounts_linked=Tinyauth');
+  assert.equal(sessionCookie(back), undefined); // still the same session
+  const mine = (await app.inject({ url: '/api/me/identities', headers: { cookie: mom } })).json();
+  assert.deepEqual(mine.linked.map((l) => [l.name, l.label]), [['Tinyauth', 'sam']]);
+  assert.deepEqual(mine.providers, [{ id: provider.id, name: 'Tinyauth' }]);
+
+  const r = await signIn(app, fp, provider.id);
+  assert.equal((await app.inject({ url: '/api/auth/me', headers: { cookie: sessionCookie(r.back) } })).json().user.username, 'mom');
+
+  // Someone else can't take the same Tinyauth account.
+  const boss = await linkFrom(app, fp, provider.id, admin);
+  assert.match(decodeURIComponent(boss.headers.location), /accounts_error=That Tinyauth account is already linked to mom/);
+
+  // Mom has a password, so she can unlink it herself.
+  assert.equal((await app.inject({ method: 'DELETE', url: `/api/me/identities/${provider.id}`, headers: { cookie: mom } })).statusCode, 200);
+  assert.deepEqual((await app.inject({ url: '/api/me/identities', headers: { cookie: mom } })).json().linked, []);
+  await app.close();
+});
+
+test('linking needs a signed-in session that lasts the whole trip', async () => {
+  const { app, admin, provider, fp } = await setup();
+  const guest = await app.inject(`/api/auth/oidc/${provider.id}/link`);
+  assert.match(decodeURIComponent(guest.headers.location), /signin_error=Sign in first/);
+  // Started signed in, came back signed out.
+  const start = await app.inject({ url: `/api/auth/oidc/${provider.id}/link`, headers: { cookie: admin } });
+  const to = new URL(start.headers.location);
+  fp.state.nonce = to.searchParams.get('nonce');
+  const back = await app.inject({ url: `/api/auth/oidc/callback?code=c&state=${to.searchParams.get('state')}`, headers: { cookie: cookieFrom(start) } });
+  assert.match(decodeURIComponent(back.headers.location), /accounts_error=You were signed out/);
+  await app.close();
+});
+
+test('people cannot unlink their last way in, but an admin can unlink anyone', async () => {
+  const { app, admin, provider, fp } = await setup({ autoCreate: true }, { sub: 'kid-1', preferred_username: 'kiddo' });
+  const r = await signIn(app, fp, provider.id);
+  const kid = sessionCookie(r.back);
+  const kidId = (await app.inject({ url: '/api/auth/me', headers: { cookie: kid } })).json().user.id;
+  const self = await app.inject({ method: 'DELETE', url: `/api/me/identities/${provider.id}`, headers: { cookie: kid } });
+  assert.equal(self.statusCode, 400);
+  assert.match(self.json().error, /only way to sign in/);
+  // Admin-only route.
+  assert.equal((await app.inject({ method: 'DELETE', url: `/api/admin/users/${kidId}/identities/${provider.id}`, headers: { cookie: kid } })).statusCode, 403);
+  let users = (await app.inject({ url: '/api/admin/users', headers: { cookie: admin } })).json().users;
+  assert.equal(users.find((u) => u.id === kidId).linked.length, 1);
+  assert.equal((await app.inject({ method: 'DELETE', url: `/api/admin/users/${kidId}/identities/${provider.id}`, headers: { cookie: admin } })).statusCode, 200);
+  users = (await app.inject({ url: '/api/admin/users', headers: { cookie: admin } })).json().users;
+  assert.deepEqual(users.find((u) => u.id === kidId).linked, []);
   await app.close();
 });

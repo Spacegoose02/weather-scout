@@ -132,6 +132,11 @@ export function checkClaims(payload, { issuer, clientId, nonce, now = Date.now()
   if (!payload.sub) throw bad('The sign-in provider did not say who you are.', 502);
 }
 
+// The name someone has at the provider, for showing which account is linked.
+function handleOf(claims) {
+  return [claims.preferred_username, claims.email, claims.name].find((x) => typeof x === 'string' && x.trim())?.trim() || '';
+}
+
 // ---- service ----------------------------------------------------------------
 export class OidcService {
   constructor(db, cfg, { fetchImpl = fetch, auth }) {
@@ -141,6 +146,9 @@ export class OidcService {
     this.auth = auth;
     this.discovery = new Map(); // issuer -> { at, doc, keys, keysAt }
     db.exec(SCHEMA);
+    // v0.14 tables had no label column: the name the person has at the provider.
+    const cols = new Set(db.prepare('PRAGMA table_info(oidc_identities)').all().map((c) => c.name));
+    if (!cols.has('label')) db.exec("ALTER TABLE oidc_identities ADD COLUMN label TEXT NOT NULL DEFAULT ''");
   }
 
   row(id) {
@@ -252,7 +260,8 @@ export class OidcService {
     return `${base}${CALLBACK_PATH}`;
   }
 
-  async start(id, req) {
+  // linkUserId: a signed-in person is adding this provider to their own profile.
+  async start(id, req, { linkUserId = null } = {}) {
     const p = this.row(id);
     if (!p) throw bad('That sign-in option is gone. Reload the page.', 404);
     const { doc } = await this.discover(p.issuer);
@@ -264,6 +273,7 @@ export class OidcService {
       v: verifier,
       r: this.callbackUrl(req),
       t: Date.now(),
+      l: linkUserId,
     };
     const url = new URL(doc.authorization_endpoint);
     const params = {
@@ -306,7 +316,24 @@ export class OidcService {
         }
       } catch { /* the ID token is enough */ }
     }
-    return this.userFor(p, claims);
+    if (flow.l) return { user: this.attach(p, claims, Number(flow.l)), linked: p.name };
+    return { user: await this.userFor(p, claims) };
+  }
+
+  // "Link Tinyauth" from someone's own profile.
+  attach(p, claims, userId) {
+    const user = this.auth.userById(userId);
+    if (!user) throw bad('Sign in again, then link the account.', 401);
+    const sub = String(claims.sub);
+    const known = this.db.prepare('SELECT user_id FROM oidc_identities WHERE provider_id = ? AND subject = ?').get(p.id, sub);
+    if (known && known.user_id !== userId) {
+      const other = this.auth.userById(known.user_id);
+      throw bad(`That ${p.name} account is already linked to ${other ? other.display_name : 'another profile'}. An admin can unlink it in Family & settings, People.`, 409);
+    }
+    // One account per provider per profile: linking again swaps it.
+    this.db.prepare('DELETE FROM oidc_identities WHERE provider_id = ? AND user_id = ? AND subject != ?').run(p.id, userId, sub);
+    this.link(p.id, sub, userId, handleOf(claims));
+    return user;
   }
 
   async exchange(p, doc, code, flow) {
@@ -340,7 +367,10 @@ export class OidcService {
     const known = this.db.prepare('SELECT user_id FROM oidc_identities WHERE provider_id = ? AND subject = ?').get(p.id, sub);
     if (known) {
       const user = this.auth.userById(known.user_id);
-      if (user) return user;
+      if (user) {
+        this.db.prepare('UPDATE oidc_identities SET label = ? WHERE provider_id = ? AND subject = ?').run(handleOf(claims), p.id, sub);
+        return user;
+      }
     }
     // The admin's "SSO link" (the tinyauth username or email) links this sign-in
     // to an existing profile, the same as the tinyauth headers do.
@@ -349,7 +379,7 @@ export class OidcService {
     for (const h of handles) {
       const user = this.db.prepare('SELECT * FROM users WHERE sso_subject = ?').get(h);
       if (user) {
-        this.link(p.id, sub, user.id);
+        this.link(p.id, sub, user.id, handleOf(claims));
         return user;
       }
     }
@@ -366,24 +396,40 @@ export class OidcService {
     const user = await this.auth.createUser({
       username, password: null, displayName: name, isAdmin: this.auth.userCount() === 0, ssoSubject: freeHandle,
     });
-    this.link(p.id, sub, user.id);
+    this.link(p.id, sub, user.id, handleOf(claims));
     return user;
   }
 
-  link(providerId, subject, userId) {
-    this.db.prepare('INSERT OR REPLACE INTO oidc_identities (provider_id, subject, user_id) VALUES (?, ?, ?)').run(providerId, subject, userId);
+  link(providerId, subject, userId, label = '') {
+    this.db.prepare('INSERT OR REPLACE INTO oidc_identities (provider_id, subject, user_id, label) VALUES (?, ?, ?, ?)').run(providerId, subject, userId, String(label || '').slice(0, 200));
   }
 
-  // Which providers each profile has signed in with, for the People table.
+  // The sign-in accounts linked to one profile.
+  identitiesFor(userId) {
+    return this.db.prepare(
+      'SELECT i.provider_id, i.label, i.created_at, p.name FROM oidc_identities i JOIN oidc_providers p ON p.id = i.provider_id WHERE i.user_id = ? ORDER BY p.name',
+    ).all(Number(userId)).map((r) => ({ providerId: r.provider_id, name: r.name, label: r.label, linkedAt: r.created_at }));
+  }
+
+  // Same, for every profile at once (the People table).
   identitiesByUser() {
-    const rows = this.db.prepare('SELECT i.user_id, p.name FROM oidc_identities i JOIN oidc_providers p ON p.id = i.provider_id ORDER BY p.name').all();
+    const rows = this.db.prepare('SELECT i.user_id, i.provider_id, i.label, p.name FROM oidc_identities i JOIN oidc_providers p ON p.id = i.provider_id ORDER BY p.name').all();
     const out = {};
-    for (const r of rows) (out[r.user_id] ||= []).push(r.name);
+    for (const r of rows) (out[r.user_id] ||= []).push({ providerId: r.provider_id, name: r.name, label: r.label });
     return out;
   }
 
-  unlinkUser(userId) {
-    this.db.prepare('DELETE FROM oidc_identities WHERE user_id = ?').run(Number(userId));
+  // byAdmin: admins may remove anyone's link. People removing their own can't
+  // remove their last way in (no password and no other linked account).
+  unlink(userId, providerId, { byAdmin = false } = {}) {
+    const user = this.auth.userById(Number(userId));
+    if (!user) throw bad('No such user.', 404);
+    const mine = this.identitiesFor(user.id);
+    if (!mine.some((i) => i.providerId === Number(providerId))) throw bad('That account is not linked.', 404);
+    if (!byAdmin && !user.password_hash && mine.length <= 1 && !(this.cfg.auth.trustProxyHeaders && user.sso_subject)) {
+      throw bad('This is your only way to sign in. Ask an admin to give you a password first, or link another account.', 400);
+    }
+    this.db.prepare('DELETE FROM oidc_identities WHERE user_id = ? AND provider_id = ?').run(user.id, Number(providerId));
   }
 }
 
@@ -391,15 +437,34 @@ export class OidcService {
 export function registerOidc(app, { oidc, auth, cfg, requireAdmin, setSession }) {
   const flowCookie = (req) => ({ path: '/api/auth/oidc', httpOnly: true, sameSite: 'lax', secure: cfg.auth.secureCookies || req.protocol === 'https', signed: true });
   const backHome = (reply, error) => reply.redirect(error ? `/?signin_error=${encodeURIComponent(error)}` : '/', 302);
+  // Linking happens from the profile window, so problems and success go back there.
+  const backToAccounts = (reply, error, linked) => reply.redirect(error
+    ? `/?accounts_error=${encodeURIComponent(error)}`
+    : `/?accounts_linked=${encodeURIComponent(linked || '')}`, 302);
+  const go = async (req, reply, opts) => {
+    const { url, flow } = await oidc.start(req.params.id, req, opts);
+    reply.setCookie(OIDC_COOKIE, Buffer.from(JSON.stringify(flow)).toString('base64url'), { ...flowCookie(req), maxAge: FLOW_TTL / 1000 });
+    return reply.redirect(url, 302);
+  };
 
   app.get('/api/auth/oidc/:id/login', async (req, reply) => {
     try {
-      const { url, flow } = await oidc.start(req.params.id, req);
-      reply.setCookie(OIDC_COOKIE, Buffer.from(JSON.stringify(flow)).toString('base64url'), { ...flowCookie(req), maxAge: FLOW_TTL / 1000 });
-      return reply.redirect(url, 302);
+      return await go(req, reply);
     } catch (e) {
       req.log.warn({ err: e }, 'OIDC sign-in could not start');
       return backHome(reply, e instanceof AuthError ? e.message : 'Sign-in could not start. Try again.');
+    }
+  });
+
+  // "Link Tinyauth" in someone's profile: the same trip, but the account found
+  // at the end is attached to the profile that is signed in now.
+  app.get('/api/auth/oidc/:id/link', async (req, reply) => {
+    if (!req.user) return backHome(reply, 'Sign in first, then link the account from your profile.');
+    try {
+      return await go(req, reply, { linkUserId: req.user.id });
+    } catch (e) {
+      req.log.warn({ err: e }, 'OIDC link could not start');
+      return backToAccounts(reply, e instanceof AuthError ? e.message : 'Linking could not start. Try again.');
     }
   });
 
@@ -413,14 +478,38 @@ export function registerOidc(app, { oidc, auth, cfg, requireAdmin, setSession })
         flow = JSON.parse(Buffer.from(unsigned.value, 'base64url').toString('utf8'));
       } catch { /* treated as missing */ }
     }
+    const linking = !!flow?.l;
     try {
-      const user = await oidc.finish(flow, req.query || {});
+      // The link must finish in the same signed-in session that started it.
+      if (linking && req.user?.id !== Number(flow.l)) throw new AuthError(401, 'You were signed out while linking. Sign in and try again.');
+      const { user, linked } = await oidc.finish(flow, req.query || {});
+      if (linking) return backToAccounts(reply, null, linked);
       setSession(reply, auth.createSession(user.id));
       return backHome(reply);
     } catch (e) {
-      req.log.warn({ err: e }, 'OIDC sign-in failed');
-      return backHome(reply, e instanceof AuthError ? e.message : 'Sign-in failed. Try again.');
+      req.log.warn({ err: e }, linking ? 'OIDC link failed' : 'OIDC sign-in failed');
+      const msg = e instanceof AuthError ? e.message : 'Sign-in failed. Try again.';
+      return linking ? backToAccounts(reply, msg) : backHome(reply, msg);
     }
+  });
+
+  // ---- linked accounts --------------------------------------------------------
+  app.get('/api/me/identities', async (req, reply) => {
+    if (!req.user) return reply.code(401).send({ error: 'Please sign in.' });
+    return {
+      linked: oidc.identitiesFor(req.user.id),
+      providers: oidc.list().map((p) => ({ id: p.id, name: p.name })),
+      hasPassword: !!req.user.password_hash,
+    };
+  });
+  app.delete('/api/me/identities/:providerId', async (req, reply) => {
+    if (!req.user) return reply.code(401).send({ error: 'Please sign in.' });
+    oidc.unlink(req.user.id, req.params.providerId);
+    return { ok: true, linked: oidc.identitiesFor(req.user.id) };
+  });
+  app.delete('/api/admin/users/:id/identities/:providerId', { preHandler: requireAdmin }, async (req) => {
+    oidc.unlink(req.params.id, req.params.providerId, { byAdmin: true });
+    return { ok: true };
   });
 
   const providerBody = {
