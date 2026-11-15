@@ -48,13 +48,23 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [hash, setHash] = useState(() => window.location.hash);
   const [modal, setModal] = useState(null); // 'signin' | 'settings' | 'admin' | 'alerts' | 'briefing' | 'profile' | 'badges'
+  // A "Sign in with …" provider sent us back with a problem (/?signin_error=…).
+  const [signInError] = useState(() => {
+    const q = new URLSearchParams(window.location.search);
+    const msg = q.get('signin_error') || '';
+    if (msg) {
+      q.delete('signin_error');
+      window.history.replaceState(null, '', `${window.location.pathname}${q.size ? `?${q}` : ''}${window.location.hash}`);
+    }
+    return msg;
+  });
 
   useEffect(() => {
     api('/api/config')
       .then((c) => {
         setConfig(c);
         setUser(c.user);
-        if (c.auth.needsSetup || (c.auth.required && !c.user)) setModal('signin');
+        if (c.auth.needsSetup || (c.auth.required && !c.user) || (signInError && !c.user)) setModal('signin');
         else if (new URLSearchParams(window.location.search).has('briefing')) setModal('briefing'); // tapped the morning push
       })
       .catch((e) => setError(e.message));
@@ -144,7 +154,7 @@ export default function App() {
     return (
       <>
         <Suspense fallback={<Loading />}><Classroom weather={weather} location={location} units={units} user={user} onSignIn={() => setModal('signin')} onExit={() => go('today')} /></Suspense>
-        {modal === 'signin' && <SignIn sso={config.auth.sso} onClose={() => setModal(null)} onDone={(u) => { setUser(u); setModal(null); }} />}
+        {modal === 'signin' && <SignIn sso={config.auth.sso} providers={config.auth.oidc || []} onClose={() => setModal(null)} onDone={(u) => { setUser(u); setModal(null); }} />}
       </>
     );
   }
@@ -238,6 +248,8 @@ export default function App() {
           setup={config.auth.needsSetup}
           required={config.auth.required}
           sso={config.auth.sso}
+          providers={config.auth.oidc || []}
+          initialError={signInError}
           onClose={() => setModal(null)}
           onDone={(u) => {
             setUser(u);

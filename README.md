@@ -110,7 +110,7 @@ from free, official data sources.
   album and earn the *Storm Gazer* badge. Admins can hide any picture for everyone (right on the
   card, or in *Family & settings*) and add their own from Commons. Needs outbound access to
   `commons.wikimedia.org` and `upload.wikimedia.org`.
-- **Profiles**: local username sign-in, tinyauth SSO, and admins can link an SSO identity to a
+- **Profiles**: local username sign-in, "Sign in with…" buttons for OpenID Connect providers (Tinyauth, Authelia, Google…), tinyauth SSO headers, and admins can link an SSO identity to a
   username. Saved places, units and Kid Mode follow you between devices.
 - **News & Videos**: local and national weather news. Your NWS office's outlook, forecast
   discussion and public statements show up on their own; admins add RSS feeds (local TV, NOAA,

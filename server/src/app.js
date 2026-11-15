@@ -13,6 +13,7 @@ import { loadConfig, loadOrCreateSecret } from './config.js';
 import { TtlCache, UpstreamError, fetchJson } from './cache.js';
 import { openDb, publicUser } from './db.js';
 import { AuthService, AuthError, SESSION_COOKIE } from './auth.js';
+import { OidcService, registerOidc } from './oidc.js';
 import { CameraService } from './providers/cameras/index.js';
 import * as openMeteo from './providers/openmeteo.js';
 import { withHomeCoords } from '../../shared/homeplace.js';
@@ -100,6 +101,7 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   const settings = new Settings(db, cfg);
   settings.apply();
   const auth = new AuthService(db, cfg);
+  const oidc = new OidcService(db, cfg, { fetchImpl, auth });
   const cameras = new CameraService(cfg, cache, fetchImpl, { retry: { baseDelayMs: Number(cfg.env.CAMERA_RETRY_DELAY_MS) || 1500 } });
   const appKeys = new AppKeys(db);
   const media = new MediaService(db, cache, fetchImpl);
@@ -130,7 +132,7 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   const OPEN = new Set(['/api/health', '/api/status', '/api/config', '/api/auth/login', '/api/auth/logout', '/api/auth/me', '/api/auth/setup']);
   app.addHook('preHandler', async (req, reply) => {
     if (!cfg.auth.required || !req.url.startsWith('/api/')) return;
-    if (OPEN.has(req.url.split('?')[0]) || req.user || req.url.startsWith('/api/connect/') || req.url.startsWith('/api/stations/push') || req.url.startsWith('/api/email-alerts/manage/')) return;
+    if (OPEN.has(req.url.split('?')[0]) || req.user || req.url.startsWith('/api/connect/') || req.url.startsWith('/api/auth/oidc/') || req.url.startsWith('/api/stations/push') || req.url.startsWith('/api/email-alerts/manage/')) return;
     reply.code(401).send({ error: 'Please sign in.' });
   });
 
@@ -239,6 +241,7 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
       sso: cfg.auth.trustProxyHeaders,
       ssoLogoutUrl: cfg.auth.ssoLogoutUrl || null,
       needsSetup: auth.userCount() === 0 && !cfg.auth.trustProxyHeaders,
+      oidc: oidc.buttons(),
     },
     user: publicUser(req.user),
     ai: ai.status(),
@@ -719,6 +722,7 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   };
 
   app.get('/api/auth/me', async (req) => ({ user: publicUser(req.user) }));
+  registerOidc(app, { oidc, auth, cfg, requireAdmin, setSession });
 
   const credsSchema = {
     body: {
@@ -760,7 +764,10 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
     publicUser(auth.setPreferences(req.user.id, req.body)).preferences);
 
   // ---- admin -----------------------------------------------------------------
-  app.get('/api/admin/users', { preHandler: requireAdmin }, async () => ({ users: auth.listUsers() }));
+  app.get('/api/admin/users', { preHandler: requireAdmin }, async () => {
+    const via = oidc.identitiesByUser();
+    return { users: auth.listUsers().map((u) => ({ ...u, signInWith: via[u.id] || [] })) };
+  });
   app.post('/api/admin/users', {
     preHandler: requireAdmin,
     schema: {
@@ -773,9 +780,13 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
       },
     },
   }, async (req) => ({ user: publicUser(await auth.createUser(req.body)) }));
-  app.patch('/api/admin/users/:id', { preHandler: requireAdmin, schema: { body: { type: 'object' } } }, async (req) => ({
-    user: publicUser(await auth.updateUser(Number(req.params.id), req.body)),
-  }));
+  app.patch('/api/admin/users/:id', { preHandler: requireAdmin, schema: { body: { type: 'object' } } }, async (req) => {
+    const before = auth.userById(Number(req.params.id));
+    const user = publicUser(await auth.updateUser(Number(req.params.id), req.body));
+    // Changing or clearing the SSO link also forgets the provider sign-ins it made.
+    if (req.body.ssoSubject !== undefined && (before?.sso_subject || null) !== user.ssoSubject) oidc.unlinkUser(user.id);
+    return { user };
+  });
   app.delete('/api/admin/users/:id', { preHandler: requireAdmin }, async (req) => {
     auth.deleteUser(Number(req.params.id));
     return { ok: true };
