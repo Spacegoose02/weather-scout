@@ -5,13 +5,18 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import './styles.css';
 import App from './App.jsx';
+import EmbedMap, { embedParams } from './EmbedMap.jsx';
 import { noteAndroidApp } from './androidApp.js';
 
 noteAndroidApp();
 
+// /?embed=map shows only the radar map, for other apps' iframes.
+const embed = embedParams();
+if (embed) document.documentElement.classList.add('embed-map');
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    {embed ? <EmbedMap params={embed} /> : <App />}
   </StrictMode>,
 );
 

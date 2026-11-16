@@ -704,3 +704,18 @@ a.button { display: inline-block; padding: 8px 14px; border-radius: 10px; backgr
 .oidc-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
 .oidc-list .pill { font-size: .75rem; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
 .linked-account { font-size: .9rem; margin-top: 2px; }
+
+/* The map on its own in another app's iframe (/?embed=map, see EmbedMap.jsx). */
+html.embed-map, html.embed-map body { background: #0f1420; }
+.embed-note { margin: 0; padding: 16px; color: #e6e9f0; font-weight: 600; }
+.embed-note a { color: inherit; }
+.map-card.embed .radar-brand { color: inherit; text-decoration: none; }
+/* A dashboard tile is small: a tighter toolbar that leaves room for the map. */
+@media (max-width: 900px) {
+  .map-card.embed .radar-bar { top: 6px; padding: 3px 4px; gap: 2px; font-size: 0.78rem; border-radius: 10px; }
+  .map-card.embed .radar-bar button { padding: 4px 6px; }
+}
+@media (max-height: 560px) {
+  .map-card.embed .radar-note, .map-card.embed .bolt-legend, .map-card.embed .map-controls > label.opacity { display: none; }
+  .map-card.embed .map-controls { bottom: 8px; padding: 6px 10px; gap: 4px 10px; }
+}
