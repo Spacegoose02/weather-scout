@@ -43,7 +43,10 @@ const siteIcon = (s, selected) => L.divIcon({
 });
 const dist2 = (a, b) => (a.lat - b.lat) ** 2 + ((a.lon - b.lon) * Math.cos((a.lat * Math.PI) / 180)) ** 2;
 
-export default function WeatherMap({ center, alerts, units = 'imperial', layers: savedLayers, onLayers, signedIn = false, lightningMiles = 0, defaultLayers = null }) {
+// embed: the map alone, filling the window, for other apps to show in an
+// iframe (see EmbedMap.jsx). It starts in the full-screen radar view, can't
+// leave it, and doesn't ask the browser for real full screen.
+export default function WeatherMap({ center, alerts, units = 'imperial', layers: savedLayers, onLayers, signedIn = false, lightningMiles = 0, defaultLayers = null, embed = false, zoom = 8, light = false }) {
   const el = useRef(null);
   const card = useRef(null);
   const base = useRef(null);
@@ -53,7 +56,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   const [productId, setProductId] = useState('composite');
   const [sites, setSites] = useState([]);
   const [site, setSite] = useState(null);
-  const [full, setFull] = useState(false);
+  const [full, setFull] = useState(embed);
   const [dark, setDark] = useState(false);
   const [outlookDay, setOutlookDay] = useState(0);
   const [outlook, setOutlook] = useState(null);
@@ -108,7 +111,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
 
   // Map + radar setup
   useEffect(() => {
-    const m = L.map(el.current, { zoomControl: true, attributionControl: true }).setView([center.lat, center.lon], 8);
+    const m = L.map(el.current, { zoomControl: true, attributionControl: true }).setView([center.lat, center.lon], zoom);
     map.current = m;
     base.current = baseMap('light').addTo(m);
     L.circleMarker([center.lat, center.lon], { radius: 7, color: '#fff', weight: 3, fillColor: '#2f6fde', fillOpacity: 1 }).addTo(m).bindTooltip('You are here');
@@ -460,13 +463,13 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   useEffect(() => {
     const m = map.current;
     const node = card.current;
-    if (full && node?.requestFullscreen && !document.fullscreenElement) node.requestFullscreen().catch(() => {});
+    if (!embed && full && node?.requestFullscreen && !document.fullscreenElement) node.requestFullscreen().catch(() => {});
     if (!full && document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    if (full) setDark(true);
+    if (full) setDark(!light);
     document.body.classList.toggle('radar-full-open', full);
     const t = setTimeout(() => m?.invalidateSize(), 120);
-    const onKey = (e) => e.key === 'Escape' && setFull(false);
-    const onChange = () => { if (!document.fullscreenElement) setFull(false); };
+    const onKey = (e) => !embed && e.key === 'Escape' && setFull(false);
+    const onChange = () => { if (!embed && !document.fullscreenElement) setFull(false); };
     window.addEventListener('keydown', onKey);
     document.addEventListener('fullscreenchange', onChange);
     return () => {
@@ -618,10 +621,12 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
   };
 
   return (
-    <section className={`card map-card ${full ? 'full' : ''}`} ref={card}>
+    <section className={`card map-card ${full ? 'full' : ''} ${embed ? 'embed' : ''}`} ref={card}>
       {full && (
         <div className="radar-bar" role="toolbar" aria-label="Radar products">
-          <span className="radar-brand">🦝 Weather Scout radar</span>
+          {embed
+            ? <a className="radar-brand" href="/#map" target="_blank" rel="noopener" title="Open Weather Scout">🦝 Weather Scout radar</a>
+            : <span className="radar-brand">🦝 Weather Scout radar</span>}
           {products.filter((p) => !p.site).map((p) => (
             <button key={p.id} className={p.id === productId ? 'on' : ''} aria-pressed={p.id === productId} onClick={() => setProductId(p.id)} title={p.note}>{p.name}</button>
           ))}
@@ -642,7 +647,7 @@ export default function WeatherMap({ center, alerts, units = 'imperial', layers:
           </label>
           <button onClick={() => setDark(!dark)} aria-pressed={dark}>{dark ? '🌙 Dark' : '☀️ Light'} map</button>
           <button onClick={openWindy} title="Animated wind, gusts and forecast models">🌬️ Windy</button>
-          <button className="radar-exit" onClick={() => setFull(false)} aria-label="Exit full screen">✕</button>
+          {!embed && <button className="radar-exit" onClick={() => setFull(false)} aria-label="Exit full screen">✕</button>}
         </div>
       )}
       {full && show.warnings && national && (

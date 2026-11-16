@@ -79,3 +79,22 @@ rest:
         value_template: "{{ value_json.current.temp }}"
         unit_of_measurement: "°F"
 ```
+
+## Show the radar map in another app
+
+`/?embed=map` is the radar map on its own, filling the window, for an iframe on a
+family dashboard or a wall tablet. It opens in the full-screen radar view (radar
+products, satellite, lightning, SPC outlooks, Windy) and needs no key.
+
+```
+https://weather.example.com/?embed=map                        home location
+https://weather.example.com/?embed=map&lat=37.38&lon=-80.11   another place
+  &zoom=7     closer or wider, 3 to 12 (default 8)
+  &light=1    the light base map instead of the dark one
+```
+
+Layers picked in the embed are kept on that device, apart from the main app's. When
+`AUTH_REQUIRED=true` the viewer has to be signed in to Weather Scout in that browser.
+A reverse proxy in front of Weather Scout must not send `X-Frame-Options: DENY` or
+`SAMEORIGIN` (or a `frame-ancestors` rule that leaves out the dashboard), or the
+browser won't show the map in the other app.
