@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { planActivities, clock } from '../../../shared/activities.js';
-import { savedLabel, ageWords, noteOffline, offlineState } from '../offline.js';
+import { savedLabel, ageWords, noteOffline, offlineState, offlineReason } from '../offline.js';
 
 const NOW = Date.parse('2026-06-10T13:00:00Z'); // place on UTC, so local = UTC
 const iso = (ms) => new Date(ms).toISOString().slice(0, 16);
@@ -57,8 +57,28 @@ describe('offline helpers', () => {
 
   it('tracks saved answers for the weather', () => {
     noteOffline('/api/weather?lat=1', '2026-06-10T14:25:00Z');
-    expect(offlineState()).toEqual({ offline: true, savedAt: '2026-06-10T14:25:00Z' });
+    expect(offlineState()).toEqual({ offline: true, savedAt: '2026-06-10T14:25:00Z', reason: 'network' });
     noteOffline('/api/weather?lat=1', null);
     expect(offlineState().offline).toBe(false);
+  });
+
+  it('keeps why the saved copy was shown', () => {
+    noteOffline('/api/weather?lat=1', '2026-06-10T14:25:00Z', 'upstream:502:Could not reach Open-Meteo right now.');
+    expect(offlineState().reason).toBe('upstream:502:Could not reach Open-Meteo right now.');
+    noteOffline('/api/weather?lat=1', null);
+    expect(offlineState().reason).toBe(null);
+  });
+
+  it('tells a server that is down apart from a weather service that is down', () => {
+    expect(offlineReason(null).kind).toBe('network');
+    expect(offlineReason('signin').kind).toBe('signin');
+    expect(offlineReason('slow').kind).toBe('slow');
+    const proxy = offlineReason('proxy:502');
+    expect(proxy.kind).toBe('proxy');
+    expect(proxy.detail).toContain('502');
+    const up = offlineReason('upstream:502:Could not reach Open-Meteo right now.');
+    expect(up.kind).toBe('upstream');
+    expect(up.detail).toBe('Could not reach Open-Meteo right now.');
+    expect(offlineReason('upstream:500:').detail).toContain('500');
   });
 });

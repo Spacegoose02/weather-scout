@@ -18,7 +18,7 @@ export async function api(path, { method = 'GET', body } = {}) {
     throw err;
   }
   // The service worker answered with a saved copy (offline mode).
-  noteOffline(path, res.headers.get('x-offline-saved-at'));
+  noteOffline(path, res.headers.get('x-offline-saved-at'), res.headers.get('x-offline-reason'));
   // Someone signed in or out: saved answers belong to the old account.
   if (method !== 'GET' && path.startsWith('/api/auth/')) clearOfflineCache();
   const data = await res.json().catch(() => ({}));

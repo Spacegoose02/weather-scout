@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { onOffline, offlineState, savedLabel, ageWords } from '../offline.js';
+import { onOffline, offlineState, offlineReason, savedLabel, ageWords } from '../offline.js';
 
 // "You're offline, showing the weather from 2:40 PM." Shows when the browser
 // loses its connection or the service worker answers with a saved copy.
@@ -28,15 +28,19 @@ export default function OfflineBanner({ onRetry }) {
 
   if (online && !state.offline) return null;
   const when = state.savedAt ? `${savedLabel(state.savedAt)} (${ageWords(state.savedAt)})` : '';
+  const why = offlineReason(state.reason);
   return (
     <div className="offline-banner card" role="status">
       <span className="offline-icon" aria-hidden>📴</span>
       <div>
-        <strong>{online ? 'Weather Scout can’t reach the server right now.' : 'You’re offline.'}</strong>{' '}
+        <strong>{online ? why.title : 'You’re offline.'}</strong>{' '}
+        {online && why.detail && <>{why.detail}{' '}</>}
         {when ? <>Showing the weather saved at {when}.</> : 'Showing what this device saved last.'}{' '}
         <span className="hint">Your safety plan and shelter spot still work. Radar and cameras come back with the connection.</span>
       </div>
-      {onRetry && <button className="ghost" onClick={onRetry}>Try again</button>}
+      {online && why.kind === 'signin'
+        ? <button className="ghost" onClick={() => window.location.reload()}>Sign in again</button>
+        : onRetry && <button className="ghost" onClick={onRetry}>Try again</button>}
     </div>
   );
 }
