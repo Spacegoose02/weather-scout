@@ -100,9 +100,12 @@ async function staticFile(event) {
 }
 
 // Saved copies are marked with when they were saved, so the app can say how old they are.
-async function markSaved(res) {
+// The reason says why, so the app can tell "the server is down" apart from
+// "the server is up but a weather service it uses isn't answering".
+async function markSaved(res, reason) {
   const headers = new Headers(res.headers);
   headers.set('x-offline-saved-at', headers.get('x-saved-at') || '');
+  headers.set('x-offline-reason', reason || 'network');
   headers.delete('x-saved-at');
   return new Response(await res.blob(), { status: res.status, statusText: res.statusText, headers });
 }
@@ -120,10 +123,37 @@ async function api(event) {
   });
   const saved = await cache.match(event.request);
   if (!saved) return net;
-  const res = await Promise.race([net.catch(() => null), timeout(API_WAIT_MS)]);
+  let failed = false;
+  const res = await Promise.race([net.catch(() => { failed = true; return null; }), timeout(API_WAIT_MS)]);
   if (res && (res.ok || res.status === 401 || res.status === 403)) return res;
   event.waitUntil(net.catch(() => {}));
-  return markSaved(saved);
+  return markSaved(saved, res ? await answerReason(res) : failed ? await failReason(event.request) : 'slow');
+}
+
+// The server answered, but with an error. Weather Scout's own errors are JSON
+// ("Could not reach Open-Meteo"); a reverse proxy's 502/504 page is HTML, which
+// means the proxy is up but Weather Scout behind it isn't answering.
+async function answerReason(res) {
+  const type = res.headers.get('content-type') || '';
+  if (type.includes('json')) {
+    const body = await res.clone().json().catch(() => ({}));
+    return `upstream:${res.status}:${String(body.error || '').slice(0, 160)}`;
+  }
+  return `proxy:${res.status}`;
+}
+
+// No answer at all. A sign-in proxy (like Tinyauth) whose session ran out
+// redirects to its login page on another address, which the browser blocks for
+// background requests, so it looks like a network failure. Ask once more
+// without following redirects to tell the two apart.
+async function failReason(request) {
+  try {
+    const res = await Promise.race([fetch(request.url, { credentials: 'same-origin', redirect: 'manual' }), timeout(3000)]);
+    if (res && (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400))) return 'signin';
+  } catch {
+    /* really unreachable */
+  }
+  return 'network';
 }
 
 self.addEventListener('fetch', (event) => {
