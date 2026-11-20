@@ -5,6 +5,8 @@
 // of the core app.
 import Anthropic from '@anthropic-ai/sdk';
 import { OllamaClient, OllamaError, onDomains } from './providers/ollama.js';
+import { milesBetween } from './providers/tropics.js';
+import { NEAR_STORM_MILES } from './hurricane.js';
 
 const DEFAULT_MODEL = 'claude-opus-5-5';
 // Models that take the server-side refusal fallback (`fallbacks: "default"`).
@@ -45,7 +47,7 @@ const CLOUD_SCHEMA = {
 
 // ---- prompts ------------------------------------------------------------------------
 const EXPERT = `You are the weather expert inside Weather Scout, a family weather app. You know meteorology, climate, clouds, storms, oceans and sky science well, and you explain clearly and accurately.
-Use the live weather data you are given for the person's place when the question is about their weather; say when the data does not cover something. Keep answers short (a few short paragraphs at most) and practical. Use plain text with simple lists, no tables.
+Use the live weather data you are given for the person's place when the question is about their weather; say when the data does not cover something. That data includes the National Hurricane Center's live list of active tropical storms and hurricanes, with each storm's distance from the person's place, so answer hurricane questions from it. Keep answers short (a few short paragraphs at most) and practical. Use plain text with simple lists, no tables.
 For severe weather, give clear safety steps and point people to the National Weather Service and local officials. Never invent alerts or forecasts.
 Stay on weather, climate, science and outdoor-planning topics. For anything else, politely steer back to weather.`;
 
@@ -54,7 +56,7 @@ How to talk:
 - Write for a 6 to 10 year old: short sentences, simple words, one idea at a time. 2 to 5 sentences unless they ask for more.
 - Be warm, curious and playful. A raccoon joke now and then is great. At most one emoji.
 - Be accurate. If you are not sure, say so and suggest asking a grown-up or looking it up together.
-- Use the live weather data for their place when it helps ("It's 54 degrees right now, so grab a jacket!").
+- Use the live weather data for their place when it helps ("It's 54 degrees right now, so grab a jacket!"). It includes any hurricanes the National Hurricane Center is tracking and how far away they are.
 Keeping kids safe:
 - If there is a warning, thunder or anything scary, stay calm and kind: tell them to find a grown-up and follow the family's safe spot plan. Never use scary words or describe damage or injuries.
 - Stay on weather, sky, nature and science. For other topics, gently steer back: "That's a fun question! I'm a weather raccoon though..."
@@ -71,8 +73,63 @@ Use "low" confidence when the photo is blurry, mostly ground, or the clouds are 
 // ---- live weather context -----------------------------------------------------
 const r0 = (v) => (v == null || Number.isNaN(v) ? '?' : Math.round(v));
 
-export function weatherContext({ place, forecast: fc, alerts = [], air = null }) {
-  if (!fc) return 'Live weather data is unavailable right now.';
+const COMPASS = ['north', 'north-northeast', 'northeast', 'east-northeast', 'east', 'east-southeast', 'southeast', 'south-southeast', 'south', 'south-southwest', 'southwest', 'west-southwest', 'west', 'west-northwest', 'northwest', 'north-northwest'];
+
+// Which way `to` lies from `from`, as a compass word ("southeast").
+export function directionFrom(from, to) {
+  const rad = Math.PI / 180;
+  const y = Math.sin((to.lon - from.lon) * rad) * Math.cos(to.lat * rad);
+  const x = Math.cos(from.lat * rad) * Math.sin(to.lat * rad) - Math.sin(from.lat * rad) * Math.cos(to.lat * rad) * Math.cos((to.lon - from.lon) * rad);
+  const deg = (Math.atan2(y, x) / rad + 360) % 360;
+  return COMPASS[Math.round(deg / 22.5) % 16];
+}
+
+const fmtNum = (n) => Math.round(n).toLocaleString('en-US');
+const latLon = (s) => `${Math.abs(s.lat).toFixed(1)}${s.lat >= 0 ? 'N' : 'S'} ${Math.abs(s.lon).toFixed(1)}${s.lon >= 0 ? 'E' : 'W'}`;
+
+// Live tropical storms and hurricanes from the National Hurricane Center, with
+// how far each is from the person's place, and (for storms close enough to
+// matter) NHC's wind odds and storm surge. `tropics` is null when the feed
+// could not be loaded, so Rocky can say so instead of guessing.
+export function tropicsContext({ place, tropics, impacts = [], metric = false }) {
+  const head = 'Active tropical storms and hurricanes (live from the National Hurricane Center, which covers the Atlantic, Eastern Pacific and Central Pacific; it does not track the western Pacific or Indian Ocean)';
+  if (!tropics) return `${head}: the live feed could not be loaded right now, so you cannot say whether any are active. Suggest nhc.noaa.gov for now.`;
+  const storms = tropics.storms || [];
+  if (!storms.length) return `${head}: none right now. The National Hurricane Center has no active tropical depressions, storms or hurricanes.`;
+  const here = place?.lat != null && place?.lon != null ? { lat: place.lat, lon: place.lon } : null;
+  const dist = (mi) => (metric ? `${fmtNum(mi * 1.609344)} km` : `${fmtNum(mi)} miles`);
+  const speed = (mph) => (metric ? `${Math.round(mph * 1.609344)} km/h` : `${Math.round(mph)} mph`);
+  const rows = storms.map((s) => ({ s, miles: here ? milesBetween(here, s) : null })).sort((a, b) => (a.miles ?? 0) - (b.miles ?? 0));
+  const lines = [`${head}: ${storms.length} active.`];
+  for (const { s, miles } of rows.slice(0, 8)) {
+    const bits = [`${s.kind} ${s.name}${s.category ? ` (Category ${s.category})` : ''}${s.basin ? `, ${s.basin}` : ''}`];
+    if (s.windMph != null) bits.push(`max winds ${speed(s.windMph)}`);
+    if (s.pressure != null) bits.push(`pressure ${s.pressure} mb`);
+    bits.push(`centered near ${latLon(s)}`);
+    if (s.movement?.dir) bits.push(`moving ${s.movement.dir}${s.movement.mph != null ? ` at ${speed(s.movement.mph)}` : ''}`);
+    if (miles != null) bits.push(`${dist(miles)} ${directionFrom(here, s)} of ${place?.name || 'the selected place'}`);
+    if (s.updated) bits.push(`advisory time ${s.updated}`);
+    if (s.advisoryUrl) bits.push(`advisory ${s.advisoryUrl}`);
+    lines.push(`- ${bits.join('; ')}.`);
+  }
+  const close = (impacts || []).filter(Boolean);
+  if (close.length) {
+    for (const c of close) {
+      const near = c.wind?.near;
+      lines.push(near
+        ? `${c.name} odds near ${place?.name || 'this place'} (NHC wind speed probabilities for ${near.name}, ${dist(near.miles)} away, next 5 days): ${near.p34}% chance of tropical-storm-force winds (39+ mph), ${near.p50}% chance of 58+ mph, ${near.p64}% chance of hurricane-force winds (74+ mph).`
+        : `${c.name} is within ${dist(c.miles)}, but NHC lists no meaningful chance of tropical-storm-force winds near ${place?.name || 'this place'} in the next 5 days.`);
+      if (c.surge?.length) lines.push(`${c.name} peak storm surge forecast: ${c.surge.slice(0, 4).map((x) => `${x.area} ${x.low === x.high ? x.high : `${x.low}-${x.high}`} ft`).join('; ')}.`);
+    }
+  } else if (here) {
+    lines.push(`None of these is within ${fmtNum(NEAR_STORM_MILES)} miles of ${place?.name || 'the selected place'}, so none is a threat there right now.`);
+  }
+  return lines.join('\n');
+}
+
+export function weatherContext({ place, forecast: fc, alerts = [], air = null, tropics, impacts }) {
+  const storms = tropics === undefined ? '' : `\n${tropicsContext({ place, tropics, impacts, metric: fc?.units?.temp === '°C' })}`;
+  if (!fc) return `Live weather data is unavailable right now.${storms}`;
   const u = fc.units || {};
   const c = fc.current || {};
   const lines = [];
@@ -91,7 +148,7 @@ export function weatherContext({ place, forecast: fc, alerts = [], air = null })
   lines.push(alerts.length
     ? `Active National Weather Service alerts: ${alerts.slice(0, 5).map((a) => `${a.event}${a.headline ? ` (${a.headline})` : ''}`).join('; ')}.`
     : 'No active National Weather Service alerts.');
-  return lines.join('\n');
+  return lines.join('\n') + storms;
 }
 
 // Keep only well-formed, alternating turns that start (and end) with the person.
@@ -359,14 +416,31 @@ function parseCloud(text) {
 }
 
 // ---- routes --------------------------------------------------------------------
-export function registerAi(app, { ai, forecast, alerts, air, settle, loc }) {
+export function registerAi(app, { ai, forecast, alerts, air, settle, loc, tropics, impacts }) {
   const off = (reply) => reply.code(404).send({ error: 'The AI helper is turned off on this server. An admin can add an Anthropic API key or an Ollama address to turn it on.' });
   const who = (req) => (req.user ? `u:${req.user.id}` : `ip:${req.ip}`);
-  const ctxFor = async (body) => {
-    if (!Number.isFinite(body.lat) || !Number.isFinite(body.lon)) return 'No location was picked, so no live weather data.';
+  // Hurricane odds geocode NHC's town list the first time; don't hold a chat up for it.
+  const nearStorms = async (l) => {
+    if (!impacts) return null;
+    let timer;
+    const late = new Promise((_, no) => { timer = setTimeout(() => no(new Error('hurricane impacts timed out')), 8000); });
+    try {
+      return await Promise.race([impacts.near(l), late]);
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const ctxFor = async (body, { storms = false } = {}) => {
+    const wantStorms = storms && !!tropics;
+    if (!Number.isFinite(body.lat) || !Number.isFinite(body.lon)) {
+      const base = 'No location was picked, so no live weather data.';
+      return wantStorms ? `${base}\n${tropicsContext({ tropics: await settle(tropics()) })}` : base;
+    }
     const l = loc(body);
-    const [fc, al, aq] = await Promise.all([settle(forecast(l)), settle(alerts(l)), settle(air(l))]);
-    return weatherContext({ place: { name: body.place, lat: l.lat, lon: l.lon }, forecast: fc, alerts: al?.alerts || [], air: aq });
+    const [fc, al, aq, tr] = await Promise.all([settle(forecast(l)), settle(alerts(l)), settle(air(l)), wantStorms ? settle(tropics()) : undefined]);
+    // Wind odds and surge only for storms close enough to matter (the same rule as the Coast card).
+    const im = wantStorms && tr?.storms?.length ? await settle(nearStorms(l)) : null;
+    return weatherContext({ place: { name: body.place, lat: l.lat, lon: l.lon }, forecast: fc, alerts: al?.alerts || [], air: aq, ...(wantStorms ? { tropics: tr, impacts: im || [] } : {}) });
   };
   const where = {
     lat: { type: 'number', minimum: -90, maximum: 90 },
@@ -405,7 +479,7 @@ export function registerAi(app, { ai, forecast, alerts, air, settle, loc }) {
     if (!ai.enabled) return off(reply);
     return handle(reply, async () => {
       ai.take(who(req));
-      const context = await ctxFor(req.body);
+      const context = await ctxFor(req.body, { storms: true });
       return ai.chat({ messages: req.body.messages, kidMode: !!req.body.kidMode, search: !!req.body.search, context });
     });
   });

@@ -339,7 +339,9 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
     },
   };
   const wrapLon = (x) => ((((x + 180) % 360) + 360) % 360) - 180;
-  app.get('/api/tropics', async () => cache.wrap('tropics', 15 * MIN, () => tropics.getStorms(fetchImpl, { log: app.log })));
+  const activeStorms = () => cache.wrap('tropics', 15 * MIN, () => tropics.getStorms(fetchImpl, { log: app.log }));
+  const hurricaneImpacts = new HurricaneImpacts(cache, fetchImpl, { storms: activeStorms, log: app.log });
+  app.get('/api/tropics', async () => activeStorms());
   app.get('/api/buoys', { schema: boxSchema }, async (req) => {
     const q = req.query;
     const units = q.units || cfg.units;
@@ -464,7 +466,7 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   app.addHook('onClose', async () => tuning.stop());
   registerOdds(app, { cache, fetchImpl, latLonSchema, loc });
   registerMarine(app, { marine: new MarineService(cache, fetchImpl, { userAgent: cfg.nwsUserAgent, log: app.log }), alerts, settle, latLonSchema, loc });
-  registerHurricane(app, { impacts: new HurricaneImpacts(cache, fetchImpl, { storms: () => cache.wrap('tropics', 15 * MIN, () => tropics.getStorms(fetchImpl, { log: app.log })), log: app.log }), latLonSchema, loc });
+  registerHurricane(app, { impacts: hurricaneImpacts, latLonSchema, loc });
   registerClassroom(app, { db, requireUser });
   registerClimate(app, { climate: new ClimateService(cache, fetchImpl, { log: app.log }), latLonSchema, loc });
   const liveHub = new LiveHub({ alerts, storm: (p) => stormCells.approaching(p), log: app.log });
@@ -491,7 +493,7 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   registerChaser(app, { cache, fetchImpl, latLonSchema, loc, chasers, nwsUserAgent: cfg.nwsUserAgent });
 
   // ---- AI weather expert, cloud photos, web search ---------------------------
-  registerAi(app, { ai, forecast, alerts, air, settle, loc });
+  registerAi(app, { ai, forecast, alerts, air, settle, loc, tropics: activeStorms, impacts: hurricaneImpacts });
   const tts = registerTts(app, { cfg, fetchImpl });
   registerBriefing(app, { ai, forecast, alerts, air, settle, loc });
   registerWindy(app, { cfg });
