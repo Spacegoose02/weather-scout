@@ -66,6 +66,7 @@ export const ES = {
   'Weather School': 'Escuela del clima',
   School: 'Escuela',
   'Ask Rocky': 'Pregúntale a Rocky',
+  'Ask me!': '¡Pregúntame!',
   Sections: 'Secciones',
   'Kid sections': 'Secciones para niños',
   'Search a city or ZIP': 'Busca una ciudad o código postal',

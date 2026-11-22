@@ -140,5 +140,26 @@ html[data-theme] body { background: var(--sky), var(--bg); background-attachment
 .theme-why { margin: 10px 0 0; padding: 8px 10px; border-radius: 12px; background: var(--bg); font-weight: 600; font-size: 0.9rem; display: flex; gap: 8px; align-items: center; }
 .theme-hint { margin: 8px 0 0; color: var(--muted); font-size: 0.82rem; }
 .theme-buddy { position: fixed; right: 14px; bottom: 10px; z-index: 5; pointer-events: none; opacity: 0.95; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.25)); }
+/* The corner Rocky stands still: no breathing or wiggling while you read. */
+.theme-buddy .raccoon .rocky, .theme-buddy .raccoon .mood-badge { animation: none; }
+/* With Ask Rocky on, he's a button that opens it. */
+.theme-buddy-ask {
+  pointer-events: auto; cursor: pointer; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  padding: 0; margin: 0; background: none; border: 0; border-radius: 16px; color: var(--ink); opacity: 1;
+}
+.theme-buddy-ask:focus-visible { outline: 3px solid var(--brand); outline-offset: 4px; }
+.theme-buddy-label {
+  padding: 4px 10px; border-radius: 999px; background: var(--brand); color: var(--brand-ink);
+  font-weight: 800; font-size: 0.82rem; white-space: nowrap; box-shadow: var(--shadow);
+  opacity: 0; transform: translateY(4px);
+}
+.theme-buddy-ask:hover .theme-buddy-label, .theme-buddy-ask:focus-visible .theme-buddy-label,
+.theme-buddy-ask.kid .theme-buddy-label { opacity: 1; transform: none; }
+.theme-buddy-art { display: block; }
+/* A small lift when you point at him. Nothing moves on its own. */
+@media (prefers-reduced-motion: no-preference) {
+  .theme-buddy-label, .theme-buddy-art { transition: opacity 0.15s ease, transform 0.15s ease; }
+  .theme-buddy-ask:hover .theme-buddy-art, .theme-buddy-ask:focus-visible .theme-buddy-art { transform: translateY(-3px); }
+}
 @media (max-width: 640px) { .theme-buddy { display: none; } }
 @media print { .theme-buddy { display: none; } }
