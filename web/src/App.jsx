@@ -294,7 +294,7 @@ export default function App() {
         </Modal>
       )}
       <BadgeCelebration user={user} onShelf={() => setModal('badges')} />
-      <ThemeBuddy active={theme.id} />
+      <ThemeBuddy active={theme.id} kidMode={kidMode} onAsk={aiOn && !blocked && tab !== 'ask' ? () => go('ask') : null} />
       {modal === 'alerts' && (
         <PushAlerts
           location={location}
