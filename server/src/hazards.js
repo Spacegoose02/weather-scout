@@ -58,7 +58,14 @@ export function gaugesUrl(box) {
   return `${NWPS_URL}?${p}`;
 }
 
-export function firesUrl(box) {
+// The service hands back at most FIRE_PAGE records per request, oldest record
+// first unless told otherwise. In a busy fall fire season a 200-mile box around
+// the Appalachians holds more than one page, and the old 500-record cap silently
+// dropped the newest fires (the White Oak Flat Fire 39 miles from Salem, VA).
+// So: newest first, and keep paging until the service says that's all.
+export const FIRE_PAGE = 2000;
+const FIRE_MAX_PAGES = 5;
+export function firesUrl(box, offset = 0) {
   const p = new URLSearchParams({
     where: "IncidentTypeCategory='WF'",
     outFields: 'IncidentName,IncidentSize,PercentContained,FireDiscoveryDateTime,POOState,IncidentTypeCategory,IrwinID,TotalIncidentPersonnel,IncidentShortDescription',
@@ -67,7 +74,9 @@ export function firesUrl(box) {
     inSR: '4326',
     spatialRel: 'esriSpatialRelIntersects',
     outSR: '4326',
-    resultRecordCount: '500',
+    orderByFields: 'FireDiscoveryDateTime DESC',
+    resultOffset: String(offset),
+    resultRecordCount: String(FIRE_PAGE),
     f: 'geojson',
   });
   return `${FIRES_URL}?${p}`;
@@ -251,7 +260,19 @@ export class HazardService {
   // ---- wildfires ----
   async firesInBox(box) {
     const s = snap(box);
-    return this.cache.wrap(`fires:${snapKey(s)}`, 15 * MIN, async () => parseFires(await fetchJson(firesUrl(s), { source: 'nifc', fetchImpl: this.fetchImpl, timeoutMs: 15000 })));
+    return this.cache.wrap(`fires:${snapKey(s)}`, 15 * MIN, async () => {
+      const features = [];
+      for (let page = 0; page < FIRE_MAX_PAGES; page++) {
+        const geo = await fetchJson(firesUrl(s, page * FIRE_PAGE), { source: 'nifc', fetchImpl: this.fetchImpl, timeoutMs: 15000 });
+        const got = geo?.features || [];
+        features.push(...got);
+        // GeoJSON replies flag a cut-off page in properties; Esri JSON at the top.
+        const more = geo?.properties?.exceededTransferLimit || geo?.exceededTransferLimit;
+        if (!more || !got.length) break;
+      }
+      const seen = new Set();
+      return parseFires({ features }).filter((f) => (seen.has(f.id) ? false : seen.add(f.id)));
+    });
   }
 
   async perimetersInBox(box) {
