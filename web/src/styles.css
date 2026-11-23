@@ -719,3 +719,37 @@ html.embed-map, html.embed-map body { background: #0f1420; }
   .map-card.embed .radar-note, .map-card.embed .bolt-legend, .map-card.embed .map-controls > label.opacity { display: none; }
   .map-card.embed .map-controls { bottom: 8px; padding: 6px 10px; gap: 4px 10px; }
 }
+
+/* Wildfire details */
+.fire-popup-more { margin-top: 8px; width: 100%; }
+.fire-detail { display: grid; gap: 12px; }
+.fire-sub { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 0; }
+.fire-status { padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 0.85em; background: color-mix(in srgb, #e0322b 18%, transparent); color: inherit; }
+.fire-status.contained { background: color-mix(in srgb, #f4b400 25%, transparent); }
+.fire-status.controlled, .fire-status.out { background: color-mix(in srgb, #2e9e5b 25%, transparent); }
+.fire-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.fire-stats > div { padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--ink) 7%, transparent); display: grid; gap: 2px; }
+.fire-stats span { font-size: 0.8em; opacity: 0.75; }
+.fire-stats b { font-size: 1.15em; }
+.fire-bar { height: 6px; border-radius: 3px; background: color-mix(in srgb, #e0322b 30%, transparent); overflow: hidden; margin-top: 2px; }
+.fire-bar i { display: block; height: 100%; background: #2e9e5b; }
+.fire-section h3 { margin: 0 0 6px; font-size: 1.02em; }
+.fire-section p { margin: 4px 0; }
+.fire-latest { padding: 8px 10px; border-left: 4px solid #f47b20; border-radius: 6px; background: color-mix(in srgb, #f47b20 8%, transparent); }
+.fire-notes h4 { margin: 8px 0 2px; font-size: 0.95em; }
+.fire-notes ul, .fire-safety { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 4px; }
+.fire-notes li { padding-left: 14px; position: relative; }
+.fire-notes li::before { content: '•'; position: absolute; left: 2px; }
+.fire-facts { display: grid; gap: 3px; }
+.fire-facts .buoy-row b { text-align: right; }
+.fire-rocky { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, #3a8dde 10%, transparent); }
+.fire-rocky h3, .fire-rocky summary { margin: 0 0 4px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.fire-rocky p { margin: 6px 0; }
+.fire-words summary { cursor: pointer; font-weight: 600; }
+.fire-words dl { margin: 6px 0 0; display: grid; gap: 6px; }
+.fire-words dt { font-weight: 700; }
+.fire-words dd { margin: 0; }
+.fire-detail.kid .fire-rocky p { font-size: 1.05em; }
+.fire-latest-more summary { cursor: pointer; font-weight: 600; margin-top: 6px; }
+.fire-stats b { overflow-wrap: break-word; }
+@media (max-width: 480px) { .fire-stats b { font-size: 1.02em; } }

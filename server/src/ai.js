@@ -127,8 +127,33 @@ export function tropicsContext({ place, tropics, impacts = [], metric = false })
   return lines.join('\n');
 }
 
-export function weatherContext({ place, forecast: fc, alerts = [], air = null, tropics, impacts }) {
-  const storms = tropics === undefined ? '' : `\n${tropicsContext({ place, tropics, impacts, metric: fc?.units?.temp === '°C' })}`;
+// Active wildfires near the person's place (NIFC WFIGS), so Rocky can answer
+// "is there a fire near me?" and "where is the smoke coming from?". `fires` is
+// null when the feed could not be loaded.
+export const FIRE_CONTEXT_MILES = 150;
+export function firesContext({ place, fires, metric = false }) {
+  const head = `Active wildfires within ${FIRE_CONTEXT_MILES} miles (live from the National Interagency Fire Center; prescribed burns left out)`;
+  if (!fires) return `${head}: the wildfire feed could not be loaded right now, so you cannot say whether any are burning nearby. Suggest inciweb.wildfire.gov for now.`;
+  if (!fires.length) return `${head}: none right now.`;
+  const dist = (mi) => (metric ? `${fmtNum(mi * 1.609344)} km` : `${fmtNum(mi)} miles`);
+  const lines = [`${head}: ${fires.length}.`];
+  for (const f of fires.slice(0, 6)) {
+    const bits = [f.name + (f.state ? ` (${f.state})` : '')];
+    if (f.acres != null) bits.push(`${fmtNum(f.acres)} acres`);
+    if (f.contained != null) bits.push(`${f.contained}% contained`);
+    if (f.personnel) bits.push(`${fmtNum(f.personnel)} personnel assigned`);
+    if (f.near) bits.push(`located ${f.near}`);
+    bits.push(`${dist(f.miles)} ${f.dir} of ${place?.name || 'the selected place'}`);
+    if (f.upwind) bits.push('today\'s wind blows from the fire toward this place, so its smoke may drift here');
+    lines.push(`- ${bits.join('; ')}.`);
+  }
+  lines.push('The app\'s Wildfires & smoke card and the map\'s fire pins open a details page for each fire (closures, smoke, safety).');
+  return lines.join('\n');
+}
+
+export function weatherContext({ place, forecast: fc, alerts = [], air = null, tropics, impacts, fires }) {
+  const fireLines = fires === undefined ? '' : `\n${firesContext({ place, fires, metric: fc?.units?.temp === '°C' })}`;
+  const storms = (tropics === undefined ? '' : `\n${tropicsContext({ place, tropics, impacts, metric: fc?.units?.temp === '°C' })}`) + fireLines;
   if (!fc) return `Live weather data is unavailable right now.${storms}`;
   const u = fc.units || {};
   const c = fc.current || {};
@@ -416,7 +441,7 @@ function parseCloud(text) {
 }
 
 // ---- routes --------------------------------------------------------------------
-export function registerAi(app, { ai, forecast, alerts, air, settle, loc, tropics, impacts }) {
+export function registerAi(app, { ai, forecast, alerts, air, settle, loc, tropics, impacts, fires }) {
   const off = (reply) => reply.code(404).send({ error: 'The AI helper is turned off on this server. An admin can add an Anthropic API key or an Ollama address to turn it on.' });
   const who = (req) => (req.user ? `u:${req.user.id}` : `ip:${req.ip}`);
   // Hurricane odds geocode NHC's town list the first time; don't hold a chat up for it.
@@ -437,10 +462,11 @@ export function registerAi(app, { ai, forecast, alerts, air, settle, loc, tropic
       return wantStorms ? `${base}\n${tropicsContext({ tropics: await settle(tropics()) })}` : base;
     }
     const l = loc(body);
-    const [fc, al, aq, tr] = await Promise.all([settle(forecast(l)), settle(alerts(l)), settle(air(l)), wantStorms ? settle(tropics()) : undefined]);
+    const wantFires = storms && !!fires;
+    const [fc, al, aq, tr, fi] = await Promise.all([settle(forecast(l)), settle(alerts(l)), settle(air(l)), wantStorms ? settle(tropics()) : undefined, wantFires ? settle(fires(l)) : undefined]);
     // Wind odds and surge only for storms close enough to matter (the same rule as the Coast card).
     const im = wantStorms && tr?.storms?.length ? await settle(nearStorms(l)) : null;
-    return weatherContext({ place: { name: body.place, lat: l.lat, lon: l.lon }, forecast: fc, alerts: al?.alerts || [], air: aq, ...(wantStorms ? { tropics: tr, impacts: im || [] } : {}) });
+    return weatherContext({ place: { name: body.place, lat: l.lat, lon: l.lon }, forecast: fc, alerts: al?.alerts || [], air: aq, ...(wantStorms ? { tropics: tr, impacts: im || [] } : {}), ...(wantFires ? { fires: fi } : {}) });
   };
   const where = {
     lat: { type: 'number', minimum: -90, maximum: 90 },
