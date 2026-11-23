@@ -233,18 +233,23 @@ const titleFire = (s) => {
   return /fire$|complex$/i.test(n) ? n : `${n} Fire`;
 };
 
-// Fires near a place, biggest threat first. `windFrom` is where the wind blows
-// from (degrees); a fire in that direction is upwind, so its smoke may drift here.
+// Fires near a place, biggest threat first: fires whose smoke the wind is
+// bringing here, then fires still burning (under 100% contained), nearest first,
+// then contained ones. A big active fire 130 miles away matters more than a
+// small one that is already fenced in at 80 miles. `windFrom` is where the wind
+// blows from (degrees); a burning fire in that direction is upwind, so its smoke
+// may drift here (a fully contained fire makes little smoke).
+export const fireActive = (f) => f.contained == null || f.contained < 100;
 export function firesNear(fires, place, { miles = 200, windFrom = null } = {}) {
   return fires
     .map((f) => {
       const b = bearing(place, f);
       const off = windFrom == null ? 180 : Math.abs(((b - windFrom + 540) % 360) - 180);
       const d = distanceMiles(place, f);
-      return { ...f, miles: Math.round(d), dir: compassWord(b), upwind: windFrom != null && off <= 45 && d <= 150 };
+      return { ...f, miles: Math.round(d), dir: compassWord(b), upwind: windFrom != null && off <= 45 && d <= 150 && fireActive(f) };
     })
     .filter((f) => f.miles <= miles)
-    .sort((a, b) => Number(b.upwind) - Number(a.upwind) || a.miles - b.miles);
+    .sort((a, b) => Number(b.upwind) - Number(a.upwind) || Number(fireActive(b)) - Number(fireActive(a)) || a.miles - b.miles);
 }
 
 // "Smoky air" from the Air Quality forecast: hours where PM2.5 drives the AQI over 100.

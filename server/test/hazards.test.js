@@ -90,6 +90,22 @@ test('wildfires: prescribed burns skipped, upwind fires first', () => {
   assert.match(firesUrl({ south: 37, west: -79, north: 38, east: -77 }), /esriGeometryEnvelope/);
 });
 
+test('wildfires: a big burning fire farther away outranks small contained ones nearby', () => {
+  // Like the card that hid the White Oak Flat Fire behind four small, fully contained fires.
+  const fire = (name, lon, lat, acres, pct) => ({ geometry: { type: 'Point', coordinates: [lon, lat] }, properties: { IncidentName: name, IncidentSize: acres, PercentContained: pct, IncidentTypeCategory: 'WF', IrwinID: name } });
+  const fires = parseFires({ features: [
+    fire('Ball Diamond', -79.0, 37.5, 152, 100),
+    fire('Hunters Branch', -78.9, 38.6, 150, 100),
+    fire('Hunts Fork', -79.5, 37.4, 313, 100),
+    fire('White Oak Flat', -79.86, 37.84, 1800, 49),
+  ] });
+  const near = firesNear(fires, home, { windFrom: 270 });
+  assert.equal(near[0].name, 'White Oak Flat Fire');
+  assert.ok(near[0].miles > near[1].miles, 'farther, but still burning');
+  assert.equal(near.find((f) => f.name === 'Ball Diamond Fire').upwind, false, 'a contained fire is not a smoke source');
+  assert.equal(near[0].upwind, true);
+});
+
 test('smoke outlook from the air quality forecast', () => {
   const s = smokeOutlook({ aqi: 120, main: { id: 'pm25' }, hourly: [{ time: 'a', aqi: 80 }, { time: 'b', aqi: 140 }, { time: 'c', aqi: 110 }] });
   assert.equal(s.badHours, 2);

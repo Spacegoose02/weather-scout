@@ -408,3 +408,4 @@
 .fire-list .fire-open .fire-more { grid-column: 3; grid-row: 1 / span 2; align-self: center; font-size: 1.3em; opacity: 0.6; }
 .fire-list .fire-open:hover, .fire-list .fire-open:focus-visible { background: color-mix(in srgb, #f47b20 12%, transparent); }
 .fire-list .fire-open:focus-visible { outline: 2px solid #f47b20; }
+.fire-all { justify-self: start; }
