@@ -11,6 +11,7 @@ const hour = (t) => (t ? new Date(`${t}Z`).toLocaleString([], { weekday: 'short'
 export default function FireSmoke({ weather, location, kidMode, size }) {
   const [d, setD] = useState(null);
   const [err, setErr] = useState('');
+  const [all, setAll] = useState(false);
   useEffect(() => {
     let live = true;
     const load = () => api(`/api/fires/near?lat=${location.lat}&lon=${location.lon}`).then((r) => live && setD(r)).catch((e) => live && setErr(e.message));
@@ -22,7 +23,9 @@ export default function FireSmoke({ weather, location, kidMode, size }) {
   const smoke = smokeOutlook(weather.air);
   const fires = d?.fires || [];
   const upwind = fires.filter((f) => f.upwind);
-  const shown = size === 's' ? fires.slice(0, 2) : size === 'l' ? fires.slice(0, 8) : fires.slice(0, 4);
+  const limit = size === 's' ? 2 : size === 'l' ? 8 : 4;
+  const shown = all ? fires : fires.slice(0, limit);
+  const more = fires.length - limit;
   const bad = smoke.badHours > 0;
   return (
     <section className={`card dash-fire ${size} ${bad || upwind.length ? 'alarm' : ''}`}>
@@ -52,6 +55,11 @@ export default function FireSmoke({ weather, location, kidMode, size }) {
             </li>
           ))}
         </ul>
+      )}
+      {more > 0 && (
+        <button type="button" className="ghost fire-all" onClick={() => setAll((v) => !v)} aria-expanded={all}>
+          {all ? 'Show fewer' : `Show all ${fires.length} fires within 200 miles`}
+        </button>
       )}
       {shown.length > 0 && <p className="hint">{kidMode ? 'Tap a fire to see what Rocky knows about it.' : 'Tap a fire for crews, closures, smoke and safety notes.'}</p>}
       <p className="source">Wildfires: National Interagency Fire Center (WFIGS). Air: Open-Meteo Air Quality (CAMS).</p>

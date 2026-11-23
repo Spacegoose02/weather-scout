@@ -88,6 +88,40 @@ test('wildfires: prescribed burns skipped, upwind fires first', () => {
   assert.equal(near[0].upwind, true);
   assert.equal(near[1].upwind, false);
   assert.match(firesUrl({ south: 37, west: -79, north: 38, east: -77 }), /esriGeometryEnvelope/);
+  assert.match(firesUrl({ south: 37, west: -79, north: 38, east: -77 }, 2000), /orderByFields=FireDiscoveryDateTime\+DESC.*resultOffset=2000&resultRecordCount=2000/);
+});
+
+test('wildfires: every page of a busy fire season is read, so new fires are not cut off', async () => {
+  // Salem, VA in a busy fall: the first page is full of older small fires, and
+  // the White Oak Flat Fire comes back on the second page.
+  const old = Array.from({ length: 3 }, (_, i) => ({ geometry: { type: 'Point', coordinates: [-81.5, 37 + i * 0.1] }, properties: { IncidentName: `Old ${i}`, IncidentSize: 100, PercentContained: 100, IncidentTypeCategory: 'WF', IrwinID: `old${i}` } }));
+  const whiteOak = { geometry: { type: 'Point', coordinates: [-79.862, 37.842] }, properties: { IncidentName: 'White Oak Flat', IncidentSize: 1800, PercentContained: 49, IncidentTypeCategory: 'WF', IrwinID: '{3D698F01-48D2-465E-BF20-A291A3639D96}' } };
+  const { app, fetchImpl } = await testApp({ fetchImpl: mockFetch({
+    WFIGS_Incident_Locations_Current: (u) => json(u.includes('resultOffset=0')
+      ? { type: 'FeatureCollection', features: old, properties: { exceededTransferLimit: true } }
+      : { type: 'FeatureCollection', features: [whiteOak, old[0]] }),
+  }) });
+  const r = (await app.inject({ url: '/api/fires/near?lat=37.29&lon=-80.05' })).json();
+  assert.equal(r.fires[0].name, 'White Oak Flat Fire');
+  assert.ok(r.fires[0].miles >= 35 && r.fires[0].miles <= 45, `${r.fires[0].miles} mi from Salem`);
+  assert.equal(r.fires.filter((f) => f.name === 'Old 0 Fire').length, 1, 'no duplicates across pages');
+  assert.equal(fetchImpl.calls.filter((c) => c.url.includes('WFIGS_Incident_Locations_Current')).length, 2);
+});
+
+test('wildfires: a big burning fire farther away outranks small contained ones nearby', () => {
+  // Like the card that hid the White Oak Flat Fire behind four small, fully contained fires.
+  const fire = (name, lon, lat, acres, pct) => ({ geometry: { type: 'Point', coordinates: [lon, lat] }, properties: { IncidentName: name, IncidentSize: acres, PercentContained: pct, IncidentTypeCategory: 'WF', IrwinID: name } });
+  const fires = parseFires({ features: [
+    fire('Ball Diamond', -79.0, 37.5, 152, 100),
+    fire('Hunters Branch', -78.9, 38.6, 150, 100),
+    fire('Hunts Fork', -79.5, 37.4, 313, 100),
+    fire('White Oak Flat', -79.86, 37.84, 1800, 49),
+  ] });
+  const near = firesNear(fires, home, { windFrom: 270 });
+  assert.equal(near[0].name, 'White Oak Flat Fire');
+  assert.ok(near[0].miles > near[1].miles, 'farther, but still burning');
+  assert.equal(near.find((f) => f.name === 'Ball Diamond Fire').upwind, false, 'a contained fire is not a smoke source');
+  assert.equal(near[0].upwind, true);
 });
 
 test('smoke outlook from the air quality forecast', () => {
