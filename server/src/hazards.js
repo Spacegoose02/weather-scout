@@ -13,7 +13,9 @@ import {
   REPORT_KIND, HAIL_SIZES, REPORT_HOURS, cleanNote, parseLsr, reportsNear,
   parseGauges, gaugesNear, eroAt, parseFires, firesNear,
 } from '../../shared/hazards.js';
-import { inBox, boxAround } from '../../shared/lightning.js';
+import { inBox, boxAround, distanceMiles, bearing, compassWord } from '../../shared/lightning.js';
+import { parseFireDetail, parseInciweb, matchInciweb, fireHighlights, smokeDrift, fireSafety, fireKid, FIRE_WORDS } from '../../shared/fires.js';
+import { UpstreamError } from './cache.js';
 
 const MIN = 60_000;
 export const LSR_URL = 'https://mesonet.agron.iastate.edu/geojson/lsr.php';
@@ -21,6 +23,7 @@ export const NWPS_URL = 'https://api.water.noaa.gov/nwps/v1/gauges';
 export const ERO_URL = (day) => `https://www.wpc.ncep.noaa.gov/exper/eromap/geojson/Day${day}_Latest.geojson`;
 export const FIRES_URL = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0/query';
 export const PERIMETERS_URL = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query';
+export const INCIWEB_RSS_URL = 'https://inciweb.wildfire.gov/incidents/rss.xml';
 const KEEP_DAYS = 30;
 const POST_GAP_MS = 2 * MIN; // one report per person every 2 minutes
 const MAX_BOX_ITEMS = 1500;
@@ -58,7 +61,7 @@ export function gaugesUrl(box) {
 export function firesUrl(box) {
   const p = new URLSearchParams({
     where: "IncidentTypeCategory='WF'",
-    outFields: 'IncidentName,IncidentSize,PercentContained,FireDiscoveryDateTime,POOState,IncidentTypeCategory,IrwinID',
+    outFields: 'IncidentName,IncidentSize,PercentContained,FireDiscoveryDateTime,POOState,IncidentTypeCategory,IrwinID,TotalIncidentPersonnel,IncidentShortDescription',
     geometry: [box.west, box.south, box.east, box.north].map((n) => n.toFixed(2)).join(','),
     geometryType: 'esriGeometryEnvelope',
     inSR: '4326',
@@ -67,6 +70,17 @@ export function firesUrl(box) {
     resultRecordCount: '500',
     f: 'geojson',
   });
+  return `${FIRES_URL}?${p}`;
+}
+
+// One fire's full record. IRWIN ids look like {3D698F01-48D2-465E-BF20-A291A3639D96}.
+export function cleanFireId(id) {
+  const m = String(id || '').trim().match(/^\{?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\}?$/i);
+  return m ? `{${m[1].toUpperCase()}}` : null;
+}
+
+export function fireDetailUrl(id) {
+  const p = new URLSearchParams({ where: `IrwinID='${id}'`, outFields: '*', outSR: '4326', resultRecordCount: '1', f: 'geojson' });
   return `${FIRES_URL}?${p}`;
 }
 
@@ -245,13 +259,33 @@ export class HazardService {
     return this.cache.wrap(`perims:${snapKey(s)}`, 30 * MIN, async () => parsePerimeters(await fetchJson(perimetersUrl(s), { source: 'nifc', fetchImpl: this.fetchImpl, timeoutMs: 20000 })));
   }
 
+  async fireDetail(id) {
+    const clean = cleanFireId(id);
+    if (!clean) throw bad('That is not a wildfire id.');
+    const f = await this.cache.wrap(`fire:${clean}`, 15 * MIN, async () => {
+      const geo = await fetchJson(fireDetailUrl(clean), { source: 'nifc', fetchImpl: this.fetchImpl, timeoutMs: 15000 });
+      return parseFireDetail(geo?.features?.[0]);
+    });
+    if (!f) throw bad('That wildfire is not in the current national list. It may have been declared out.', 404);
+    return f;
+  }
+
+  // InciWeb's written incident overviews (closures, evacuations, smoke notes).
+  async inciweb() {
+    return this.cache.wrap('inciweb', 30 * MIN, async () => {
+      const res = await this.fetchImpl(INCIWEB_RSS_URL, { headers: { 'User-Agent': this.userAgent, Accept: 'application/rss+xml, application/xml, text/xml' }, signal: AbortSignal.timeout(15000) });
+      if (!res.ok) throw new UpstreamError('inciweb', res.status);
+      return parseInciweb(await res.text());
+    });
+  }
+
   async firesNearPlace(place, { miles = 200, windFrom = null } = {}) {
     const fires = await this.firesInBox(boxAround(place, miles));
     return firesNear(fires, place, { miles, windFrom }).slice(0, 15);
   }
 }
 
-export function registerHazards(app, { hazards, requireUser, latLonSchema, loc, boxSchema, forecast, settle }) {
+export function registerHazards(app, { hazards, requireUser, latLonSchema, loc, boxSchema, forecast, settle, air = null }) {
   const near = { ...latLonSchema.querystring.properties, miles: { type: 'number', minimum: 1, maximum: 300 } };
   const nearSchema = { querystring: { ...latLonSchema.querystring, properties: near } };
   const box = (q) => ({ south: q.south, north: q.north, west: Math.max(-180, q.west), east: Math.min(180, q.east) });
@@ -292,6 +326,52 @@ export function registerHazards(app, { hazards, requireUser, latLonSchema, loc, 
     if ((q.north - q.south) > 8 || (q.east - q.west) > 12) return { type: 'FeatureCollection', features: [], zoomIn: true };
     const features = await hazards.perimetersInBox(box(q));
     return { type: 'FeatureCollection', features, source: 'National Interagency Fire Center (WFIGS perimeters)' };
+  });
+  // Everything about one fire: the numbers, the fire team's written notes
+  // (closures, evacuations, smoke), where its smoke is blowing, air quality
+  // there, safety notes, and Rocky's kid version. lat/lon (optional) is the
+  // person's place, for distance and whether they are downwind.
+  app.get('/api/fires/detail', {
+    schema: { querystring: { type: 'object', required: ['id'], properties: { id: { type: 'string', maxLength: 60 }, lat: { type: 'number', minimum: -90, maximum: 90 }, lon: { type: 'number', minimum: -180, maximum: 180 } } } },
+  }, async (req) => {
+    const fire = await hazards.fireDetail(req.query.id);
+    const at = fire.lat != null && fire.lon != null ? loc({ lat: fire.lat, lon: fire.lon, units: 'imperial' }) : null;
+    const [items, fc, aq] = await Promise.all([
+      settle(hazards.inciweb()),
+      at ? settle(forecast(at)) : null,
+      at && air ? settle(air(at)) : null,
+    ]);
+    const match = matchInciweb(items || [], fire);
+    const highlights = fireHighlights(match?.overview);
+    const drift = smokeDrift(fc?.current?.windDir, fc?.current?.windSpeed);
+    const here = Number.isFinite(req.query.lat) && Number.isFinite(req.query.lon) && at ? { lat: req.query.lat, lon: req.query.lon } : null;
+    let you = null;
+    if (here) {
+      const b = bearing(here, fire);
+      const windFrom = fc?.current?.windDir;
+      // The smoke heads away from where the wind comes from; you're downwind
+      // when you sit within 45° of that heading and not too far away.
+      const toYou = bearing(fire, here);
+      const off = windFrom == null ? 180 : Math.abs(((toYou - ((windFrom + 180) % 360)) + 540) % 360 - 180);
+      const miles = Math.round(distanceMiles(here, fire));
+      you = { miles, dir: compassWord(b), downwind: windFrom != null && off <= 45 && miles <= 150 };
+    }
+    return {
+      fire,
+      inciweb: match ? { url: match.url, updated: match.updated, overview: match.overview.length > 1800 ? `${match.overview.slice(0, 1797)}…` : match.overview, ...highlights } : null,
+      inciwebAvailable: items != null,
+      drift,
+      air: aq ? { aqi: aq.aqi, category: aq.category?.label || null, pm25: aq.pm25 } : null,
+      you,
+      safety: fireSafety({ miles: you?.miles ?? null, upwind: !!you?.downwind, airAqi: aq?.aqi ?? null, status: fire.status }),
+      kid: fireKid(fire, { drift }),
+      words: FIRE_WORDS,
+      links: {
+        inciweb: match?.url || 'https://inciweb.wildfire.gov/',
+        airnow: 'https://fire.airnow.gov/',
+      },
+      sources: ['National Interagency Fire Center (WFIGS)', ...(match ? ['InciWeb'] : []), 'Open-Meteo (wind and air quality near the fire)'],
+    };
   });
   app.get('/api/fires/near', { schema: nearSchema }, async (req) => {
     const l = loc(req.query);

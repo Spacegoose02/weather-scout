@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { smokeOutlook } from '../../../../shared/hazards.js';
+import { openFire } from './FireDetail.jsx';
 
 const acres = (n) => (n == null ? 'size unknown' : `${n.toLocaleString()} acres`);
 const hour = (t) => (t ? new Date(`${t}Z`).toLocaleString([], { weekday: 'short', hour: 'numeric', timeZone: 'UTC' }) : '');
@@ -42,13 +43,17 @@ export default function FireSmoke({ weather, location, kidMode, size }) {
         <ul className="fire-list">
           {shown.map((f) => (
             <li key={f.id}>
-              <span aria-hidden>🔥</span>
-              <span className="fire-name"><strong>{f.name}</strong>{f.state && <span className="hint"> {f.state}</span>}</span>
-              <span className="fire-meta hint">{f.miles} mi {f.dir} · {acres(f.acres)}{f.contained != null ? ` · ${f.contained}% contained` : ''}</span>
+              <button type="button" className="fire-open" onClick={() => openFire(f.id, f.name)} aria-label={`More about the ${f.name}`}>
+                <span aria-hidden>🔥</span>
+                <span className="fire-name"><strong>{f.name}</strong>{f.state && <span className="hint"> {f.state}</span>}</span>
+                <span className="fire-meta hint">{f.miles} mi {f.dir} · {acres(f.acres)}{f.contained != null ? ` · ${f.contained}% contained` : ''}{f.personnel ? ` · ${f.personnel.toLocaleString()} ${kidMode ? 'firefighters' : 'personnel'}` : ''}</span>
+                <span className="fire-more" aria-hidden>›</span>
+              </button>
             </li>
           ))}
         </ul>
       )}
+      {shown.length > 0 && <p className="hint">{kidMode ? 'Tap a fire to see what Rocky knows about it.' : 'Tap a fire for crews, closures, smoke and safety notes.'}</p>}
       <p className="source">Wildfires: National Interagency Fire Center (WFIGS). Air: Open-Meteo Air Quality (CAMS).</p>
     </section>
   );

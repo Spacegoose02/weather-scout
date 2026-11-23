@@ -221,6 +221,8 @@ export function parseFires(geo) {
       contained: Number.isFinite(pct) ? Math.round(pct) : null,
       started: Number.isFinite(Number(p.FireDiscoveryDateTime)) ? new Date(Number(p.FireDiscoveryDateTime)).toISOString() : null,
       state: String(p.POOState || '').replace(/^US-/, ''),
+      personnel: Number.isFinite(Number(p.TotalIncidentPersonnel)) && p.TotalIncidentPersonnel != null ? Number(p.TotalIncidentPersonnel) : null,
+      near: String(p.IncidentShortDescription || '').trim() || null,
     });
   }
   return out;

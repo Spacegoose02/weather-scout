@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { api } from '../../api.js';
 import { floodLevel, gaugeRank, hailLabel } from '../../../../shared/hazards.js';
+import { openFire } from '../hazards/FireDetail.jsx';
 
 export const REPORT_MIN_ZOOM = 5;
 export const GAUGE_MIN_ZOOM = 7;
@@ -47,11 +48,21 @@ function gaugePopup(g) {
   return div;
 }
 
+export function fireButton(id, name) {
+  const b = el('button', 'Closures, smoke & safety ›', 'fire-popup-more');
+  b.type = 'button';
+  b.addEventListener('click', () => openFire(id, name));
+  return b;
+}
+
 function firePopup(f) {
   const div = el('div', '', 'buoy-popup');
   div.append(el('strong', `🔥 ${f.name}`));
   div.append(el('div', `${f.acres != null ? `${f.acres.toLocaleString()} acres` : 'Size unknown'}${f.contained != null ? ` · ${f.contained}% contained` : ''}`));
+  if (f.personnel) div.append(el('div', `${f.personnel.toLocaleString()} personnel assigned`));
+  if (f.near) div.append(el('div', f.near, 'cam-meta'));
   if (f.started) div.append(el('div', `Started ${new Date(f.started).toLocaleDateString([], { month: 'short', day: 'numeric' })}`, 'cam-meta'));
+  div.append(fireButton(f.id, f.name));
   return div;
 }
 

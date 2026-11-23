@@ -37,7 +37,7 @@ import { MediaService } from './media.js';
 import { ChaserService } from './chasers.js';
 import { getOfficeProducts } from './providers/news.js';
 import { PushService, LEVELS } from './push.js';
-import { AiService, registerAi } from './ai.js';
+import { AiService, registerAi, FIRE_CONTEXT_MILES } from './ai.js';
 import { registerTts } from './tts.js';
 import { testConnection, previewVoice } from './aisettings.js';
 import { Settings, SettingsError } from './settings.js';
@@ -450,7 +450,9 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   registerDashboard(app, { db, requireUser, requireAdmin, cache, latLonSchema, loc });
   // Crowd reports, rivers and flash floods, wildfires (v0.7).
   const hazards = new HazardService(db, cache, fetchImpl, { log: app.log });
-  registerHazards(app, { hazards, requireUser, latLonSchema, loc, boxSchema, forecast, settle });
+  // Air near a fire: the air-quality model only (no pollen lookup, which can cost a key's allowance).
+  const fireAir = (l) => cache.wrap(key('aqfire', { ...l, units: '' }), 30 * MIN, () => openMeteo.getAirQuality(l, fetchImpl));
+  registerHazards(app, { hazards, requireUser, latLonSchema, loc, boxSchema, forecast, settle, air: fireAir });
   // Across the US, and the storm week ahead (SPC days 1-8).
   registerNational(app, { cache, fetchImpl, hazards, nwsUserAgent: cfg.nwsUserAgent, latLonSchema, loc, settle });
   const stormCells = new StormCellService(cache, fetchImpl, { log: app.log });
@@ -493,7 +495,10 @@ export async function buildApp({ config, fetchImpl: rawFetch = fetch, logger = t
   registerChaser(app, { cache, fetchImpl, latLonSchema, loc, chasers, nwsUserAgent: cfg.nwsUserAgent });
 
   // ---- AI weather expert, cloud photos, web search ---------------------------
-  registerAi(app, { ai, forecast, alerts, air, settle, loc, tropics: activeStorms, impacts: hurricaneImpacts });
+  registerAi(app, {
+    ai, forecast, alerts, air, settle, loc, tropics: activeStorms, impacts: hurricaneImpacts,
+    fires: async (l) => hazards.firesNearPlace(l, { miles: FIRE_CONTEXT_MILES, windFrom: (await settle(forecast(l)))?.current?.windDir ?? null }),
+  });
   const tts = registerTts(app, { cfg, fetchImpl });
   registerBriefing(app, { ai, forecast, alerts, air, settle, loc });
   registerWindy(app, { cfg });

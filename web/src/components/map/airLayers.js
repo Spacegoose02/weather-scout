@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { api } from '../../api.js';
 import { aqiLevel, SMOKE_MIN_AQI } from '../../../../shared/aqi.js';
+import { fireButton } from './hazardLayers.js';
 
 export const SMOKE_MIN_ZOOM = 4;
 export const SENSOR_MIN_ZOOM = 8;
@@ -61,6 +62,7 @@ function perimeterPopup(p) {
   if (p.acres != null) row('Burned', `${p.acres.toLocaleString()} acres`);
   if (p.contained != null) row('Contained', `${p.contained}%`);
   div.append(el('div', `Mapped fire edge (NIFC)${p.updated ? ` · ${new Date(p.updated).toLocaleDateString([], { month: 'short', day: 'numeric' })}` : ''}`, 'cam-meta'));
+  if (/^\{?[0-9a-f-]{36}\}?$/i.test(p.id || '')) div.append(fireButton(p.id, p.name));
   return div;
 }
 

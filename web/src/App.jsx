@@ -35,6 +35,7 @@ import OfflineBanner from './components/OfflineBanner.jsx';
 import { useLive } from './live.js';
 import { DEFAULT_ALERT_MILES } from '../../shared/lightning.js';
 import ChaserPopup from './components/chasers/ChaserPopup.jsx';
+import FireDetailHost from './components/hazards/FireDetail.jsx';
 import { popupMode } from './chasers/chasers.js';
 import { configureVoice } from './kid/speak.js';
 import { useTheme } from './theme/useTheme.js';
@@ -246,6 +247,7 @@ export default function App() {
 
       {!blocked && <ChaserPopup alerts={weather?.alerts || []} kidMode={kidMode} mode={chasers.mode} onMode={chasers.onChange} />}
       {!blocked && <SafetyCenter alerts={weather?.alerts} kidMode={kidMode} user={user} onSignIn={() => setModal('signin')} />}
+      {!blocked && <FireDetailHost location={location} kidMode={kidMode} />}
 
       {modal === 'signin' && (
         <SignIn
